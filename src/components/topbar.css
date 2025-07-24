@@ -1,0 +1,210 @@
+/* topbar.css */
+
+.navbar {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    min-height: 60px;
+  }
+  
+  .navbar-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    padding-left: 0;
+    margin-bottom: 0;
+    list-style: none;
+  }
+  
+  .nav-item {
+    display: flex;
+    align-items: center;
+  }
+  
+  .nav-link {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: #495057;
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.15s ease-in-out;
+  }
+  
+  .nav-link:hover {
+    color: #007bff;
+  }
+  
+  .logo-container {
+    display: flex;
+    align-items: center;
+    margin-right: 1rem;
+  }
+  
+  .logo-container img {
+    max-height: 40px;
+    width: auto;
+  }
+  
+  .menu-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .menu-icon {
+    padding: 8px;
+    cursor: pointer;
+    color: #495057;
+    background: none;
+    border: none;
+    font-size: 16px;
+  }
+  
+  .menu-icon:hover {
+    color: #007bff;
+  }
+  
+  .spacer {
+    flex-grow: 1;
+  }
+  
+  /* Dropdown styles */
+  .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    display: none;
+    float: left;
+    min-width: 10rem;
+    padding: 0.5rem 0;
+    margin: 0.125rem 0 0;
+    font-size: 0.875rem;
+    color: #212529;
+    text-align: left;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.25rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
+  }
+  
+  .dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 0.375rem 1.5rem;
+    clear: both;
+    font-weight: 400;
+    color: #212529;
+    text-align: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+    background-color: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+  
+  .dropdown-item:hover {
+    color: #16181b;
+    background-color: #f8f9fa;
+  }
+  
+  .dropdown-submenu {
+    position: relative;
+  }
+  
+  .dropdown-submenu .dropdown-menu {
+    top: 0;
+    left: 100%;
+    margin-top: -1px;
+  }
+  
+  .custom-bg-green {
+    background-color: #d4edda !important;
+    color: #155724 !important;
+  }
+  
+  .custom-bg-red {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+  }
+  
+  /* Menu toggle button */
+  #menu-toggle {
+    display: none;
+  }
+  
+  /* Responsive behavior */
+  @media (max-width: 991.98px) {
+    #menu-toggle {
+      display: block;
+    }
+    
+    .navbar-collapse {
+      flex-basis: 100%;
+      flex-grow: 1;
+      align-items: center;
+    }
+    
+    .navbar-nav {
+      flex-direction: column !important;
+      width: 100%;
+    }
+    
+    .menu-right {
+      margin-top: 1rem;
+    }
+  }
+  
+  /* Fix per il layout orizzontale */
+  .navbar-expand-lg .navbar-nav {
+    flex-direction: row !important;
+  }
+  
+  .navbar-expand-lg .navbar-nav .nav-link {
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+  }
+  
+  .navbar-collapse {
+    display: flex !important;
+    flex-basis: auto;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  
+  /* Assicura che gli elementi siano allineati orizzontalmente */
+  .navbar > * {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Box icone nella topbar */
+.topbar-icon-button {
+  width: 40px;
+  height: 40px;
+  background-color: white;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.topbar-icon-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+}
+
+.topbar-icon-button i {
+  color: #222;
+  font-size: 16px;
+}
+

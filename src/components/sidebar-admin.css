@@ -1,0 +1,105 @@
+/* Sidebar styles */
+.sidebar {
+  width: 300px; /* aumentata */
+  min-height: 100vh;
+  background-color: #000;
+  color: white;
+  padding-top: 20px;
+  position: relative;
+  transition: width 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* Stato OPEN */
+.sidebar.open {
+  width: 300px;
+}
+
+/* Stato CLOSED - solo ridotta, non scompare */
+.sidebar.closed {
+  width: 60px;
+}
+
+/* Header sidebar */
+.sidebar-heading {
+  text-align: center;
+  padding: 10px;
+}
+
+/* Logo (se usato) */
+.sidebar-logo {
+  width: 100px;
+  height: auto;
+}
+
+/* Gruppo di voci */
+.list-group-mine {
+  display: flex;
+  flex-direction: column;
+  padding-left: 0;
+}
+
+/* Voci di menu */
+.list-group-item {
+  background-color: transparent;
+  color: white;
+  border: none;
+  text-align: left;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  gap: 28px; /* aumentato ulteriormente */
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.list-group-item:hover {
+  background-color: #1a1a1a;
+}
+
+/* Icone */
+.list-group-item .icon {
+  min-width: 24px;
+  height: 24px;
+  margin-right: 20px; /* nuovo */
+}
+
+/* Nasconde solo il testo in modalità chiusa */
+.sidebar.closed .item-text {
+  display: none;
+}
+
+/* Bottone per chiudere */
+.btn-close-sidebar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 20px;
+  color: white;
+  background: #333; /* evidenziato */
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  z-index: 9999;
+  transition: background 0.2s ease;
+}
+
+/* Tooltip opzionale per modalità closed */
+.sidebar.closed .list-group-item:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 70px;
+  background: #333;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.btn-close-sidebar:hover {
+  background: #555;
+}
+
