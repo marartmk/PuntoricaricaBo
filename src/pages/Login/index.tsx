@@ -1,4 +1,5 @@
-import { useState, useEffect, FC } from "react";
+import { useState, useEffect } from "react";
+import type { FC } from "react";
 import type { FormEvent } from "react";
 import type { ChangeEvent } from "react";
 import { Eye, EyeOff, User, LogIn } from "lucide-react";

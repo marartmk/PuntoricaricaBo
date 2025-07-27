@@ -1,4 +1,5 @@
-import { useState, useEffect, FC } from "react";
+import { useState, useEffect } from "react";
+import type { FC } from "react";
 import type { FormEvent } from "react";
 import type { ChangeEvent } from "react";
 import { Eye, EyeOff, User, LogIn } from "lucide-react";
@@ -7,9 +8,8 @@ import logo from "../../assets/LogoBaseBlack_300.png"; // Importa il logo se nec
 const API_URL = import.meta.env.VITE_API_URL;
 
 interface LoginResponse {
-  userId: string;
-  level: string;
-  isExternalUser: boolean;
+  token: string;
+  idCompany: string;
 }
 
 const LoginAdmin: FC = () => {
@@ -47,11 +47,6 @@ const LoginAdmin: FC = () => {
     return true;
   };
 
-  interface LoginResponse {
-    token: string;
-    idCompany: string;
-  }
-
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -81,14 +76,14 @@ const LoginAdmin: FC = () => {
       localStorage.setItem("isAuthenticated", "true");
 
       // ✅ Salvataggio dati utente
-      localStorage.setItem("userId", formData.username);      
+      localStorage.setItem("userId", formData.username);
       localStorage.setItem("IdCompanyAdmin", result.idCompany);
-      
+
       // 🔍 Se vuoi decodificare il token JWT client-side (opzionale):
       const payload = JSON.parse(atob(result.token.split(".")[1]));
 
       localStorage.setItem("userId", payload.unique_name || ""); // o email
-      localStorage.setItem("userLevel", payload.role || "");      
+      localStorage.setItem("userLevel", payload.role || "");
       localStorage.setItem(
         "isExternalUser",
         String(payload.role === "External")
@@ -104,9 +99,7 @@ const LoginAdmin: FC = () => {
         error instanceof TypeError &&
         error.message.includes("Failed to fetch")
       ) {
-        setError(
-          "Impossibile connettersi al server. Verifica la rete."
-        );
+        setError("Impossibile connettersi al server. Verifica la rete.");
       } else if (error instanceof Error) {
         setError(error.message || "Errore sconosciuto durante la connessione.");
       } else {
@@ -124,7 +117,7 @@ const LoginAdmin: FC = () => {
 
       {/* logo */}
       <div className="login-logo">
-        <img src={logo} alt="Medialab Logo" />;
+        <img src={logo} alt="Medialab Logo" />
       </div>
 
       {/* form */}
@@ -196,4 +189,3 @@ const LoginAdmin: FC = () => {
 };
 
 export default LoginAdmin;
-

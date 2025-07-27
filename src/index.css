@@ -24,11 +24,13 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  padding: 0;             /* ✅ Aggiunto */
+  width: 100vw;           /* ✅ Sostituisce min-width: 320px */
+  height: 100vh;          /* ✅ Sostituisce min-height: 100vh */
+  overflow-x: hidden;     /* ✅ Aggiunto */ 
 }
+
+/* Mantieni tutto il resto del file index.css identico */
 
 h1 {
   font-size: 3.2em;

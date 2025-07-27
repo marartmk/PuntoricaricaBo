@@ -1,14 +1,41 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+//import { useNavigate } from "react-router-dom";
 import "./dashboard.css";
 import Sidebar from "../../components/sidebar"; // Assicurati che il percorso sia corretto
 import Topbar from "../../components/topbar"; // Assicurati che il percorso sia corretto
 
+interface News {
+  id: number;
+  title: string;
+  date: Date;
+  content: string;
+}
+
+interface AIMessage {
+  id: number;
+  type: 'user' | 'ai';
+  message: string;
+  timestamp: Date;
+}
+
 const Dashboard: React.FC = () => {
   const [menuState, setMenuState] = useState<"open" | "closed">("open");
-  const [selectedNews, setSelectedNews] = useState<any>(null);
-  const [newsData, setNewsData] = useState<any[]>([]);
-  const navigate = useNavigate();
+  const [selectedNews, setSelectedNews] = useState<News | null>(null);
+  const [newsData, setNewsData] = useState<News[]>([]);
+  
+  // Stati per AI Assistant
+  const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
+  const [currentQuestion, setCurrentQuestion] = useState<string>("");
+  const [isAiTyping, setIsAiTyping] = useState<boolean>(false);
+  const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+  
+  //const navigate = useNavigate();
+
+  // Verifica configurazione API all'avvio
+  useEffect(() => {
+    console.log('API Key presente:', !!OPENAI_API_KEY);
+    console.log('Tutte le variabili env:', import.meta.env);
+  }, []);
 
   // Simula il caricamento delle notizie
   useEffect(() => {
@@ -55,14 +82,105 @@ const Dashboard: React.FC = () => {
 
   // Gestione della selezione di una notizia
   const handleSelectNews = (newsId: number) => {
-    const newsItem = newsData.find((item) => item.id === newsId);
+    const newsItem = newsData.find((item) => item.id === newsId) || null;
     setSelectedNews(newsItem);
+  };  
+
+  // Chiamata vera alle API OpenAI
+  const getAIResponse = async (question: string): Promise<string> => {
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: "Sei un assistente specializzato in analisi di Kpi Prestazioni nelle vendite. Rispondi in italiano in modo professionale e utile."
+            },
+            {
+              role: "user",
+              content: question
+            }
+          ],
+          max_tokens: 500,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0].message.content;
+    } catch (error) {
+      console.error('Errore chiamata OpenAI:', error);
+      return "Scusa, c'è stato un problema nella connessione. Riprova tra poco.";
+    }
+  };
+
+  // Gestione invio domanda all'AI
+  const handleSendQuestion = async () => {
+    if (!currentQuestion.trim()) return;
+    
+    // Salva la domanda per la chiamata API
+    const questionToSend = currentQuestion;
+    
+    // Aggiungi la domanda dell'utente
+    const userMessage: AIMessage = {
+      id: Date.now(),
+      type: 'user',
+      message: currentQuestion,
+      timestamp: new Date()
+    };
+    
+    setAiMessages(prev => [...prev, userMessage]);
+    setCurrentQuestion("");
+    setIsAiTyping(true);
+    
+    try {
+      // Chiamata vera all'API OpenAI
+      const aiResponseText = await getAIResponse(questionToSend);
+      
+      const aiResponse: AIMessage = {
+        id: Date.now() + 1,
+        type: 'ai',
+        message: aiResponseText,
+        timestamp: new Date()
+      };
+      
+      setAiMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Errore durante la risposta AI:', error);
+      const errorMessage: AIMessage = {
+        id: Date.now() + 1,
+        type: 'ai',
+        message: "Scusa, c'è stato un errore. Riprova tra poco.",
+        timestamp: new Date()
+      };
+      setAiMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsAiTyping(false);
+    }
+  };
+
+  // Gestione del tasto Enter nella textbox
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendQuestion();
+    }
   };
 
   // Navigazione alle varie pagine
-  const navigateTo = (path: string) => {
-    navigate(path);
-  };
+  // const navigateTo = (path: string) => {
+  //   navigate(path);
+  // };
 
   // Gestione data e ora
   const [currentDate, setCurrentDate] = useState({
@@ -199,7 +317,7 @@ const Dashboard: React.FC = () => {
       className={`d-flex ${menuState === "closed" ? "menu-closed" : ""}`}
       id="wrapper"
     >
-      {/* Nuova Sidebar */}
+      {/* 👈 RIMUOVI IL WRAPPER - Sidebar si gestisce da sola */}
       <Sidebar menuState={menuState} toggleMenu={toggleMenu} />
 
       {/* Main Content */}
@@ -227,7 +345,7 @@ const Dashboard: React.FC = () => {
             <div className="box dark">
               <i className="fa-solid fa-screwdriver icon"></i>
               <div className="text">
-                <span>Riparazioni</span>
+                <span>Operazioni</span>
               </div>
             </div>
             <div className="box dark">
@@ -241,7 +359,7 @@ const Dashboard: React.FC = () => {
             <div className="box grey">
               <i className="fa fa-wallet icon"></i>
               <div className="text">
-                <span>Vendite Accessori</span>
+                <span>Vendite Servizi</span>
               </div>
             </div>
             <div className="box grey">
@@ -266,10 +384,6 @@ const Dashboard: React.FC = () => {
               <span className="event">Nessun evento oggi</span>
             </div>
 
-            <div className="clock-container">
-              <canvas id="clockCanvas" width="250" height="250"></canvas>
-            </div>
-
             <div className="stats-box">
               <div className="icon-container">
                 <i className="fa-solid fa-user"></i>
@@ -284,7 +398,7 @@ const Dashboard: React.FC = () => {
                 <i className="fa-solid fa-screwdriver-wrench icon-large"></i>
               </div>
               <span>
-                <strong>2950</strong> Riparazioni
+                <strong>2950</strong> Operazioni
               </span>
             </div>
 
@@ -315,7 +429,7 @@ const Dashboard: React.FC = () => {
             <div className="left-panel">
               <div className="card bg-light text-black">
                 <div className="custom-card-header-news">
-                  <span className="header-title">Service News</span>
+                  <span className="header-title">News e Comunicazioni</span>
                   <div className="search-container-news">
                     <span className="search-icon-news">
                       <i className="fa-solid fa-magnifying-glass"></i>
@@ -363,15 +477,87 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Destra: Impegni */}
+            {/* Destra: AI Assistant */}
             <div className="right-panel">
               <div className="card bg-light text-black">
-                <div className="custom-card-header">Impegni</div>
+                <div className="custom-card-header">
+                  <span>AI Assistant</span>
+                  <i className="fa-solid fa-robot" style={{fontSize: '18px'}}></i>
+                </div>
                 <div className="card-body">
-                  <div className="service-news-box-right">
-                    <h5 className="card-title">
-                      Nessuna Comunicazione Disponibile
-                    </h5>
+                  {/* Area conversazione */}
+                  <div className="ai-chat-container">
+                    {aiMessages.length === 0 ? (
+                      <div className="ai-welcome">
+                        <p className="text-muted">
+                          <i className="fa-solid fa-robot"></i> Ciao! Sono il tuo assistente AI. 
+                          Puoi farmi domande sui dispositivi, riparazioni o procedure tecniche.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="ai-messages">
+                        {aiMessages.map((msg) => (
+                          <div key={msg.id} className={`ai-message ${msg.type}`}>
+                            <div className="message-content">
+                              <div className="message-header">
+                                <span className="sender">
+                                  {msg.type === 'user' ? (
+                                    <><i className="fa-solid fa-user"></i> Tu</>
+                                  ) : (
+                                    <><i className="fa-solid fa-robot"></i> AI Assistant</>
+                                  )}
+                                </span>
+                                <span className="timestamp">
+                                  {msg.timestamp.toLocaleTimeString('it-IT', { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })}
+                                </span>
+                              </div>
+                              <div className="message-text">{msg.message}</div>
+                            </div>
+                          </div>
+                        ))}
+                        {isAiTyping && (
+                          <div className="ai-message ai">
+                            <div className="message-content">
+                              <div className="message-header">
+                                <span className="sender">
+                                  <i className="fa-solid fa-robot"></i> AI Assistant
+                                </span>
+                              </div>
+                              <div className="typing-indicator">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Input area */}
+                  <div className="ai-input-container">
+                    <div className="ai-input-wrapper">
+                      <textarea
+                        className="ai-input"
+                        value={currentQuestion}
+                        onChange={(e) => setCurrentQuestion(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        placeholder="Scrivi la tua domanda qui..."
+                        rows={2}
+                        disabled={isAiTyping}
+                      />
+                      <button 
+                        className="ai-send-btn"
+                        onClick={handleSendQuestion}
+                        disabled={!currentQuestion.trim() || isAiTyping}
+                      >
+                        <i className="fa-solid fa-paper-plane"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
