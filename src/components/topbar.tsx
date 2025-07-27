@@ -2,7 +2,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import "./topbar.css";
-import logo from "../assets/LogoBaseBlack_300.png";
+import logo from "../assets/admiralpay_logo_top.png";
 
 interface TopbarProps {
   toggleMenu: () => void;
@@ -12,7 +12,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
   const navigate = useNavigate();
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+    <nav className="navbar navbar-expand-lg navbar-dark border-bottom">
       <div className="container-fluid">
         {/* Logo */}
         <div className="logo-container">
@@ -81,12 +81,12 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                 id="navbarRiparazione"
                 data-bs-toggle="dropdown"
               >
-                Riparazione
+                Listini
               </button>
               <ul className="dropdown-menu">
                 <li className="dropdown-submenu">
                   <button className="dropdown-item dropdown-toggle">
-                    IPhone
+                    Sunmi
                   </button>
                   <ul className="dropdown-menu">
                     <li>
@@ -94,7 +94,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/iphone/display")}
                       >
-                        Display
+                        Configurazione
                       </button>
                     </li>
                     <li>
@@ -102,7 +102,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/iphone/batteria")}
                       >
-                        Batteria
+                        POS
                       </button>
                     </li>
                     <li>
@@ -112,7 +112,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                           navigate("/riparazioni/iphone/altri-danni")
                         }
                       >
-                        Altri Danni
+                        ...
                       </button>
                     </li>
                     <li>
@@ -122,7 +122,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                           navigate("/riparazioni/iphone/chip-livello2")
                         }
                       >
-                        Danni Chip II Livello
+                        ...
                       </button>
                     </li>
                     <li>
@@ -140,7 +140,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/iphone/software")}
                       >
-                        Interventi Software
+                       ...
                       </button>
                     </li>
                     <li>
@@ -148,7 +148,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni-attive")}
                       >
-                        Riparazioni Attive
+                        ...
                       </button>
                     </li>
                     <li>
@@ -156,14 +156,14 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni-archivio")}
                       >
-                        Riparazioni in Archivio
+                        ...
                       </button>
                     </li>
                   </ul>
                 </li>
                 <li className="dropdown-submenu">
                   <button className="dropdown-item dropdown-toggle">
-                    IMac
+                    Piattaforme
                   </button>
                   <ul className="dropdown-menu">
                     <li>
@@ -171,7 +171,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/imac/display")}
                       >
-                        Display
+                        Servizi al Cittadino
                       </button>
                     </li>
                     <li>
@@ -179,7 +179,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/imac/batteria")}
                       >
-                        Batteria
+                        B2B
                       </button>
                     </li>
                     <li>
@@ -189,7 +189,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                           navigate("/riparazioni/imac/altri-danni")
                         }
                       >
-                        Altri Danni
+                        Altri ...
                       </button>
                     </li>
                     <li>
@@ -199,7 +199,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                           navigate("/riparazioni/imac/chip-livello2")
                         }
                       >
-                        Danni Chip II Livello
+                        ...
                       </button>
                     </li>
                     <li>
@@ -209,7 +209,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                           navigate("/riparazioni/imac/danni-liquido")
                         }
                       >
-                        Danni Da Liquido
+                        ...
                       </button>
                     </li>
                     <li>
@@ -217,7 +217,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/imac/software")}
                       >
-                        Interventi Software
+                        ...
                       </button>
                     </li>
                     <li>
@@ -225,7 +225,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni-attive")}
                       >
-                        Riparazioni Attive
+                        ...
                       </button>
                     </li>
                     <li>
@@ -233,14 +233,14 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni-archivio")}
                       >
-                        Riparazioni in Archivio
+                        ...
                       </button>
                     </li>
                   </ul>
                 </li>
                 <li className="dropdown-submenu">
                   <button className="dropdown-item dropdown-toggle">
-                    MacBook
+                    Novo Cash
                   </button>
                   <ul className="dropdown-menu">
                     <li>
@@ -248,7 +248,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/macbook/air")}
                       >
-                        MacBook Air
+                        ...
                       </button>
                     </li>
                     <li>
@@ -256,14 +256,14 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/macbook/pro")}
                       >
-                        MacBook Pro
+                       ...
                       </button>
                     </li>
                   </ul>
                 </li>
                 <li className="dropdown-submenu">
                   <button className="dropdown-item dropdown-toggle">
-                    IPad
+                    Novo Cash VLT
                   </button>
                   <ul className="dropdown-menu">
                     <li>
@@ -271,7 +271,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/ipad/display")}
                       >
-                        Display
+                        ...
                       </button>
                     </li>
                     <li>
@@ -279,7 +279,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/ipad/batteria")}
                       >
-                        Batteria
+                        ...
                       </button>
                     </li>
                     <li>
@@ -289,7 +289,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                           navigate("/riparazioni/ipad/altri-danni")
                         }
                       >
-                        Altri Danni
+                        ...
                       </button>
                     </li>
                     <li>
@@ -299,7 +299,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                           navigate("/riparazioni/ipad/chip-livello2")
                         }
                       >
-                        Danni Chip II Livello
+                       ...
                       </button>
                     </li>
                     <li>
@@ -309,7 +309,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                           navigate("/riparazioni/ipad/danni-liquido")
                         }
                       >
-                        Danni Da Liquido
+                        ...
                       </button>
                     </li>
                     <li>
@@ -317,7 +317,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/ipad/software")}
                       >
-                        Interventi Software
+                        ...
                       </button>
                     </li>
                     <li>
@@ -325,7 +325,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni-attive")}
                       >
-                        Riparazioni Attive
+                        ...
                       </button>
                     </li>
                     <li>
@@ -333,14 +333,14 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni-archivio")}
                       >
-                        Riparazioni in Archivio
+                        ...
                       </button>
                     </li>
                   </ul>
                 </li>
                 <li className="dropdown-submenu">
                   <button className="dropdown-item dropdown-toggle">
-                    Apple Watch
+                    Terminale POS 
                   </button>
                   <ul className="dropdown-menu">
                     <li>
@@ -350,7 +350,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                           navigate("/riparazioni/apple-watch/display")
                         }
                       >
-                        Display
+                        ...
                       </button>
                     </li>
                     <li>
@@ -360,7 +360,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                           navigate("/riparazioni/apple-watch/batteria")
                         }
                       >
-                        Batteria
+                        ...
                       </button>
                     </li>
                     <li>
@@ -368,7 +368,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni-attive")}
                       >
-                        Riparazioni Attive
+                        ...
                       </button>
                     </li>
                     <li>
@@ -376,7 +376,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni-archivio")}
                       >
-                        Riparazioni in Archivio
+                        ...
                       </button>
                     </li>
                   </ul>
@@ -389,7 +389,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                     className="dropdown-item custom-bg-green"
                     onClick={() => navigate("/riparazioni-attive")}
                   >
-                    Tutte le Riparazioni Attive
+                    ...
                   </button>
                 </li>
                 <li>
@@ -397,7 +397,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                     className="dropdown-item custom-bg-red"
                     onClick={() => navigate("/riparazioni-archivio")}
                   >
-                    Tutte le Riparazioni In Archivio
+                    Tutte le Piattaforme
                   </button>
                 </li>
               </ul>
@@ -417,7 +417,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                     className="dropdown-item"
                     onClick={() => navigate("/vendite/accessorio-rapido")}
                   >
-                    Accessorio (Rapido)
+                    B2C
                   </button>
                 </li>
                 <li>
@@ -425,7 +425,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                     className="dropdown-item"
                     onClick={() => navigate("/vendite/accessorio-garanzia")}
                   >
-                    Accessorio (Garanzia)
+                    B2B
                   </button>
                 </li>
                 <li>
@@ -433,7 +433,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                     className="dropdown-item"
                     onClick={() => navigate("/vendite/software")}
                   >
-                    Software
+                    ...
                   </button>
                 </li>
                 <li>
@@ -441,7 +441,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                     className="dropdown-item"
                     onClick={() => navigate("/vendite/dispositivo-usato")}
                   >
-                    Dispositivo Usato
+                    ...
                   </button>
                 </li>
                 <li>
@@ -449,7 +449,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                     className="dropdown-item"
                     onClick={() => navigate("/vendite/dispositivo-nuovo")}
                   >
-                    Dispositivo Nuovo
+                    ...
                   </button>
                 </li>
                 <li>
@@ -457,7 +457,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                     className="dropdown-item"
                     onClick={() => navigate("/vendite/spesa")}
                   >
-                    Spesa
+                    ...
                   </button>
                 </li>
               </ul>
@@ -496,7 +496,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
             {/* Fatture */}
             <li className="nav-item">
               <button className="nav-link" onClick={() => navigate("/fatture")}>
-                Fatture
+                Analisi KPI
               </button>
             </li>
           </ul>

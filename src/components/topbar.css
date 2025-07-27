@@ -7,6 +7,7 @@
     justify-content: space-between;
     padding: 0.5rem 1rem;
     min-height: 60px;
+    background-color: #002454 !important;
   }
   
   .navbar-nav {
@@ -43,10 +44,11 @@
     margin-right: 1rem;
   }
   
-  .logo-container img {
-    max-height: 40px;
-    width: auto;
-  }
+.logo-container img {
+  max-height: 40px;
+  width: auto;
+  border-radius: 8px;
+}
   
   .menu-right {
     display: flex;

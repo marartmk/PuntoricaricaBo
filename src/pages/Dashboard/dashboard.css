@@ -45,22 +45,22 @@ body {
 }
 
 .list-group-mine .list-group-item {
-    background-color: black !important;
+    background-color: #002454 !important;
     color: white !important;
-    border-color: black !important;
+    border-color: #002454 !important;
     border-radius: 0;
     padding: 12px 20px;
     transition: all 0.3s;
 }
 
 .list-group-mine .list-group-item:hover {
-    background-color: #222 !important;
+    background-color: #26374d !important;
     color: white !important;
 }
 
 .list-group-mine .list-group-item.active {
     background-color: white !important;
-    color: black !important;
+    color: #002454 !important;
     border-left: 3px solid #3498db;
 }
 
@@ -108,10 +108,43 @@ body {
     transform: translateY(-5px);
 }
 
-.purple { background-color: #5a3d50; }
-.dark { background-color: #1f1f1f; }
-.grey { background-color: #3d3d3d; }
-.light-grey { background-color: #9c9c9c; }
+/* NUOVI COLORI BLU AZIENDALE - Scala graduale */
+.purple { 
+    background-color: #002454; /* Blu aziendale principale */
+}
+
+.dark { 
+    background-color: #003875; /* Blu intermedio scuro */
+}
+
+.grey { 
+    background-color: #004a99; /* Blu medio */
+}
+
+.light-grey { 
+    background-color: #3498db; /* Blu chiaro */
+}
+
+/* Effetti hover coordinati con i nuovi colori */
+.purple:hover { 
+    background-color: #003875; 
+    transform: translateY(-7px);
+}
+
+.dark:hover { 
+    background-color: #004a99; 
+    transform: translateY(-7px);
+}
+
+.grey:hover { 
+    background-color: #3498db; 
+    transform: translateY(-7px);
+}
+
+.light-grey:hover { 
+    background-color: #5dade2; /* Blu ancora più chiaro */
+    transform: translateY(-7px);
+}
 
 .box .icon {
     font-size: 50px;
@@ -295,7 +328,7 @@ body {
 }
 
 .custom-card-header {
-    background-color: #333;
+    background-color: #002454 !important;
     color: white;
     padding: 12px 15px;
     border-top-left-radius: 10px;
@@ -307,7 +340,7 @@ body {
 }
 
 .custom-card-header-news {
-    background-color: #333;
+    background-color: #002454 !important;
     color: white;
     padding: 12px 15px;
     border-top-left-radius: 10px;

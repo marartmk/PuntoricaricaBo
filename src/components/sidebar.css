@@ -2,7 +2,7 @@
 .sidebar {
   width: 300px; /* aumentata */
   min-height: 100vh;
-  background-color: #000;
+  background-color: #002454;
   color: white;
   padding-top: 20px;
   position: relative;
@@ -102,4 +102,3 @@
 .btn-close-sidebar:hover {
   background: #555;
 }
-

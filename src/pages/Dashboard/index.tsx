@@ -13,7 +13,7 @@ interface News {
 
 interface AIMessage {
   id: number;
-  type: 'user' | 'ai';
+  type: "user" | "ai";
   message: string;
   timestamp: Date;
 }
@@ -22,19 +22,19 @@ const Dashboard: React.FC = () => {
   const [menuState, setMenuState] = useState<"open" | "closed">("open");
   const [selectedNews, setSelectedNews] = useState<News | null>(null);
   const [newsData, setNewsData] = useState<News[]>([]);
-  
+
   // Stati per AI Assistant
   const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<string>("");
   const [isAiTyping, setIsAiTyping] = useState<boolean>(false);
   const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-  
+
   //const navigate = useNavigate();
 
   // Verifica configurazione API all'avvio
   useEffect(() => {
-    console.log('API Key presente:', !!OPENAI_API_KEY);
-    console.log('Tutte le variabili env:', import.meta.env);
+    console.log("API Key presente:", !!OPENAI_API_KEY);
+    console.log("Tutte le variabili env:", import.meta.env);
   }, []);
 
   // Simula il caricamento delle notizie
@@ -43,22 +43,25 @@ const Dashboard: React.FC = () => {
       const mockNews = [
         {
           id: 1,
-          title: "Alcuni computer Mac con l'aggiornamento....",
-          date: new Date(Date.now() - 86400000),
+          title: "Nuove normative PSD3: cambiamenti nei pagamenti digitali ...",
+          date: new Date(Date.now() - 259200000),
           content:
-            "Alcuni modelli di Mac potrebbero riscontrare ritardi nel caricamento di Diagnosi Apple o delle diagnostiche EFI di AST 2 dopo i seguenti aggiornamenti: Aggiornamento a macOS Big Sur 11.3 Aggiornamento del firmware del chip di sicurezza Apple T2 alla versione più recente dopo aver eseguito correttamente le suite Configurazione di sistema, Riattiva dispositivo o un ripristino con Apple Configurator 2 I modelli di Mac interessati si collegheranno alla Console di diagnostica di AST 2 e possono visualizzare il messaggio 'Attendo il supporto...' per diversi minuti.",
+            "La Commissione Europea ha annunciato la bozza preliminare della direttiva PSD3 (Payment Services Directive 3), che introdurrà regole più severe sulla sicurezza delle transazioni digitali e sulla gestione delle API bancarie. Le nuove linee guida, che entreranno in vigore dal 2026, prevedono un rafforzamento della Strong Customer Authentication (SCA) e una maggiore trasparenza sulle commissioni applicate ai pagamenti elettronici. I terminali Sunmi e le piattaforme di pagamento dovranno adeguarsi entro 18 mesi dall’entrata in vigore della direttiva per garantire la conformità ai nuovi standard.",
         },
         {
           id: 2,
-          title: "Trasformazione di GSX - Fase 2: ...",
+          title: "Aggiornamento servizi Sunmi: ...",
           date: new Date(Date.now() - 172800000),
-          content: "Informazioni sulla fase 2......",
+          content:
+            "Nella nuova release del Sunmi abbiamo introdotto un nuovo modulo per la gestione delle transazioni multi-valuta e un sistema di riconciliazione automatica. Questa novità permette agli esercenti di controllare in tempo reale i flussi di pagamento tramite un’interfaccia web migliorata. L’aggiornamento è stato rilasciato su tutti i terminali Sunmi T2 con Android 11, migliorando anche la compatibilità con i sistemi di pagamento del wallet.",
         },
         {
           id: 3,
-          title: "Suggerimenti per ridurre l'impatto ambiantale ...",
+          title:
+            "Pagamenti bollettini: dal 2025 nuovi standard di tracciabilità ...",
           date: new Date(Date.now() - 259200000),
-          content: "Suggerimenti per ridurre l'impatto ambientale...",
+          content:
+            "L’Autorità Europea dei Pagamenti ha approvato una serie di modifiche normative che interesseranno tutti i sistemi di pagamento dei bollettini postali e MAV. Dal gennaio 2026, ogni operazione dovrà includere un codice univoco di tracciamento conforme agli standard PSD3, garantendo una maggiore sicurezza e trasparenza per i cittadini. I terminali Sunmi, così come le piattaforme online, dovranno aggiornare i propri sistemi di riconciliazione e logistica dei pagamenti per rispettare i nuovi requisiti. Le istituzioni di pagamento avranno 12 mesi di tempo per adeguarsi alla normativa, con incentivi per chi adotterà le soluzioni di tracciamento in anticipo.",
         },
       ];
       setNewsData(mockNews);
@@ -84,33 +87,37 @@ const Dashboard: React.FC = () => {
   const handleSelectNews = (newsId: number) => {
     const newsItem = newsData.find((item) => item.id === newsId) || null;
     setSelectedNews(newsItem);
-  };  
+  };
 
   // Chiamata vera alle API OpenAI
   const getAIResponse = async (question: string): Promise<string> => {
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: [
-            {
-              role: "system",
-              content: "Sei un assistente specializzato in analisi di Kpi Prestazioni nelle vendite. Rispondi in italiano in modo professionale e utile."
-            },
-            {
-              role: "user",
-              content: question
-            }
-          ],
-          max_tokens: 500,
-          temperature: 0.7,
-        }),
-      });
+      const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [
+              {
+                role: "system",
+                content:
+                  "Sei un assistente specializzato in analisi di Kpi Prestazioni nelle vendite. Rispondi in italiano in modo professionale e utile.",
+              },
+              {
+                role: "user",
+                content: question,
+              },
+            ],
+            max_tokens: 500,
+            temperature: 0.7,
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`API Error: ${response.status}`);
@@ -119,7 +126,7 @@ const Dashboard: React.FC = () => {
       const data = await response.json();
       return data.choices[0].message.content;
     } catch (error) {
-      console.error('Errore chiamata OpenAI:', error);
+      console.error("Errore chiamata OpenAI:", error);
       return "Scusa, c'è stato un problema nella connessione. Riprova tra poco.";
     }
   };
@@ -127,43 +134,43 @@ const Dashboard: React.FC = () => {
   // Gestione invio domanda all'AI
   const handleSendQuestion = async () => {
     if (!currentQuestion.trim()) return;
-    
+
     // Salva la domanda per la chiamata API
     const questionToSend = currentQuestion;
-    
+
     // Aggiungi la domanda dell'utente
     const userMessage: AIMessage = {
       id: Date.now(),
-      type: 'user',
+      type: "user",
       message: currentQuestion,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
-    setAiMessages(prev => [...prev, userMessage]);
+
+    setAiMessages((prev) => [...prev, userMessage]);
     setCurrentQuestion("");
     setIsAiTyping(true);
-    
+
     try {
       // Chiamata vera all'API OpenAI
       const aiResponseText = await getAIResponse(questionToSend);
-      
+
       const aiResponse: AIMessage = {
         id: Date.now() + 1,
-        type: 'ai',
+        type: "ai",
         message: aiResponseText,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
-      
-      setAiMessages(prev => [...prev, aiResponse]);
+
+      setAiMessages((prev) => [...prev, aiResponse]);
     } catch (error) {
-      console.error('Errore durante la risposta AI:', error);
+      console.error("Errore durante la risposta AI:", error);
       const errorMessage: AIMessage = {
         id: Date.now() + 1,
-        type: 'ai',
+        type: "ai",
         message: "Scusa, c'è stato un errore. Riprova tra poco.",
-        timestamp: new Date()
+        timestamp: new Date(),
       };
-      setAiMessages(prev => [...prev, errorMessage]);
+      setAiMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsAiTyping(false);
     }
@@ -171,7 +178,7 @@ const Dashboard: React.FC = () => {
 
   // Gestione del tasto Enter nella textbox
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendQuestion();
     }
@@ -343,7 +350,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             <div className="box dark">
-              <i className="fa-solid fa-screwdriver icon"></i>
+              <i className="fa-solid fa-hand-holding-dollar icon"></i>
               <div className="text">
                 <span>Operazioni</span>
               </div>
@@ -395,7 +402,7 @@ const Dashboard: React.FC = () => {
 
             <div className="stats-box">
               <div className="icon-container">
-                <i className="fa-solid fa-screwdriver-wrench icon-large"></i>
+                <i className="fa-solid fa-hand-holding-dollar icon-large"></i>
               </div>
               <span>
                 <strong>2950</strong> Operazioni
@@ -405,7 +412,7 @@ const Dashboard: React.FC = () => {
             <div className="stats-box">
               <span className="success-rate">
                 <strong className="big-number">98%</strong>
-                <span className="small-text">Rip. svolte con successo</span>
+                <span className="small-text">Op. concluse con successo</span>
               </span>
             </div>
 
@@ -418,7 +425,7 @@ const Dashboard: React.FC = () => {
                 <input
                   type="text"
                   className="search-input"
-                  placeholder="Trova imei, riparazioni, garanzie, clienti ed altro"
+                  placeholder="Trova clienti, procedure, commissioni, listini ed altro"
                 />
               </div>
             </div>
@@ -437,7 +444,7 @@ const Dashboard: React.FC = () => {
                     <input
                       type="text"
                       className="search-input-news"
-                      placeholder="Cerca Service News"
+                      placeholder="Cerca Nelle News"
                     />
                   </div>
                 </div>
@@ -482,7 +489,10 @@ const Dashboard: React.FC = () => {
               <div className="card bg-light text-black">
                 <div className="custom-card-header">
                   <span>AI Assistant</span>
-                  <i className="fa-solid fa-robot" style={{fontSize: '18px'}}></i>
+                  <i
+                    className="fa-solid fa-robot"
+                    style={{ fontSize: "18px" }}
+                  ></i>
                 </div>
                 <div className="card-body">
                   {/* Area conversazione */}
@@ -490,27 +500,37 @@ const Dashboard: React.FC = () => {
                     {aiMessages.length === 0 ? (
                       <div className="ai-welcome">
                         <p className="text-muted">
-                          <i className="fa-solid fa-robot"></i> Ciao! Sono il tuo assistente AI. 
-                          Puoi farmi domande sui dispositivi, riparazioni o procedure tecniche.
+                          <i className="fa-solid fa-robot"></i> Ciao! Sono il
+                          tuo assistente AI per il backoffice. Puoi chiedermi
+                          informazioni su transazioni, terminali di pagamento o
+                          procedure operative.
                         </p>
                       </div>
                     ) : (
                       <div className="ai-messages">
                         {aiMessages.map((msg) => (
-                          <div key={msg.id} className={`ai-message ${msg.type}`}>
+                          <div
+                            key={msg.id}
+                            className={`ai-message ${msg.type}`}
+                          >
                             <div className="message-content">
                               <div className="message-header">
                                 <span className="sender">
-                                  {msg.type === 'user' ? (
-                                    <><i className="fa-solid fa-user"></i> Tu</>
+                                  {msg.type === "user" ? (
+                                    <>
+                                      <i className="fa-solid fa-user"></i> Tu
+                                    </>
                                   ) : (
-                                    <><i className="fa-solid fa-robot"></i> AI Assistant</>
+                                    <>
+                                      <i className="fa-solid fa-robot"></i> AI
+                                      Assistant
+                                    </>
                                   )}
                                 </span>
                                 <span className="timestamp">
-                                  {msg.timestamp.toLocaleTimeString('it-IT', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
+                                  {msg.timestamp.toLocaleTimeString("it-IT", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
                                   })}
                                 </span>
                               </div>
@@ -523,7 +543,8 @@ const Dashboard: React.FC = () => {
                             <div className="message-content">
                               <div className="message-header">
                                 <span className="sender">
-                                  <i className="fa-solid fa-robot"></i> AI Assistant
+                                  <i className="fa-solid fa-robot"></i> AI
+                                  Assistant
                                 </span>
                               </div>
                               <div className="typing-indicator">
@@ -537,7 +558,7 @@ const Dashboard: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Input area */}
                   <div className="ai-input-container">
                     <div className="ai-input-wrapper">
@@ -550,7 +571,7 @@ const Dashboard: React.FC = () => {
                         rows={2}
                         disabled={isAiTyping}
                       />
-                      <button 
+                      <button
                         className="ai-send-btn"
                         onClick={handleSendQuestion}
                         disabled={!currentQuestion.trim() || isAiTyping}
