@@ -2,23 +2,17 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   ArrowLeft,
-  FilePlus,
   Search,
   Calendar,
   Truck,
-  FlaskConical,
-  Warehouse,
   ShoppingCart,
-  FileText,
   Users,
   BarChart,
-  Settings,
-  Lock,
   MonitorSmartphone,
   Store,
 } from "lucide-react";
 
-import "./Sidebar.css";
+import "./sidebar.css";
 
 interface SidebarProps {
   menuState: "open" | "closed";
