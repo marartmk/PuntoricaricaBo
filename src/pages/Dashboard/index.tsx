@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 //import { useNavigate } from "react-router-dom";
 import "./dashboard.css";
-import Sidebar from "../../components/sidebar"; // Assicurati che il percorso sia corretto
-import Topbar from "../../components/topbar"; // Assicurati che il percorso sia corretto
+import Sidebar from "../../components/sidebar";
+import Topbar from "../../components/topbar";
 
 interface News {
   id: number;
@@ -27,15 +27,61 @@ const Dashboard: React.FC = () => {
   const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<string>("");
   const [isAiTyping, setIsAiTyping] = useState<boolean>(false);
-  const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+  const [aiError, setAiError] = useState<string>("");
+
+  // Rimuoviamo la dipendenza dall'env
+  const API_URL = import.meta.env.VITE_API_URL;
 
   //const navigate = useNavigate();
 
   // Verifica configurazione API all'avvio
   useEffect(() => {
-    console.log("API Key presente:", !!OPENAI_API_KEY);
-    console.log("Tutte le variabili env:", import.meta.env);
+    const token = localStorage.getItem("token");
+    console.log("Token presente:", !!token);
+    console.log("API URL:", API_URL);
   }, []);
+
+  // Funzione per recuperare l'API key dal backend
+  const getOpenAIApiKey = async (): Promise<string> => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      throw new Error(
+        "Token di autenticazione non trovato. Effettua il login."
+      );
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/OpenAi/get-key`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token scaduto o non valido
+          localStorage.removeItem("token");
+          localStorage.removeItem("isAuthenticated");
+          throw new Error("Sessione scaduta. Effettua nuovamente il login.");
+        }
+        throw new Error(`Errore nel recupero dell'API key: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success || !data.apiKey) {
+        throw new Error("API key non disponibile dal server");
+      }
+
+      return data.apiKey;
+    } catch (error) {
+      console.error("Errore nel recupero dell'API key:", error);
+      throw error;
+    }
+  };
 
   // Simula il caricamento delle notizie
   useEffect(() => {
@@ -46,14 +92,14 @@ const Dashboard: React.FC = () => {
           title: "Nuove normative PSD3: cambiamenti nei pagamenti digitali ...",
           date: new Date(Date.now() - 259200000),
           content:
-            "La Commissione Europea ha annunciato la bozza preliminare della direttiva PSD3 (Payment Services Directive 3), che introdurrà regole più severe sulla sicurezza delle transazioni digitali e sulla gestione delle API bancarie. Le nuove linee guida, che entreranno in vigore dal 2026, prevedono un rafforzamento della Strong Customer Authentication (SCA) e una maggiore trasparenza sulle commissioni applicate ai pagamenti elettronici. I terminali Sunmi e le piattaforme di pagamento dovranno adeguarsi entro 18 mesi dall’entrata in vigore della direttiva per garantire la conformità ai nuovi standard.",
+            "La Commissione Europea ha annunciato la bozza preliminare della direttiva PSD3 (Payment Services Directive 3), che introdurrà regole più severe sulla sicurezza delle transazioni digitali e sulla gestione delle API bancarie. Le nuove linee guida, che entreranno in vigore dal 2026, prevedono un rafforzamento della Strong Customer Authentication (SCA) e una maggiore trasparenza sulle commissioni applicate ai pagamenti elettronici. I terminali Sunmi e le piattaforme di pagamento dovranno adeguarsi entro 18 mesi dall'entrata in vigore della direttiva per garantire la conformità ai nuovi standard.",
         },
         {
           id: 2,
           title: "Aggiornamento servizi Sunmi: ...",
           date: new Date(Date.now() - 172800000),
           content:
-            "Nella nuova release del Sunmi abbiamo introdotto un nuovo modulo per la gestione delle transazioni multi-valuta e un sistema di riconciliazione automatica. Questa novità permette agli esercenti di controllare in tempo reale i flussi di pagamento tramite un’interfaccia web migliorata. L’aggiornamento è stato rilasciato su tutti i terminali Sunmi T2 con Android 11, migliorando anche la compatibilità con i sistemi di pagamento del wallet.",
+            "Nella nuova release del Sunmi abbiamo introdotto un nuovo modulo per la gestione delle transazioni multi-valuta e un sistema di riconciliazione automatica. Questa novità permette agli esercenti di controllare in tempo reale i flussi di pagamento tramite un'interfaccia web migliorata. L'aggiornamento è stato rilasciato su tutti i terminali Sunmi T2 con Android 11, migliorando anche la compatibilità con i sistemi di pagamento del wallet.",
         },
         {
           id: 3,
@@ -61,7 +107,7 @@ const Dashboard: React.FC = () => {
             "Pagamenti bollettini: dal 2025 nuovi standard di tracciabilità ...",
           date: new Date(Date.now() - 259200000),
           content:
-            "L’Autorità Europea dei Pagamenti ha approvato una serie di modifiche normative che interesseranno tutti i sistemi di pagamento dei bollettini postali e MAV. Dal gennaio 2026, ogni operazione dovrà includere un codice univoco di tracciamento conforme agli standard PSD3, garantendo una maggiore sicurezza e trasparenza per i cittadini. I terminali Sunmi, così come le piattaforme online, dovranno aggiornare i propri sistemi di riconciliazione e logistica dei pagamenti per rispettare i nuovi requisiti. Le istituzioni di pagamento avranno 12 mesi di tempo per adeguarsi alla normativa, con incentivi per chi adotterà le soluzioni di tracciamento in anticipo.",
+            "L'Autorità Europea dei Pagamenti ha approvato una serie di modifiche normative che interesseranno tutti i sistemi di pagamento dei bollettini postali e MAV. Dal gennaio 2026, ogni operazione dovrà includere un codice univoco di tracciamento conforme agli standard PSD3, garantendo una maggiore sicurezza e trasparenza per i cittadini. I terminali Sunmi, così come le piattaforme online, dovranno aggiornare i propri sistemi di riconciliazione e logistica dei pagamenti per rispettare i nuovi requisiti. Le istituzioni di pagamento avranno 12 mesi di tempo per adeguarsi alla normativa, con incentivi per chi adotterà le soluzioni di tracciamento in anticipo.",
         },
       ];
       setNewsData(mockNews);
@@ -89,15 +135,18 @@ const Dashboard: React.FC = () => {
     setSelectedNews(newsItem);
   };
 
-  // Chiamata vera alle API OpenAI
+  // Chiamata alle API OpenAI con API key dal backend
   const getAIResponse = async (question: string): Promise<string> => {
     try {
+      // Prima recuperiamo l'API key dal backend
+      const openaiApiKey = await getOpenAIApiKey();
+
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${OPENAI_API_KEY}`,
+            Authorization: `Bearer ${openaiApiKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -106,7 +155,7 @@ const Dashboard: React.FC = () => {
               {
                 role: "system",
                 content:
-                  "Sei un assistente specializzato in analisi di Kpi Prestazioni nelle vendite. Rispondi in italiano in modo professionale e utile.",
+                  "Sei un assistente specializzato in analisi di KPI e prestazioni nelle vendite per un sistema di pagamenti e terminali POS. Rispondi in italiano in modo professionale e utile, focalizzandoti su analisi dati, metriche di performance, troubleshooting terminali e procedure operative.",
               },
               {
                 role: "user",
@@ -120,20 +169,58 @@ const Dashboard: React.FC = () => {
       );
 
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+
+        if (response.status === 401) {
+          throw new Error("API key OpenAI non valida o scaduta");
+        } else if (response.status === 429) {
+          throw new Error(
+            "Limite di utilizzo OpenAI raggiunto. Riprova tra poco."
+          );
+        } else if (response.status >= 500) {
+          throw new Error("Servizio OpenAI temporaneamente non disponibile");
+        }
+
+        throw new Error(
+          `Errore API OpenAI: ${response.status} - ${
+            errorData.error?.message || "Errore sconosciuto"
+          }`
+        );
       }
 
       const data = await response.json();
+
+      if (!data.choices || !data.choices[0]?.message?.content) {
+        throw new Error("Risposta non valida dal servizio AI");
+      }
+
       return data.choices[0].message.content;
     } catch (error) {
       console.error("Errore chiamata OpenAI:", error);
-      return "Scusa, c'è stato un problema nella connessione. Riprova tra poco.";
+
+      if (error instanceof Error) {
+        // Gestiamo i diversi tipi di errore
+        if (
+          error.message.includes("Token di autenticazione") ||
+          error.message.includes("Sessione scaduta")
+        ) {
+          // Redirect al login se il token è scaduto
+          window.location.href = "/login";
+          return "Sessione scaduta. Reindirizzamento al login...";
+        }
+        return error.message;
+      }
+
+      return "Si è verificato un errore imprevisto. Riprova tra poco.";
     }
   };
 
   // Gestione invio domanda all'AI
   const handleSendQuestion = async () => {
     if (!currentQuestion.trim()) return;
+
+    // Reset dell'errore precedente
+    setAiError("");
 
     // Salva la domanda per la chiamata API
     const questionToSend = currentQuestion;
@@ -151,7 +238,7 @@ const Dashboard: React.FC = () => {
     setIsAiTyping(true);
 
     try {
-      // Chiamata vera all'API OpenAI
+      // Chiamata all'API OpenAI tramite il nostro backend
       const aiResponseText = await getAIResponse(questionToSend);
 
       const aiResponse: AIMessage = {
@@ -164,13 +251,23 @@ const Dashboard: React.FC = () => {
       setAiMessages((prev) => [...prev, aiResponse]);
     } catch (error) {
       console.error("Errore durante la risposta AI:", error);
-      const errorMessage: AIMessage = {
+
+      let errorMessage = "Si è verificato un errore. Riprova tra poco.";
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      setAiError(errorMessage);
+
+      const errorAIMessage: AIMessage = {
         id: Date.now() + 1,
         type: "ai",
-        message: "Scusa, c'è stato un errore. Riprova tra poco.",
+        message: `❌ ${errorMessage}`,
         timestamp: new Date(),
       };
-      setAiMessages((prev) => [...prev, errorMessage]);
+
+      setAiMessages((prev) => [...prev, errorAIMessage]);
     } finally {
       setIsAiTyping(false);
     }
@@ -324,7 +421,7 @@ const Dashboard: React.FC = () => {
       className={`d-flex ${menuState === "closed" ? "menu-closed" : ""}`}
       id="wrapper"
     >
-      {/* 👈 RIMUOVI IL WRAPPER - Sidebar si gestisce da sola */}
+      {/* Sidebar si gestisce da sola */}
       <Sidebar menuState={menuState} toggleMenu={toggleMenu} />
 
       {/* Main Content */}
@@ -495,6 +592,14 @@ const Dashboard: React.FC = () => {
                   ></i>
                 </div>
                 <div className="card-body">
+                  {/* Mostra errore generale se presente */}
+                  {aiError && (
+                    <div className="alert alert-warning mb-3" role="alert">
+                      <i className="fa-solid fa-exclamation-triangle"></i>{" "}
+                      {aiError}
+                    </div>
+                  )}
+
                   {/* Area conversazione */}
                   <div className="ai-chat-container">
                     {aiMessages.length === 0 ? (
@@ -502,8 +607,8 @@ const Dashboard: React.FC = () => {
                         <p className="text-muted">
                           <i className="fa-solid fa-robot"></i> Ciao! Sono il
                           tuo assistente AI per il backoffice. Puoi chiedermi
-                          informazioni su transazioni, terminali di pagamento o
-                          procedure operative.
+                          informazioni su KPI, transazioni, terminali di
+                          pagamento o procedure operative.
                         </p>
                       </div>
                     ) : (
