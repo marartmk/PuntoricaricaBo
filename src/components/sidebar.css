@@ -24,6 +24,7 @@
 .sidebar-heading {
   text-align: center;
   padding: 10px;
+  position: relative;
 }
 
 /* Logo (se usato) */
@@ -85,6 +86,10 @@
   transition: background 0.2s ease;
 }
 
+.btn-close-sidebar:hover {
+  background: #555;
+}
+
 /* Tooltip opzionale per modalità closed */
 .sidebar.closed .list-group-item:hover::after {
   content: attr(data-tooltip);
@@ -99,6 +104,58 @@
   z-index: 10;
 }
 
-.btn-close-sidebar:hover {
-  background: #555;
+/* ===== RESPONSIVE MOBILE ===== */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 280px !important; /* Larghezza fissa su mobile */
+    height: 100vh !important;
+    z-index: 9999;
+    transform: translateX(-100%); /* Nascosto di default */
+    transition: transform 0.3s ease;
+  }
+  
+  /* Quando il menu è aperto su mobile */
+  .sidebar.open {
+    transform: translateX(0); /* Visibile */
+    width: 280px !important;
+  }
+  
+  /* Quando il menu è chiuso su mobile resta nascosto */
+  .sidebar.closed {
+    transform: translateX(-100%);
+    width: 280px !important; /* Non 60px su mobile */
+  }
+  
+  /* Header mobile */
+  .sidebar-heading {
+    padding: 15px 10px;
+  }
+  
+  /* Menu items mobile */
+  .list-group-item {
+    padding: 12px 20px;
+    gap: 15px;
+  }
+  
+  .list-group-item .icon {
+    min-width: 20px;
+    height: 20px;
+    margin-right: 15px;
+  }
+  
+  /* Bottone toggle mobile */
+  .btn-close-sidebar {
+    top: 15px;
+    right: 15px;
+    font-size: 18px;
+    padding: 8px 12px;
+  }
+  
+  /* Rimuovi tooltip su mobile */
+  .sidebar.closed .list-group-item:hover::after {
+    display: none;
+  }
 }

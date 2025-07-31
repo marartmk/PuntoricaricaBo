@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login/index";
 import LoginAdmin from "./pages/LoginAdmin";
 import Dashboard from "./pages/Dashboard";
+import Report from "./pages/Report";
 
 // Componente per proteggere le route
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -23,6 +24,16 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />     
+
+       {/* Rotte protette */}
+      <Route
+        path="/report"
+        element={
+          <ProtectedRoute>
+            <Report />
           </ProtectedRoute>
         }
       />     
