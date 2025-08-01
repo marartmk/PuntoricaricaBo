@@ -10,6 +10,7 @@ import {
   BarChart,
   MonitorSmartphone,
   Store,
+  UsersRound,
 } from "lucide-react";
 
 import "./sidebar.css";
@@ -41,7 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
         <button className="list-group-item" onClick={() => navigate(-1)}>
           <ArrowLeft className="icon" />
           <span className="item-text">Indietro</span>
-        </button>       
+        </button>
         <button
           className="list-group-item"
           onClick={() => navigate("/ricerca-schede")}
@@ -62,14 +63,14 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
         >
           <Truck className="icon" />
           <span className="item-text">Gestione Sales</span>
-        </button>               
+        </button>
         <button
           className="list-group-item"
           onClick={() => navigate("/ordini-ricambi")}
         >
           <ShoppingCart className="icon" />
           <span className="item-text">Listini Servizi</span>
-        </button>       
+        </button>
         <button
           className="list-group-item"
           onClick={() => navigate("/anagrafica-clienti")}
@@ -83,18 +84,25 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
         >
           <MonitorSmartphone className="icon" />
           <span className="item-text">Anagrafica Fornitori</span>
-        </button>       
+        </button>
         <button
           className="list-group-item"
           onClick={() => navigate("/vendite")}
         >
           <Store className="icon" />
           <span className="item-text">Vendite</span>
-        </button>                     
+        </button>
         <button className="list-group-item" onClick={() => navigate("/report")}>
           <BarChart className="icon" />
           <span className="item-text">Report</span>
-        </button>       
+        </button>
+        <button
+          className="list-group-item"
+          onClick={() => navigate("/dealer-analytics")}
+        >
+          <UsersRound className="icon" />
+          <span className="item-text">Dealer Analytics</span>
+        </button>
       </div>
     </div>
   );

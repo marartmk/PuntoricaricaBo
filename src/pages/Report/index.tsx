@@ -116,6 +116,21 @@ interface StatsByServiceResponse {
   errors: unknown[];
 }
 
+// Interfacce per Dealer Transazioni
+interface DealerTransactionTotals {
+  conTransazioni: number;
+  senzaTransazioni: number;
+}
+
+interface DealerTransactionResponse {
+  success: boolean;
+  message: string;
+  data: {
+    totali: DealerTransactionTotals;
+  };
+  errors: unknown[];
+}
+
 const Report: React.FC = () => {
   const [menuState, setMenuState] = useState<"open" | "closed">("open");
   const [riepilogoData, setRiepilogoData] = useState<RiepilogoAnnuale | null>(
@@ -129,6 +144,14 @@ const Report: React.FC = () => {
   const [topDealerData, setTopDealerData] = useState<TopDealer[]>([]);
   const [isLoadingTopDealer, setIsLoadingTopDealer] = useState<boolean>(false);
   const [errorTopDealer, setErrorTopDealer] = useState<string>("");
+
+  // Stati per Dealer Transazioni
+  const [dealerTransactionData, setDealerTransactionData] =
+    useState<DealerTransactionTotals | null>(null);
+  const [isLoadingDealerTransaction, setIsLoadingDealerTransaction] =
+    useState<boolean>(false);
+  const [errorDealerTransaction, setErrorDealerTransaction] =
+    useState<string>("");
 
   // Nuovi stati per Statistiche Servizi
   const [serviceStatsData, setServiceStatsData] = useState<
@@ -148,6 +171,17 @@ const Report: React.FC = () => {
   const [isTopDealerModalClosing, setIsTopDealerModalClosing] =
     useState<boolean>(false);
 
+  // Nuovo stato per modal fullscreen del grafico Servizi
+  const [isServiceStatsModalOpen, setIsServiceStatsModalOpen] =
+    useState<boolean>(false);
+  const [isServiceStatsModalClosing, setIsServiceStatsModalClosing] =
+    useState<boolean>(false);
+
+  // Nuovo stato per il tipo di grafico nel modal fullscreen
+  const [modalChartType, setModalChartType] = useState<
+    "pie" | "bar" | "horizontalBar" | "donut"
+  >("pie");
+
   const API_URL = import.meta.env.VITE_API_URL;
 
   // Carica lo stato del menu dal localStorage
@@ -162,6 +196,7 @@ const Report: React.FC = () => {
   useEffect(() => {
     fetchRiepilogoAnnuale(selectedYear);
     fetchTopDealer(selectedYear);
+    fetchDealerTransactionTotals(selectedYear);
   }, [selectedYear]);
 
   // Carica le statistiche servizi (separato per evitare reload non necessari)
@@ -173,21 +208,22 @@ const Report: React.FC = () => {
     }
   }, [selectedYear, serviceStatsViewMode, selectedServiceMonth]);
 
-  // Gestione del tasto Esc per chiudere il modal
+  // Gestione del tasto Esc per chiudere i modal
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
-      if (
-        event.key === "Escape" &&
-        isTopDealerModalOpen &&
-        !isTopDealerModalClosing
-      ) {
-        closeTopDealerModal();
+      if (event.key === "Escape") {
+        if (isTopDealerModalOpen && !isTopDealerModalClosing) {
+          closeTopDealerModal();
+        }
+        if (isServiceStatsModalOpen && !isServiceStatsModalClosing) {
+          closeServiceStatsModal();
+        }
       }
     };
 
-    if (isTopDealerModalOpen) {
+    if (isTopDealerModalOpen || isServiceStatsModalOpen) {
       document.addEventListener("keydown", handleEsc);
-      // Previeni lo scroll del body quando il modal è aperto
+      // Previeni lo scroll del body quando un modal è aperto
       document.body.style.overflow = "hidden";
     }
 
@@ -196,7 +232,12 @@ const Report: React.FC = () => {
       // Ripristina lo scroll del body
       document.body.style.overflow = "unset";
     };
-  }, [isTopDealerModalOpen, isTopDealerModalClosing]);
+  }, [
+    isTopDealerModalOpen,
+    isTopDealerModalClosing,
+    isServiceStatsModalOpen,
+    isServiceStatsModalClosing,
+  ]);
 
   // Funzione per recuperare il riepilogo annuale
   const fetchRiepilogoAnnuale = async (anno: number) => {
@@ -300,6 +341,65 @@ const Report: React.FC = () => {
     }
   };
 
+  // Funzione per recuperare i totali delle transazioni dealer
+  const fetchDealerTransactionTotals = async (anno: number, mese?: number) => {
+    setIsLoadingDealerTransaction(true);
+    setErrorDealerTransaction("");
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Token di autenticazione non trovato");
+      }
+
+      // Costruisce l'URL con i parametri
+      let url = `${API_URL}/api/Reports/dealer-istransaction-totals?anno=${anno}`;
+      if (mese) {
+        url += `&mese=${mese}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("isAuthenticated");
+          throw new Error("Sessione scaduta. Effettua nuovamente il login.");
+        }
+        throw new Error(
+          `Errore nel caricamento totali dealer: ${response.status}`
+        );
+      }
+
+      const data: DealerTransactionResponse = await response.json();
+
+      if (data.success && data.data?.totali) {
+        setDealerTransactionData(data.data.totali);
+      } else {
+        throw new Error(
+          data.message || "Errore nel recupero dei totali dealer"
+        );
+      }
+    } catch (error) {
+      console.error("Errore nel caricamento totali dealer:", error);
+      if (error instanceof Error) {
+        setErrorDealerTransaction(error.message);
+      } else {
+        setErrorDealerTransaction(
+          "Errore imprevisto nel caricamento dei totali dealer"
+        );
+      }
+    } finally {
+      setIsLoadingDealerTransaction(false);
+    }
+  };
+
   // Nuova funzione per recuperare le statistiche servizi
   const fetchServiceStats = async (anno: number, mese?: number) => {
     setIsLoadingServiceStats(true);
@@ -341,6 +441,7 @@ const Report: React.FC = () => {
       if (data.success && data.data?.statistiche) {
         setServiceStatsData(data.data.statistiche);
       } else {
+        setServiceStatsData([]);
         throw new Error(
           data.message || "Errore nel recupero delle statistiche servizi"
         );
@@ -354,6 +455,7 @@ const Report: React.FC = () => {
           "Errore imprevisto nel caricamento delle statistiche servizi"
         );
       }
+      setServiceStatsData([]);
     } finally {
       setIsLoadingServiceStats(false);
     }
@@ -422,9 +524,16 @@ const Report: React.FC = () => {
       });
   };
 
-  // Nuova funzione per preparare i dati delle statistiche servizi per il grafico a torta
+  // FUNZIONE CORRETTA per preparare i dati delle statistiche servizi con percentuali calcolate
   const prepareServiceStatsData = () => {
-    if (!serviceStatsData || serviceStatsData.length === 0) return [];
+    // Controllo di sicurezza robusto
+    if (
+      !serviceStatsData ||
+      !Array.isArray(serviceStatsData) ||
+      serviceStatsData.length === 0
+    ) {
+      return [];
+    }
 
     // Colori specifici per tipologia di servizio (sempre coerenti)
     const colorMapping: Record<string, string> = {
@@ -437,24 +546,58 @@ const Report: React.FC = () => {
       ALTRI: "#1abc9c", // Turchese per eventuali altri servizi
     };
 
-    return serviceStatsData
-      .sort((a, b) => b.importoTotale - a.importoTotale) // Ordina per importo decrescente
-      .map((servizio) => ({
-        name: servizio.nomeServizio,
-        value: servizio.importoTotale,
-        percentuale: servizio.percentuale,
-        numeroOperazioni: servizio.numeroOperazioni,
-        importoMedio: servizio.importoMedio,
-        tipologia: servizio.tipologiaServizio,
-        fill: colorMapping[servizio.tipologiaServizio] || "#95a5a6",
-        color: colorMapping[servizio.tipologiaServizio] || "#95a5a6", // Aggiungo anche color per la legenda
-      }));
+    try {
+      // Prima filtra i dati validi
+      const validData = serviceStatsData.filter((servizio) => {
+        return (
+          servizio &&
+          typeof servizio.importoTotale === "number" &&
+          servizio.importoTotale > 0 &&
+          servizio.nomeServizio &&
+          servizio.tipologiaServizio
+        );
+      });
+
+      // Calcola il totale per le percentuali corrette
+      const totalAmount = validData.reduce(
+        (sum, servizio) => sum + servizio.importoTotale,
+        0
+      );
+
+      // Processa i dati ordinandoli e calcolando le percentuali corrette
+      const processedData = validData
+        .sort((a, b) => b.importoTotale - a.importoTotale) // Ordina per importo decrescente
+        .map((servizio, index) => {
+          // CALCOLA LA PERCENTUALE CORRETTA basata sui valori reali
+          const percentualeCalcolata =
+            totalAmount > 0 ? (servizio.importoTotale / totalAmount) * 100 : 0;
+
+          const result = {
+            name: servizio.nomeServizio || `Servizio ${index + 1}`,
+            value: servizio.importoTotale || 0,
+            percentuale: percentualeCalcolata, // <- PERCENTUALE CORRETTA
+            numeroOperazioni: servizio.numeroOperazioni || 0,
+            importoMedio: servizio.importoMedio || 0,
+            tipologia: servizio.tipologiaServizio || "ALTRI",
+            fill: colorMapping[servizio.tipologiaServizio] || "#95a5a6",
+            color: colorMapping[servizio.tipologiaServizio] || "#95a5a6",
+          };
+
+          return result;
+        });
+
+      return processedData;
+    } catch (error) {
+      console.error("❌ Errore in prepareServiceStatsData:", error);
+      return [];
+    }
   };
 
   // Funzione per aggiornare tutti i dati
   const refreshAllData = () => {
     fetchRiepilogoAnnuale(selectedYear);
     fetchTopDealer(selectedYear);
+    fetchDealerTransactionTotals(selectedYear);
     // Ricarica statistiche servizi in base alla modalità corrente
     if (serviceStatsViewMode === "month") {
       fetchServiceStats(selectedYear, selectedServiceMonth);
@@ -506,6 +649,187 @@ const Report: React.FC = () => {
       setIsTopDealerModalOpen(false);
       setIsTopDealerModalClosing(false);
     }, 300); // Durata dell'animazione CSS (0.3s)
+  };
+
+  // Funzioni per gestire il modal fullscreen del grafico Servizi
+  const openServiceStatsModal = () => {
+    setIsServiceStatsModalOpen(true);
+    setIsServiceStatsModalClosing(false);
+  };
+
+  const closeServiceStatsModal = () => {
+    setIsServiceStatsModalClosing(true);
+    // Aspetta che l'animazione finisca prima di chiudere completamente
+    setTimeout(() => {
+      setIsServiceStatsModalOpen(false);
+      setIsServiceStatsModalClosing(false);
+    }, 300); // Durata dell'animazione CSS (0.3s)
+  };
+
+  // Funzione per renderizzare il grafico nel modal in base al tipo selezionato
+  const renderModalChart = () => {
+    const data = prepareServiceStatsData();
+
+    switch (modalChartType) {
+      case "pie":
+        return (
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={250}
+              paddingAngle={3}
+              dataKey="value"
+              stroke="#fff"
+              strokeWidth={3}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: number, _unused: unknown, props: any) => [
+                formatCurrency(value),
+                `${props.payload.name} (${props.payload.percentuale.toFixed(
+                  1
+                )}%)`,
+              ]}
+              labelFormatter={() => ""}
+              contentStyle={{
+                backgroundColor: "#fff",
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                fontSize: "16px",
+              }}
+            />
+          </PieChart>
+        );
+
+      case "donut":
+        return (
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={120}
+              outerRadius={250}
+              paddingAngle={3}
+              dataKey="value"
+              stroke="#fff"
+              strokeWidth={3}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: number, name: string, props: any) => [
+                formatCurrency(value),
+                `${props.payload.name} (${props.payload.percentuale.toFixed(
+                  1
+                )}%)`,
+              ]}
+              labelFormatter={() => ""}
+              contentStyle={{
+                backgroundColor: "#fff",
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                fontSize: "16px",
+              }}
+            />
+          </PieChart>
+        );
+
+      case "bar":
+        return (
+          <BarChart
+            data={data}
+            margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+            <XAxis
+              dataKey="name"
+              stroke="#666"
+              fontSize={12}
+              angle={-45}
+              textAnchor="end"
+              height={100}
+              interval={0}
+            />
+            <YAxis stroke="#666" fontSize={12} tickFormatter={formatCurrency} />
+            <Tooltip
+              formatter={(value: number) => [
+                formatCurrency(value),
+                "Fatturato",
+              ]}
+              labelStyle={{ fontSize: "14px", fontWeight: "bold" }}
+              contentStyle={{
+                backgroundColor: "#fff",
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                fontSize: "14px",
+              }}
+            />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Bar>
+          </BarChart>
+        );
+
+      case "horizontalBar":
+        return (
+          <BarChart
+            layout="horizontal"
+            data={data}
+            margin={{ top: 20, right: 50, left: 100, bottom: 20 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+            <XAxis
+              type="number"
+              stroke="#666"
+              fontSize={12}
+              tickFormatter={formatCurrency}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              stroke="#666"
+              fontSize={12}
+              width={90}
+            />
+            <Tooltip
+              formatter={(value: number) => [
+                formatCurrency(value),
+                "Fatturato",
+              ]}
+              labelStyle={{ fontSize: "14px", fontWeight: "bold" }}
+              contentStyle={{
+                backgroundColor: "#fff",
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                fontSize: "14px",
+              }}
+            />
+            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Bar>
+          </BarChart>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
@@ -582,6 +906,7 @@ const Report: React.FC = () => {
                 disabled={
                   isLoadingRiepilogo ||
                   isLoadingTopDealer ||
+                  isLoadingDealerTransaction ||
                   isLoadingServiceStats
                 }
               >
@@ -589,6 +914,7 @@ const Report: React.FC = () => {
                   className={`fa-solid ${
                     isLoadingRiepilogo ||
                     isLoadingTopDealer ||
+                    isLoadingDealerTransaction ||
                     isLoadingServiceStats
                       ? "fa-spinner fa-spin"
                       : "fa-refresh"
@@ -658,26 +984,116 @@ const Report: React.FC = () => {
             </div>
 
             <div className="col-xl-3 col-md-6 mb-3">
-              <div className="card h-100">
+              <div
+                className="card h-100 dealer-analytics-card"
+                onClick={() => {
+                  if (dealerTransactionData) {
+                    // Naviga alla pagina DealerAnalytics passando l'anno come parametro
+                    window.location.href = `/dealer-analytics?anno=${selectedYear}`;
+                  }
+                }}
+                style={{
+                  cursor: dealerTransactionData ? "pointer" : "default",
+                  transition: "all 0.3s ease",
+                }}
+              >
                 <div className="custom-card-header">
                   <span>Dealer Attivi</span>
-                  <i className="fa-solid fa-users"></i>
+                  <div className="d-flex align-items-center gap-2">
+                    <i className="fa-solid fa-users"></i>
+                    {dealerTransactionData && (
+                      <i
+                        className="fa-solid fa-external-link"
+                        style={{ fontSize: "12px", opacity: 0.7 }}
+                      ></i>
+                    )}
+                  </div>
                 </div>
                 <div className="card-body d-flex flex-column justify-content-center align-items-center">
-                  {riepilogoData ? (
-                    <div className="text-center">
+                  {isLoadingDealerTransaction ? (
+                    <div className="chart-placeholder">
+                      <div className="text-center text-muted">
+                        <i className="fa-solid fa-spinner fa-spin fa-2x mb-2"></i>
+                        <div>Caricamento...</div>
+                      </div>
+                    </div>
+                  ) : errorDealerTransaction ? (
+                    <div className="text-center text-danger">
+                      <i className="fa-solid fa-exclamation-triangle fa-2x mb-2"></i>
+                      <div style={{ fontSize: "12px" }}>Errore caricamento</div>
+                      <button
+                        className="btn btn-sm btn-outline-danger mt-1"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Evita il click sulla card
+                          fetchDealerTransactionTotals(selectedYear);
+                        }}
+                      >
+                        <i className="fa-solid fa-refresh"></i>
+                      </button>
+                    </div>
+                  ) : dealerTransactionData ? (
+                    <div className="text-center w-100">
                       <h2 className="text-info mb-2">
-                        {riepilogoData.numeroDealerDistinti.toLocaleString(
-                          "it-IT"
-                        )}
+                        {(
+                          dealerTransactionData.conTransazioni +
+                          dealerTransactionData.senzaTransazioni
+                        ).toLocaleString("it-IT")}
                       </h2>
-                      <small className="text-muted">Dealer unici</small>
+                      <small className="text-muted d-block mb-3">
+                        Dealer totali
+                      </small>
+
+                      {/* Suddivisione con piccole card - DESIGN ORIGINALE */}
+                      <div className="row g-2">
+                        <div className="col-6">
+                          <div
+                            className="border rounded p-2"
+                            style={{ backgroundColor: "#e8f5e8" }}
+                          >
+                            <div
+                              className="fw-bold text-success"
+                              style={{ fontSize: "16px" }}
+                            >
+                              {dealerTransactionData.conTransazioni.toLocaleString(
+                                "it-IT"
+                              )}
+                            </div>
+                            <small
+                              className="text-muted"
+                              style={{ fontSize: "10px" }}
+                            >
+                              Transanti
+                            </small>
+                          </div>
+                        </div>
+                        <div className="col-6">
+                          <div
+                            className="border rounded p-2"
+                            style={{ backgroundColor: "#fff3cd" }}
+                          >
+                            <div
+                              className="fw-bold text-warning"
+                              style={{ fontSize: "16px" }}
+                            >
+                              {dealerTransactionData.senzaTransazioni.toLocaleString(
+                                "it-IT"
+                              )}
+                            </div>
+                            <small
+                              className="text-muted"
+                              style={{ fontSize: "10px" }}
+                            >
+                              Non transanti
+                            </small>
+                          </div>
+                        </div>
+                      </div>                     
                     </div>
                   ) : (
                     <div className="chart-placeholder">
                       <div className="text-center text-muted">
                         <i className="fa-solid fa-chart-pie fa-2x mb-2"></i>
-                        <div>Caricamento...</div>
+                        <div>Nessun dato</div>
                       </div>
                     </div>
                   )}
@@ -881,6 +1297,17 @@ const Report: React.FC = () => {
                     <div className="menu-icon">
                       <i className="fa-solid fa-chart-pie"></i>
                     </div>
+                    <div className="menu-icon">
+                      <i className="fa-solid fa-filter"></i>
+                    </div>
+                    <div
+                      className="menu-icon"
+                      onClick={openServiceStatsModal}
+                      style={{ cursor: "pointer" }}
+                      title="Visualizza a schermo intero"
+                    >
+                      <i className="fa-solid fa-expand"></i>
+                    </div>
                   </div>
                 </div>
                 <div className="card-body">
@@ -922,53 +1349,60 @@ const Report: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                  ) : serviceStatsData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={350}>
-                      <PieChart>
-                        <Pie
-                          data={prepareServiceStatsData()}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={120}
-                          paddingAngle={2}
-                          dataKey="value"
-                          stroke="#fff"
-                          strokeWidth={2}
-                        >
-                          {prepareServiceStatsData().map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(
-                            value: number,
-                            name: string,
-                            props: any
-                          ) => [
-                            formatCurrency(value),
-                            `${
-                              props.payload.name
-                            } (${props.payload.percentuale.toFixed(1)}%)`,
-                          ]}
-                          labelFormatter={() => ""}
-                          contentStyle={{
-                            backgroundColor: "#fff",
-                            border: "1px solid #ccc",
-                            borderRadius: "8px",
-                            boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                          }}
-                        />
-                      </PieChart>
-                      {/* Legenda personalizzata per controllo totale sui colori */}
+                  ) : prepareServiceStatsData().length > 0 ? (
+                    <div>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={prepareServiceStatsData()}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={100}
+                            paddingAngle={2}
+                            dataKey="value"
+                            stroke="#fff"
+                            strokeWidth={2}
+                          >
+                            {prepareServiceStatsData().map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(
+                              value: number,
+                              name: string,
+                              props: any
+                            ) => [
+                              formatCurrency(value),
+                              `${
+                                props.payload.name
+                              } (${props.payload.percentuale.toFixed(1)}%)`,
+                            ]}
+                            labelFormatter={() => ""}
+                            contentStyle={{
+                              backgroundColor: "#fff",
+                              border: "1px solid #ccc",
+                              borderRadius: "8px",
+                              boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+
+                      {/* Legenda personalizzata migliorata - FUORI dal ResponsiveContainer */}
                       <div
                         style={{
                           display: "flex",
                           flexWrap: "wrap",
                           justifyContent: "center",
-                          marginTop: "10px",
-                          fontSize: "12px",
-                          gap: "10px",
+                          marginTop: "15px",
+                          fontSize: "11px",
+                          gap: "8px",
+                          padding: "10px",
+                          backgroundColor: "#f8f9fa",
+                          borderRadius: "6px",
+                          border: "1px solid #e9ecef",
                         }}
                       >
                         {prepareServiceStatsData().map((entry, index) => (
@@ -978,23 +1412,51 @@ const Report: React.FC = () => {
                               display: "flex",
                               alignItems: "center",
                               gap: "4px",
+                              padding: "4px 8px",
+                              backgroundColor: "white",
+                              borderRadius: "12px",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                              border: `1px solid ${entry.fill}`,
+                              transition: "transform 0.2s ease",
                             }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.transform = "scale(1.02)")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.transform = "scale(1)")
+                            }
                           >
                             <div
                               style={{
-                                width: "12px",
-                                height: "12px",
+                                width: "10px",
+                                height: "10px",
                                 borderRadius: "50%",
                                 backgroundColor: entry.fill,
+                                flexShrink: 0,
                               }}
                             />
-                            <span>
-                              {entry.name} ({entry.percentuale.toFixed(1)}%)
+                            <span
+                              style={{
+                                fontWeight: "500",
+                                color: "#2c3e50",
+                                fontSize: "10px",
+                              }}
+                            >
+                              {entry.name}
+                            </span>
+                            <span
+                              style={{
+                                color: entry.fill,
+                                fontWeight: "600",
+                                fontSize: "9px",
+                              }}
+                            >
+                              ({entry.percentuale.toFixed(1)}%)
                             </span>
                           </div>
                         ))}
                       </div>
-                    </ResponsiveContainer>
+                    </div>
                   ) : (
                     <div className="chart-placeholder large">
                       <div className="text-center text-muted">
@@ -1437,6 +1899,377 @@ const Report: React.FC = () => {
                 >
                   <i className="fa-solid fa-times me-2"></i>
                   Chiudi
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    // Implementare export PDF/Excel in futuro
+                    alert("Funzionalità di export in arrivo!");
+                  }}
+                >
+                  <i className="fa-solid fa-download me-2"></i>
+                  Esporta
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Fullscreen per Distribuzione Tipologie Servizi */}
+      {isServiceStatsModalOpen && (
+        <div
+          className={`modal fade show modal-fullscreen-overlay ${
+            isServiceStatsModalClosing ? "modal-closing" : "modal-opening"
+          }`}
+          style={{ display: "block" }}
+          tabIndex={-1}
+          onClick={closeServiceStatsModal}
+        >
+          <div
+            className={`modal-dialog modal-fullscreen modal-fullscreen-content ${
+              isServiceStatsModalClosing
+                ? "modal-content-closing"
+                : "modal-content-opening"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content">
+              <div className="modal-header bg-primary text-white">
+                <h5 className="modal-title">
+                  <i className="fa-solid fa-chart-pie me-2"></i>
+                  Distribuzione Tipologie Servizi...
+                </h5>
+
+                {/* container a destra con dropdown + X */}
+                <div className="d-flex align-items-center gap-3">
+                  {/* Dropdown tipo grafico */}
+                  <div className="btn-group dropstart">
+                    <button
+                      className="btn btn-sm btn-outline-light dropdown-toggle"
+                      data-bs-toggle="dropdown"
+                      data-bs-display="static"
+                      aria-expanded="false"
+                      style={{ fontSize: "12px" }}
+                    >
+                      <i className="fa-solid fa-chart-column me-1"></i>
+                      {modalChartType === "pie" && "Grafico a Torta"}
+                      {modalChartType === "donut" && "Grafico a Ciambella"}
+                      {modalChartType === "bar" && "Grafico a Barre"}
+                      {modalChartType === "horizontalBar" &&
+                        "Barre Orizzontali"}
+                    </button>
+                    <ul className="dropdown-menu dropdown-menu-end">
+                      <li>
+                        <h6 className="dropdown-header">Tipo di Grafico</h6>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() => setModalChartType("pie")}
+                        >
+                          Grafico a Torta
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() => setModalChartType("donut")}
+                        >
+                          Grafico a Ciambella
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() => setModalChartType("bar")}
+                        >
+                          Grafico a Barre
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() => setModalChartType("horizontalBar")}
+                        >
+                          Barre Orizzontali
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Bottone chiudi */}
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={closeServiceStatsModal}
+                    aria-label="Close"
+                  ></button>
+                </div>
+              </div>
+
+              <div className="modal-body p-4">
+                {isLoadingServiceStats ? (
+                  <div
+                    className="d-flex justify-content-center align-items-center"
+                    style={{ height: "60vh" }}
+                  >
+                    <div className="text-center text-muted">
+                      <i className="fa-solid fa-spinner fa-spin fa-4x mb-4"></i>
+                      <h4>Caricamento statistiche servizi...</h4>
+                      <p>
+                        {serviceStatsViewMode === "month"
+                          ? `${getMonthName(
+                              selectedServiceMonth
+                            )} ${selectedYear}`
+                          : `Anno ${selectedYear}`}
+                      </p>
+                    </div>
+                  </div>
+                ) : errorServiceStats ? (
+                  <div
+                    className="d-flex justify-content-center align-items-center"
+                    style={{ height: "60vh" }}
+                  >
+                    <div className="text-center text-danger">
+                      <i className="fa-solid fa-exclamation-triangle fa-4x mb-4"></i>
+                      <h4>Errore nel caricamento</h4>
+                      <p className="mb-4">{errorServiceStats}</p>
+                      <button
+                        className="btn btn-primary btn-lg"
+                        onClick={() => {
+                          if (serviceStatsViewMode === "month") {
+                            fetchServiceStats(
+                              selectedYear,
+                              selectedServiceMonth
+                            );
+                          } else {
+                            fetchServiceStats(selectedYear);
+                          }
+                        }}
+                      >
+                        <i className="fa-solid fa-refresh me-2"></i>
+                        Riprova
+                      </button>
+                    </div>
+                  </div>
+                ) : prepareServiceStatsData().length > 0 ? (
+                  <div style={{ height: "80vh" }}>
+                    <div className="row h-100">
+                      {/* Colonna sinistra: Grafico dinamico più grande */}
+                      <div className="col-md-8">
+                        <ResponsiveContainer width="100%" height="100%">
+                          {renderModalChart()}
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Colonna destra: Statistiche dettagliate */}
+                      <div className="col-md-4">
+                        <div className="h-100 d-flex flex-column">
+                          <h6 className="mb-4">
+                            <i className="fa-solid fa-list me-2"></i>
+                            Dettaglio Servizi
+                          </h6>
+
+                          {/* Lista servizi scrollabile */}
+                          <div
+                            className="flex-grow-1"
+                            style={{ overflowY: "auto", maxHeight: "60vh" }}
+                          >
+                            {prepareServiceStatsData().map((entry, index) => (
+                              <div
+                                key={index}
+                                className="card mb-3"
+                                style={{
+                                  borderLeft: `4px solid ${entry.fill}`,
+                                  transition: "transform 0.2s ease",
+                                }}
+                                onMouseEnter={(e) =>
+                                  (e.currentTarget.style.transform =
+                                    "scale(1.02)")
+                                }
+                                onMouseLeave={(e) =>
+                                  (e.currentTarget.style.transform = "scale(1)")
+                                }
+                              >
+                                <div className="card-body p-3">
+                                  <div className="d-flex justify-content-between align-items-start mb-2">
+                                    <h6
+                                      className="card-title mb-1"
+                                      style={{
+                                        color: entry.fill,
+                                        fontSize: "14px",
+                                      }}
+                                    >
+                                      #{index + 1} {entry.name}
+                                    </h6>
+                                    <span
+                                      className="badge rounded-pill"
+                                      style={{
+                                        backgroundColor: entry.fill,
+                                        fontSize: "11px",
+                                      }}
+                                    >
+                                      {entry.percentuale.toFixed(1)}%
+                                    </span>
+                                  </div>
+
+                                  <div className="row text-center">
+                                    <div className="col-6">
+                                      <div className="border-end">
+                                        <div
+                                          style={{
+                                            fontSize: "16px",
+                                            fontWeight: "bold",
+                                            color: entry.fill,
+                                          }}
+                                        >
+                                          {formatCurrency(entry.value)}
+                                        </div>
+                                        <small className="text-muted">
+                                          Fatturato
+                                        </small>
+                                      </div>
+                                    </div>
+                                    <div className="col-6">
+                                      <div
+                                        style={{
+                                          fontSize: "16px",
+                                          fontWeight: "bold",
+                                          color: "#495057",
+                                        }}
+                                      >
+                                        {entry.numeroOperazioni.toLocaleString(
+                                          "it-IT"
+                                        )}
+                                      </div>
+                                      <small className="text-muted">
+                                        Operazioni
+                                      </small>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-2 text-center">
+                                    <small className="text-muted">
+                                      Media:{" "}
+                                      {formatCurrency(entry.importoMedio || 0)}
+                                    </small>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Statistiche totali */}
+                          <div className="mt-4">
+                            <div className="card bg-light">
+                              <div className="card-body p-3">
+                                <h6 className="mb-3">
+                                  <i className="fa-solid fa-calculator me-2"></i>
+                                  Totali
+                                </h6>
+                                <div className="row text-center">
+                                  <div className="col-6">
+                                    <div className="border-end">
+                                      <div
+                                        style={{
+                                          fontSize: "18px",
+                                          fontWeight: "bold",
+                                          color: "#002454",
+                                        }}
+                                      >
+                                        {formatCurrency(
+                                          prepareServiceStatsData().reduce(
+                                            (sum, entry) => sum + entry.value,
+                                            0
+                                          )
+                                        )}
+                                      </div>
+                                      <small className="text-muted">
+                                        Fatturato Totale
+                                      </small>
+                                    </div>
+                                  </div>
+                                  <div className="col-6">
+                                    <div
+                                      style={{
+                                        fontSize: "18px",
+                                        fontWeight: "bold",
+                                        color: "#495057",
+                                      }}
+                                    >
+                                      {prepareServiceStatsData()
+                                        .reduce(
+                                          (sum, entry) =>
+                                            sum + entry.numeroOperazioni,
+                                          0
+                                        )
+                                        .toLocaleString("it-IT")}
+                                    </div>
+                                    <small className="text-muted">
+                                      Operazioni Totali
+                                    </small>
+                                  </div>
+                                </div>
+                                <div className="mt-2 text-center">
+                                  <small className="text-muted">
+                                    Categorie:{" "}
+                                    {prepareServiceStatsData().length}
+                                  </small>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="d-flex justify-content-center align-items-center"
+                    style={{ height: "60vh" }}
+                  >
+                    <div className="text-center text-muted">
+                      <i className="fa-solid fa-chart-pie fa-4x mb-4"></i>
+                      <h4>Nessun dato disponibile</h4>
+                      <p>
+                        Non ci sono statistiche servizi per
+                        {serviceStatsViewMode === "month"
+                          ? ` ${getMonthName(
+                              selectedServiceMonth
+                            )} ${selectedYear}`
+                          : ` l'anno ${selectedYear}`}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={closeServiceStatsModal}
+                >
+                  <i className="fa-solid fa-times me-2"></i>
+                  Chiudi
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-primary"
+                  onClick={() => {
+                    // Cambio modalità visualizzazione
+                    if (serviceStatsViewMode === "month") {
+                      handleServiceStatsViewChange("year");
+                    } else {
+                      handleServiceStatsViewChange("month", 7);
+                    }
+                  }}
+                >
+                  <i className="fa-solid fa-calendar me-2"></i>
+                  {serviceStatsViewMode === "month"
+                    ? "Vista Annuale"
+                    : "Vista Mensile"}
                 </button>
                 <button
                   type="button"

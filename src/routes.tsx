@@ -4,6 +4,7 @@ import Login from "./pages/Login/index";
 import LoginAdmin from "./pages/LoginAdmin";
 import Dashboard from "./pages/Dashboard";
 import Report from "./pages/Report";
+import DealerAnalytics from "./pages/DealerAnalytics";
 
 // Componente per proteggere le route
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -26,9 +27,9 @@ const AppRoutes = () => {
             <Dashboard />
           </ProtectedRoute>
         }
-      />     
+      />
 
-       {/* Rotte protette */}
+      {/* Rotte protette */}
       <Route
         path="/report"
         element={
@@ -36,9 +37,18 @@ const AppRoutes = () => {
             <Report />
           </ProtectedRoute>
         }
-      />     
+      />
 
-
+      {/* Rotte protette */}
+      <Route
+        path="/dealer-analytics"
+        element={
+          <ProtectedRoute>
+            <DealerAnalytics />
+          </ProtectedRoute>
+        }
+      />
+     
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

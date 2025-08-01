@@ -367,5 +367,19 @@
   /* Riduci l'effetto di pulsazione su mobile */
   .menu-icon[title="Visualizza a schermo intero"]:hover::before {
     animation: pulseExpand 0.4s ease-out;
-  }
+  }  
 }
+
+/* Assicurati che i dropdown nel modal siano sempre visibili sopra */
+.modal-fullscreen .dropdown-menu {
+  z-index: 9999 !important; /* più alto di modal e grafico */
+}
+
+.modal-fullscreen .modal-header {
+  overflow: visible !important; /* evita che il menu venga tagliato */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+
