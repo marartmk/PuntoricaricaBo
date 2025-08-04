@@ -727,7 +727,7 @@ const Report: React.FC = () => {
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: number, name: string, props: any) => [
+              formatter={(value: number, _name: string, props: any) => [
                 formatCurrency(value),
                 `${props.payload.name} (${props.payload.percentuale.toFixed(
                   1
@@ -828,7 +828,20 @@ const Report: React.FC = () => {
         );
 
       default:
-        return null;
+        return (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#6c757d",
+            }}
+          >
+            <span>Tipo grafico non supportato</span>
+          </div>
+        );
     }
   };
 
@@ -1087,7 +1100,7 @@ const Report: React.FC = () => {
                             </small>
                           </div>
                         </div>
-                      </div>                     
+                      </div>
                     </div>
                   ) : (
                     <div className="chart-placeholder">
@@ -1371,7 +1384,7 @@ const Report: React.FC = () => {
                           <Tooltip
                             formatter={(
                               value: number,
-                              name: string,
+                              _name: string,
                               props: any
                             ) => [
                               formatCurrency(value),

@@ -4,13 +4,7 @@ import "../../pages/Dashboard/dashboard.css";
 import "./dealer-analytics.css";
 import Sidebar from "../../components/sidebar";
 import Topbar from "../../components/topbar";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer, 
-  Tooltip,  
-} from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 // Interfacce per i dati API - AGGIORNATE
 interface DealerTransactionTotals {
@@ -30,6 +24,8 @@ interface DealerDetail {
   provincia: string;
   regione: string;
   telefonoFisso: string;
+  ultimaTransazione?: string; // Data ultima transazione
+  giorniDallUltimaTransazione?: number; // Giorni dall'ultima transazione
 }
 
 interface DealerDetailResponse {
@@ -68,6 +64,10 @@ const DealerAnalytics: React.FC = () => {
   );
   const [selectedProvincia, setSelectedProvincia] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+
+  // Ordinamento
+  const [sortColumn, setSortColumn] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Paginazione
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -174,6 +174,7 @@ const DealerAnalytics: React.FC = () => {
   };
 
   // Filtri per la lista
+  // Filtri per la lista - AGGIORNATA CON ORDINAMENTO
   const getFilteredList = () => {
     if (!dealerData?.dealers) return [];
 
@@ -201,7 +202,9 @@ const DealerAnalytics: React.FC = () => {
       );
     }
 
-    return filtered;
+    // Applica ordinamento - NUOVO
+    return getSortedList(filtered);
+    //return filtered;
   };
 
   // Paginazione
@@ -219,6 +222,133 @@ const DealerAnalytics: React.FC = () => {
     const provinces = [...new Set(dealerData.dealers.map((d) => d.provincia))];
     return provinces.sort();
   };
+
+  // Gestione ordinamento - NUOVO
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      // Se è la stessa colonna, cambia direzione
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Se è una nuova colonna, imposta ascendente
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+    // Reset della paginazione quando si ordina
+    setCurrentPage(1);
+  };
+
+  // Funzione per ordinare i dati
+  function getSortedList(data: DealerDetail[]): DealerDetail[] {
+    if (!sortColumn) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue: any, bValue: any;
+
+      switch (sortColumn) {
+        case "userId":
+          aValue = a.userId.toLowerCase();
+          bValue = b.userId.toLowerCase();
+          break;
+        case "nome":
+          aValue = a.nome.toLowerCase();
+          bValue = b.nome.toLowerCase();
+          break;
+        case "citta":
+          aValue = a.citta.toLowerCase();
+          bValue = b.citta.toLowerCase();
+          break;
+        case "provincia":
+          aValue = a.provincia.toLowerCase();
+          bValue = b.provincia.toLowerCase();
+          break;
+        case "isTransaction":
+          aValue = a.isTransaction ? 1 : 0;
+          bValue = b.isTransaction ? 1 : 0;
+          break;
+        case "ultimaTransazione":
+          aValue = a.giorniDallUltimaTransazione ?? 999999;
+          bValue = b.giorniDallUltimaTransazione ?? 999999;
+          break;
+        case "email":
+          aValue = a.email.toLowerCase();
+          bValue = b.email.toLowerCase();
+          break;
+        case "telefonoFisso":
+          aValue = a.telefonoFisso?.toLowerCase() || "";
+          bValue = b.telefonoFisso?.toLowerCase() || "";
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
+  // Helper per formattare i giorni dall'ultima transazione
+  function formatGiorniUltimaTransazione(giorni?: number): {
+    text: string;
+    badgeClass: string;
+  } {
+    if (giorni === null || giorni === undefined) {
+      return {
+        text: "Mai",
+        badgeClass: "bg-secondary",
+      };
+    }
+
+    if (giorni === 0) {
+      return {
+        text: "Oggi",
+        badgeClass: "bg-success",
+      };
+    }
+
+    if (giorni === 1) {
+      return {
+        text: "Ieri",
+        badgeClass: "bg-success",
+      };
+    }
+
+    if (giorni <= 7) {
+      return {
+        text: `${giorni} giorni fa`,
+        badgeClass: "bg-success",
+      };
+    }
+
+    if (giorni <= 30) {
+      return {
+        text: `${giorni} giorni fa`,
+        badgeClass: "bg-warning",
+      };
+    }
+
+    if (giorni <= 90) {
+      return {
+        text: `${giorni} giorni fa`,
+        badgeClass: "bg-warning",
+      };
+    }
+
+    // Più di 90 giorni
+    if (giorni <= 365) {
+      const mesi = Math.floor(giorni / 30);
+      return {
+        text: `${mesi} ${mesi === 1 ? "mese" : "mesi"} fa`,
+        badgeClass: "bg-danger",
+      };
+    }
+
+    // Più di un anno
+    const anni = Math.floor(giorni / 365);
+    return {
+      text: `${anni} ${anni === 1 ? "anno" : "anni"} fa`,
+      badgeClass: "bg-danger",
+    };
+  }
 
   return (
     <div
@@ -687,13 +817,142 @@ const DealerAnalytics: React.FC = () => {
                         <table className="table table-hover">
                           <thead className="table-dark">
                             <tr>
-                              <th>Codice</th>
-                              <th>Ragione Sociale</th>
-                              <th>Città</th>
-                              <th>Provincia</th>
-                              <th>Status</th>
-                              <th>Email</th>
-                              <th>Telefono</th>
+                              <th
+                                style={{ cursor: "pointer" }}
+                                onClick={() => handleSort("userId")}
+                              >
+                                <div className="d-flex align-items-center justify-content-between">
+                                  <span>Codice</span>
+                                  <i
+                                    className={`fa-solid ${
+                                      sortColumn === "userId"
+                                        ? sortDirection === "asc"
+                                          ? "fa-sort-up"
+                                          : "fa-sort-down"
+                                        : "fa-sort"
+                                    } ms-1`}
+                                  ></i>
+                                </div>
+                              </th>
+                              <th
+                                style={{ cursor: "pointer" }}
+                                onClick={() => handleSort("nome")}
+                              >
+                                <div className="d-flex align-items-center justify-content-between">
+                                  <span>Ragione Sociale</span>
+                                  <i
+                                    className={`fa-solid ${
+                                      sortColumn === "nome"
+                                        ? sortDirection === "asc"
+                                          ? "fa-sort-up"
+                                          : "fa-sort-down"
+                                        : "fa-sort"
+                                    } ms-1`}
+                                  ></i>
+                                </div>
+                              </th>
+                              <th
+                                style={{ cursor: "pointer" }}
+                                onClick={() => handleSort("citta")}
+                              >
+                                <div className="d-flex align-items-center justify-content-between">
+                                  <span>Città</span>
+                                  <i
+                                    className={`fa-solid ${
+                                      sortColumn === "citta"
+                                        ? sortDirection === "asc"
+                                          ? "fa-sort-up"
+                                          : "fa-sort-down"
+                                        : "fa-sort"
+                                    } ms-1`}
+                                  ></i>
+                                </div>
+                              </th>
+                              <th
+                                style={{ cursor: "pointer" }}
+                                onClick={() => handleSort("provincia")}
+                              >
+                                <div className="d-flex align-items-center justify-content-between">
+                                  <span>Provincia</span>
+                                  <i
+                                    className={`fa-solid ${
+                                      sortColumn === "provincia"
+                                        ? sortDirection === "asc"
+                                          ? "fa-sort-up"
+                                          : "fa-sort-down"
+                                        : "fa-sort"
+                                    } ms-1`}
+                                  ></i>
+                                </div>
+                              </th>
+                              <th
+                                style={{ cursor: "pointer" }}
+                                onClick={() => handleSort("isTransaction")}
+                              >
+                                <div className="d-flex align-items-center justify-content-between">
+                                  <span>Status</span>
+                                  <i
+                                    className={`fa-solid ${
+                                      sortColumn === "isTransaction"
+                                        ? sortDirection === "asc"
+                                          ? "fa-sort-up"
+                                          : "fa-sort-down"
+                                        : "fa-sort"
+                                    } ms-1`}
+                                  ></i>
+                                </div>
+                              </th>
+                              <th
+                                style={{ cursor: "pointer" }}
+                                onClick={() => handleSort("ultimaTransazione")}
+                              >
+                                <div className="d-flex align-items-center justify-content-between">
+                                  <span>Ultima Transazione</span>
+                                  <i
+                                    className={`fa-solid ${
+                                      sortColumn === "ultimaTransazione"
+                                        ? sortDirection === "asc"
+                                          ? "fa-sort-up"
+                                          : "fa-sort-down"
+                                        : "fa-sort"
+                                    } ms-1`}
+                                  ></i>
+                                </div>
+                              </th>
+                              <th
+                                style={{ cursor: "pointer" }}
+                                onClick={() => handleSort("email")}
+                              >
+                                <div className="d-flex align-items-center justify-content-between">
+                                  <span>Email</span>
+                                  <i
+                                    className={`fa-solid ${
+                                      sortColumn === "email"
+                                        ? sortDirection === "asc"
+                                          ? "fa-sort-up"
+                                          : "fa-sort-down"
+                                        : "fa-sort"
+                                    } ms-1`}
+                                  ></i>
+                                </div>
+                              </th>
+                              <th
+                                style={{ cursor: "pointer" }}
+                                onClick={() => handleSort("telefonoFisso")}
+                              >
+                                <div className="d-flex align-items-center justify-content-between">
+                                  <span>Telefono</span>
+                                  <i
+                                    className={`fa-solid ${
+                                      sortColumn === "telefonoFisso"
+                                        ? sortDirection === "asc"
+                                          ? "fa-sort-up"
+                                          : "fa-sort-down"
+                                        : "fa-sort"
+                                    } ms-1`}
+                                  ></i>
+                                </div>
+                              </th>
                               <th>Azioni</th>
                             </tr>
                           </thead>
@@ -745,6 +1004,32 @@ const DealerAnalytics: React.FC = () => {
                                       Non Transante
                                     </span>
                                   )}
+                                </td>
+                                <td>
+                                  {(() => {
+                                    const giornoInfo =
+                                      formatGiorniUltimaTransazione(
+                                        dealer.giorniDallUltimaTransazione
+                                      );
+                                    return (
+                                      <div className="text-center">
+                                        <span
+                                          className={`badge ${giornoInfo.badgeClass}`}
+                                        >
+                                          {giornoInfo.text}
+                                        </span>
+                                        {dealer.ultimaTransazione && (
+                                          <div>
+                                            <small className="text-muted d-block mt-1">
+                                              {new Date(
+                                                dealer.ultimaTransazione
+                                              ).toLocaleDateString("it-IT")}
+                                            </small>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
                                 <td>
                                   <small>
