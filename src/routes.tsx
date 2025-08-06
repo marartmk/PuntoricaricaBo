@@ -5,6 +5,8 @@ import LoginAdmin from "./pages/LoginAdmin";
 import Dashboard from "./pages/Dashboard";
 import Report from "./pages/Report";
 import DealerAnalytics from "./pages/DealerAnalytics";
+import ServicesAnalytics from "./pages/ServicesAnalytics";
+import GestioneAgenti from "./pages/GestioneAgenti";
 
 // Componente per proteggere le route
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -45,6 +47,26 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <DealerAnalytics />
+          </ProtectedRoute>
+        }
+      />
+
+       {/* Rotte protette */}
+      <Route
+        path="/services-analytics"
+        element={
+          <ProtectedRoute>
+            <ServicesAnalytics />
+          </ProtectedRoute>
+        }
+      />
+
+        {/* Rotte protette */}
+      <Route
+        path="/gestione-agenti"
+        element={
+          <ProtectedRoute>
+            <GestioneAgenti />
           </ProtectedRoute>
         }
       />

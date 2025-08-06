@@ -59,10 +59,10 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
         </button>
         <button
           className="list-group-item"
-          onClick={() => navigate("/gestione-logistica")}
+          onClick={() => navigate("/gestione-agenti")}
         >
           <Truck className="icon" />
-          <span className="item-text">Gestione Sales</span>
+          <span className="item-text">Gestione Agenti</span>
         </button>
         <button
           className="list-group-item"
@@ -102,6 +102,13 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
         >
           <UsersRound className="icon" />
           <span className="item-text">Dealer Analytics</span>
+        </button>
+         <button
+          className="list-group-item"
+          onClick={() => navigate("/services-analytics")}
+        >
+          <UsersRound className="icon" />
+          <span className="item-text">Services Analytics</span>
         </button>
       </div>
     </div>

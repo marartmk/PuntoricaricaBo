@@ -1,0 +1,553 @@
+/* gestione-agenti.css - Stili specifici per la pagina GestioneAgenti */
+
+/* Header title */
+.gestione-agenti-title {
+  color: #000000 !important;
+  font-weight: 600;
+}
+
+/* Breadcrumb personalizzato */
+.breadcrumb {
+  background: none;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  content: "›";
+  color: #002454;
+  font-weight: bold;
+}
+
+.breadcrumb .btn-link {
+  color: #002454 !important;
+  text-decoration: none !important;
+  font-weight: 500;
+}
+
+.breadcrumb .btn-link:hover {
+  color: #003875 !important;
+  text-decoration: underline !important;
+}
+
+/* Bottoni con brand color aziendale */
+.gestione-agenti-page .btn-primary-dark {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+  color: white !important;
+  transition: all 0.3s ease;
+}
+
+.gestione-agenti-page .btn-primary-dark:hover {
+  background-color: #003875 !important;
+  border-color: #003875 !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.3);
+}
+
+.gestione-agenti-page .btn-outline-primary-dark {
+  border-color: #002454 !important;
+  color: #002454 !important;
+  background: transparent !important;
+  transition: all 0.3s ease;
+}
+
+.gestione-agenti-page .btn-outline-primary-dark:hover {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.3);
+}
+
+/* Card headers personalizzati */
+.gestione-agenti-page .custom-card-header {
+  background: linear-gradient(135deg, #002454 0%, #003875 100%);
+  border-bottom: 3px solid #3498db;
+  color: white;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+}
+
+.gestione-agenti-page .custom-card-header .menu-right {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Card hover effects */
+.gestione-agenti-page .card {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.gestione-agenti-page .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 36, 84, 0.15);
+  border-color: #002454;
+}
+
+/* Cards statistiche colorate */
+.gestione-agenti-page .card.bg-primary {
+  background: linear-gradient(135deg, #002454 0%, #003875 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.gestione-agenti-page .card.bg-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.gestione-agenti-page .card.bg-info {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.gestione-agenti-page .card.bg-warning {
+  background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.gestione-agenti-page .card.bg-primary:hover,
+.gestione-agenti-page .card.bg-success:hover,
+.gestione-agenti-page .card.bg-info:hover,
+.gestione-agenti-page .card.bg-warning:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Menu icons personalizzati */
+.gestione-agenti-page .menu-icon {
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.gestione-agenti-page .menu-icon:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* Tabella personalizzata */
+.gestione-agenti-page .table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.gestione-agenti-page .table th {
+  background: linear-gradient(135deg, #002454 0%, #003875 100%);
+  color: white;
+  border: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 1rem 0.75rem;
+}
+
+.gestione-agenti-page .table td {
+  vertical-align: middle;
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color 0.2s ease;
+  padding: 0.875rem 0.75rem;
+}
+
+.gestione-agenti-page .table tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: scale(1.002);
+  transition: all 0.2s ease;
+}
+
+.gestione-agenti-page .table tbody tr:nth-child(even) {
+  background-color: #fafbfc;
+}
+
+.gestione-agenti-page .table tbody tr:nth-child(even):hover {
+  background-color: #f1f3f4;
+}
+
+/* Badge personalizzati per stato follow-up */
+.gestione-agenti-page .badge {
+  font-size: 0.75rem;
+  padding: 0.5em 0.75em;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gestione-agenti-page .badge.bg-success {
+  background-color: #28a745 !important;
+}
+
+.gestione-agenti-page .badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+.gestione-agenti-page .badge.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.gestione-agenti-page .badge.bg-primary {
+  background-color: #002454 !important;
+}
+
+.gestione-agenti-page .badge.bg-info {
+  background-color: #17a2b8 !important;
+}
+
+.gestione-agenti-page .badge.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+.gestione-agenti-page .badge.bg-light {
+  background-color: #f8f9fa !important;
+  color: #495057 !important;
+  border: 1px solid #dee2e6;
+}
+
+/* Form controls personalizzati */
+.gestione-agenti-page .form-control,
+.gestione-agenti-page .form-select {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.gestione-agenti-page .form-control:focus,
+.gestione-agenti-page .form-select:focus {
+  border-color: #002454;
+  box-shadow: 0 0 0 0.2rem rgba(0, 36, 84, 0.25);
+  outline: none;
+}
+
+.gestione-agenti-page .form-control:hover,
+.gestione-agenti-page .form-select:hover {
+  border-color: #003875;
+}
+
+/* Form labels */
+.gestione-agenti-page .form-label {
+  font-weight: 600;
+  color: #002454;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Required field indicator */
+.gestione-agenti-page .form-label:has(+ input:required)::after,
+.gestione-agenti-page .form-label:has(+ select:required)::after {
+  content: " *";
+  color: #dc3545;
+  font-weight: bold;
+}
+
+/* Sezione form aggiunta attività */
+.gestione-agenti-page .card .card-body {
+  padding: 1.5rem;
+}
+
+.gestione-agenti-page .form-control::placeholder {
+  color: #adb5bd;
+  font-style: italic;
+}
+
+/* Bottoni nel form */
+.gestione-agenti-page .btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.gestione-agenti-page .btn-success:hover {
+  background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.gestione-agenti-page .btn-secondary {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.gestione-agenti-page .btn-secondary:hover {
+  background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+/* Placeholder per quando non ci sono risultati */
+.gestione-agenti-page .text-center.py-4 {
+  padding: 3rem 1rem !important;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  border: 2px dashed #dee2e6;
+  margin: 2rem 0;
+}
+
+.gestione-agenti-page .text-center.py-4 i {
+  color: #6c757d;
+  opacity: 0.7;
+}
+
+.gestione-agenti-page .text-center.py-4 h5 {
+  color: #495057;
+  margin-top: 1rem;
+}
+
+.gestione-agenti-page .text-center.py-4 p {
+  color: #6c757d;
+  margin-bottom: 0;
+}
+
+/* Animazioni per il caricamento */
+.gestione-agenti-page .fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Indicatori numerici nelle card statistiche */
+.gestione-agenti-page .card .card-body h3 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.gestione-agenti-page .card .card-body small {
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .gestione-agenti-title {
+    font-size: 1.5rem;
+  }
+  
+  .breadcrumb {
+    font-size: 0.875rem;
+  }
+  
+  .gestione-agenti-page .table {
+    font-size: 0.875rem;
+  }
+  
+  .gestione-agenti-page .custom-card-header {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* Stack dei filtri su mobile */
+  .gestione-agenti-page .row.g-3 .col-md-4 {
+    margin-bottom: 1rem;
+  }
+
+  /* Card statistiche responsive */
+  .gestione-agenti-page .card .card-body h3 {
+    font-size: 2rem;
+  }
+
+  /* Form responsive */
+  .gestione-agenti-page .row.g-3 > div {
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .gestione-agenti-page .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  .gestione-agenti-page .d-flex.gap-2 {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 1rem;
+  }
+
+  .gestione-agenti-page .btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+
+  /* Tabella responsive */
+  .gestione-agenti-page .table-responsive {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .gestione-agenti-page .table th,
+  .gestione-agenti-page .table td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.8rem;
+  }
+
+  /* Card statistiche stack better su mobile */
+  .gestione-agenti-page .card .card-body {
+    padding: 1rem;
+  }
+
+  .gestione-agenti-page .card .card-body h3 {
+    font-size: 1.8rem;
+  }
+}
+
+/* Stili per la stampa */
+@media print {
+  .gestione-agenti-page .btn,
+  .gestione-agenti-page .form-control,
+  .gestione-agenti-page .form-select,
+  .gestione-agenti-page .custom-card-header .menu-icon {
+    display: none !important;
+  }
+
+  .gestione-agenti-page .card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .gestione-agenti-page .table {
+    font-size: 0.8rem;
+  }
+
+  .gestione-agenti-page .badge {
+    border: 1px solid #000;
+    color: #000 !important;
+    background: transparent !important;
+  }
+}
+
+/* Stili per accessibilità */
+.gestione-agenti-page .btn:focus,
+.gestione-agenti-page .form-control:focus,
+.gestione-agenti-page .form-select:focus {
+  outline: 2px solid #002454;
+  outline-offset: 2px;
+}
+
+.gestione-agenti-page .table tbody tr:focus {
+  outline: 2px solid #002454;
+  outline-offset: -2px;
+}
+
+/* Hover effects per badge */
+.gestione-agenti-page .badge:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+  cursor: default;
+}
+
+/* Stili per i tooltip (se necessari) */
+.gestione-agenti-page [title] {
+  cursor: help;
+  border-bottom: 1px dotted #002454;
+}
+
+/* Miglioramento visivo per le righe della tabella */
+.gestione-agenti-page .table tbody tr {
+  border-left: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.gestione-agenti-page .table tbody tr:hover {
+  border-left-color: #002454;
+  background-color: #f8f9fa;
+  box-shadow: 0 2px 4px rgba(0, 36, 84, 0.1);
+}
+
+/* Stili per evidenziare i campi obbligatori */
+.gestione-agenti-page .form-control:required:invalid {
+  border-color: #dc3545;
+}
+
+.gestione-agenti-page .form-control:required:valid {
+  border-color: #28a745;
+}
+
+/* Animazione per l'apparizione del form */
+.gestione-agenti-page .card {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stili specifici per la textarea delle note */
+.gestione-agenti-page textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.gestione-agenti-page textarea.form-control:focus {
+  min-height: 120px;
+  transition: min-height 0.3s ease;
+}
+
+/* Miglioramenti per la user experience */
+.gestione-agenti-page .btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.gestione-agenti-page .btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.gestione-agenti-page .btn:hover::before {
+  width: 300px;
+  height: 300px;
+}

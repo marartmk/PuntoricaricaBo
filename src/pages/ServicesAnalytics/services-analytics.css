@@ -1,0 +1,578 @@
+/* services-analytics.css - Stili specifici per la pagina ServicesAnalytics */
+
+/* Header title */
+.services-analytics-title {
+  color: #000000 !important;
+  font-weight: 600;
+}
+
+/* Breadcrumb personalizzato */
+.breadcrumb {
+  background: none;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  content: "›";
+  color: #002454;
+  font-weight: bold;
+}
+
+.breadcrumb .btn-link {
+  color: #002454 !important;
+  text-decoration: none !important;
+  font-weight: 500;
+}
+
+.breadcrumb .btn-link:hover {
+  color: #003875 !important;
+  text-decoration: underline !important;
+}
+
+/* Bottoni con brand color aziendale */
+.services-analytics-page .btn-primary-dark {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+  color: white !important;
+  transition: all 0.3s ease;
+}
+
+.services-analytics-page .btn-primary-dark:hover {
+  background-color: #003875 !important;
+  border-color: #003875 !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.3);
+}
+
+.services-analytics-page .btn-outline-primary-dark {
+  border-color: #002454 !important;
+  color: #002454 !important;
+  background: transparent !important;
+  transition: all 0.3s ease;
+}
+
+.services-analytics-page .btn-outline-primary-dark:hover {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.3);
+}
+
+/* Card headers personalizzati */
+.services-analytics-page .custom-card-header {
+  background: linear-gradient(135deg, #002454 0%, #003875 100%);
+  border-bottom: 3px solid #3498db;
+  color: white;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+}
+
+.services-analytics-page .custom-card-header .menu-right {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Card hover effects */
+.services-analytics-page .card {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+}
+
+.services-analytics-page .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 36, 84, 0.15);
+  border-color: #002454;
+}
+
+/* Service Cards specifiche */
+.services-analytics-page .service-card {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+}
+
+.services-analytics-page .service-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(0, 36, 84, 0.15);
+}
+
+.services-analytics-page .service-card.border-primary {
+  border-color: #002454 !important;
+  box-shadow: 0 8px 25px rgba(0, 36, 84, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Stili per i placeholder dei grafici */
+.chart-placeholder {
+  height: 200px;
+  width: 100%;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.chart-placeholder:hover {
+  border-color: #002454;
+  background: linear-gradient(135deg, #f1f3f4 0%, #e1e5e9 100%);
+}
+
+.chart-placeholder.large {
+  height: 350px;
+}
+
+/* Nav pills personalizzate */
+.services-analytics-page .nav-pills .nav-link {
+  color: #002454;
+  border: 1px solid #dee2e6;
+  margin-right: 0.5rem;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.services-analytics-page .nav-pills .nav-link:hover {
+  background-color: #f8f9fa;
+  border-color: #002454;
+  transform: translateY(-1px);
+}
+
+.services-analytics-page .nav-pills .nav-link.active {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+  color: white !important;
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.3);
+}
+
+/* Tabella personalizzata */
+.services-analytics-page .table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.services-analytics-page .table th {
+  background: linear-gradient(135deg, #002454 0%, #003875 100%);
+  color: white;
+  border: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.services-analytics-page .table td {
+  vertical-align: middle;
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+.services-analytics-page .table tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: scale(1.005);
+  transition: all 0.2s ease;
+}
+
+/* Link nelle celle della tabella */
+.services-analytics-page .table a {
+  color: #002454;
+  transition: color 0.2s ease;
+}
+
+.services-analytics-page .table a:hover {
+  color: #003875;
+  text-decoration: underline;
+}
+
+/* Badge personalizzati */
+.services-analytics-page .badge {
+  font-size: 0.75rem;
+  padding: 0.5em 0.75em;
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+
+.services-analytics-page .badge.bg-success {
+  background-color: #28a745 !important;
+}
+
+.services-analytics-page .badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+.services-analytics-page .badge.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+.services-analytics-page .badge.bg-info {
+  background-color: #17a2b8 !important;
+  color: white !important;
+}
+
+/* Menu icons personalizzati */
+.services-analytics-page .menu-icon {
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.services-analytics-page .menu-icon:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* Cards statistiche rapide */
+.services-analytics-page .card.bg-primary {
+  background: linear-gradient(135deg, #002454 0%, #003875 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.services-analytics-page .card.bg-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.services-analytics-page .card.bg-warning {
+  background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.services-analytics-page .card.bg-info {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.services-analytics-page .card.bg-primary:hover,
+.services-analytics-page .card.bg-success:hover,
+.services-analytics-page .card.bg-warning:hover,
+.services-analytics-page .card.bg-info:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Messaggio "Nessun risultato" */
+.services-analytics-page .text-center.py-4 {
+  padding: 3rem 1rem !important;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  border: 2px dashed #dee2e6;
+}
+
+.services-analytics-page .text-center.py-4 i {
+  color: #6c757d;
+  opacity: 0.7;
+}
+
+/* Animazioni per il caricamento */
+.services-analytics-page .fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Progress bar personalizzate */
+.services-analytics-page .progress {
+  background-color: #e9ecef;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.services-analytics-page .progress-bar {
+  transition: width 0.6s ease;
+}
+
+.services-analytics-page .progress-bar.bg-success {
+  background: linear-gradient(45deg, #28a745, #20c997);
+}
+
+.services-analytics-page .progress-bar.bg-warning {
+  background: linear-gradient(45deg, #ffc107, #fd7e14);
+}
+
+/* Form controls personalizzati */
+.services-analytics-page .form-control:focus,
+.services-analytics-page .form-select:focus {
+  border-color: #002454;
+  box-shadow: 0 0 0 0.2rem rgba(0, 36, 84, 0.25);
+}
+
+/* Paginazione personalizzata */
+.services-analytics-page .pagination .page-link {
+  color: #002454;
+  border-color: #dee2e6;
+  transition: all 0.3s ease;
+}
+
+.services-analytics-page .pagination .page-link:hover {
+  color: white;
+  background-color: #002454;
+  border-color: #002454;
+  transform: translateY(-1px);
+}
+
+.services-analytics-page .pagination .page-link:focus {
+  box-shadow: 0 0 0 0.2rem rgba(0, 36, 84, 0.25);
+}
+
+.services-analytics-page .pagination .page-item.active .page-link {
+  background-color: #002454;
+  border-color: #002454;
+  color: white;
+}
+
+.services-analytics-page .pagination .page-item.disabled .page-link {
+  color: #6c757d;
+  background-color: #fff;
+  border-color: #dee2e6;
+}
+
+/* Tooltip personalizzati per le azioni */
+.services-analytics-page .btn[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  animation: fadeInTooltip 0.3s ease-in-out forwards;
+}
+
+@keyframes fadeInTooltip {
+  from { opacity: 0; transform: translateX(-50%) translateY(5px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Stili per i bottoni di azione */
+.services-analytics-page .btn-group .btn {
+  transition: all 0.2s ease;
+}
+
+.services-analytics-page .btn-group .btn:hover {
+  transform: scale(1.05);
+}
+
+.services-analytics-page .btn-outline-primary:hover {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+}
+
+.services-analytics-page .btn-outline-success:hover {
+  background-color: #28a745 !important;
+  border-color: #28a745 !important;
+}
+
+.services-analytics-page .btn-outline-secondary:hover {
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+}
+
+/* Miglioramenti per l'accessibilità */
+.services-analytics-page .btn:focus,
+.services-analytics-page .form-control:focus,
+.services-analytics-page .form-select:focus {
+  outline: 2px solid #002454;
+  outline-offset: 2px;
+}
+
+/* Stili per il dropdown degli anni */
+.services-analytics-page .dropdown-menu {
+  border: 1px solid #002454;
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.15);
+}
+
+.services-analytics-page .dropdown-item:hover {
+  background-color: #002454;
+  color: white;
+}
+
+.services-analytics-page .dropdown-header {
+  color: #002454;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Stili specifici per le service cards */
+.services-analytics-page .service-card .card-title {
+  color: #002454;
+  font-weight: 600;
+}
+
+.services-analytics-page .service-card .badge.rounded-pill {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.services-analytics-page .service-card .fw-bold {
+  font-size: 1.1rem;
+}
+
+.services-analytics-page .service-card .text-primary {
+  color: #002454 !important;
+}
+
+.services-analytics-page .service-card .text-success {
+  color: #28a745 !important;
+}
+
+.services-analytics-page .service-card .text-info {
+  color: #17a2b8 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .services-analytics-title {
+    font-size: 1.5rem;
+  }
+  
+  .breadcrumb {
+    font-size: 0.875rem;
+  }
+  
+  .chart-placeholder.large {
+    height: 250px;
+  }
+  
+  .services-analytics-page .table {
+    font-size: 0.875rem;
+  }
+  
+  .services-analytics-page .nav-pills .nav-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Stack dei filtri su mobile */
+  .services-analytics-page .row.mb-3 .col-md-6 {
+    margin-bottom: 1rem;
+  }
+
+  /* Service cards responsive */
+  .services-analytics-page .service-card .fw-bold {
+    font-size: 1rem;
+  }
+
+  .services-analytics-page .service-card .card-body {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .services-analytics-page .btn-group .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .services-analytics-page .pagination {
+    justify-content: center;
+  }
+  
+  .services-analytics-page .pagination .page-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* Header responsive */
+  .services-analytics-page .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  .services-analytics-page .d-flex.gap-2 {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 1rem;
+  }
+
+  /* Service cards stack better on mobile */
+  .services-analytics-page .service-card {
+    margin-bottom: 1rem;
+  }
+
+  .services-analytics-page .service-card .row.text-center > div {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Dark mode support (opzionale) */
+@media (prefers-color-scheme: dark) {
+  .services-analytics-page .chart-placeholder {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+
+  .services-analytics-page .card {
+    background-color: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+
+  .services-analytics-page .service-card {
+    background-color: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+}
+
+/* Print styles */
+@media print {
+  .services-analytics-page .btn,
+  .services-analytics-page .dropdown,
+  .services-analytics-page .pagination,
+  .services-analytics-page .nav-pills,
+  .services-analytics-page .form-control,
+  .services-analytics-page .form-select {
+    display: none !important;
+  }
+
+  .services-analytics-page .card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .services-analytics-page .service-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .services-analytics-page .chart-placeholder {
+    display: none;
+  }
+}
