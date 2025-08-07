@@ -1797,7 +1797,7 @@ const GestioneAgenti: React.FC = () => {
                               <th>Prodotto/Motivo</th>
                               <th>Trasferta</th>
                               <th>Note</th>
-                              <th width="120">Azioni</th>
+                              <th style={{ width: "120px" }}>Azioni</th>
                             </tr>
                           </thead>
                           <tbody>
