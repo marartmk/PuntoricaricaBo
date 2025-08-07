@@ -22,18 +22,6 @@ interface AgenteDto {
   dataUltimaModifica?: string;
 }
 
-// interface AgenteCreateDto {
-//   codiceAgente: string;
-//   nome: string;
-//   cognome: string;
-//   email?: string;
-//   telefono?: string;
-//   indirizzo?: string;
-//   citta?: string;
-//   provincia?: string;
-//   cap?: string;
-// }
-
 interface TipoAttivita {
   id: number;
   nome: string;
@@ -85,6 +73,7 @@ interface AttivitaAgente {
   valorePotenziale?: number | null;
   followUp?: string;
   statoProduzione: boolean;
+  statoLead: boolean;
   prodottoSelezionato?: string;
   motivoNonProduzione?: string;
   trasferta?: boolean;
@@ -108,6 +97,7 @@ interface AttivitaAgenteCreateDto {
   valorePotenziale: number | null;
   followUp: string;
   statoProduzione: boolean;
+  statoLead: boolean;
   prodottoId?: number; // ID (dal select prodotto)
   motivoNonProduzioneId?: number; // ID (dal select motivo)
   trasferta?: boolean;
@@ -153,6 +143,14 @@ const GestioneAgenti: React.FC = () => {
   const [agenteSelezionato, setAgenteSelezionato] = useState<string>("Tutti");
   const [mostraFormAggiunta, setMostraFormAggiunta] = useState<boolean>(false);
 
+  // ✅ STATI PER PAGINAZIONE
+  const [recordPerPagina, setRecordPerPagina] = useState<number>(10);
+  const [paginaCorrente, setPaginaCorrente] = useState<number>(1);
+
+  // ✅ STATI PER MODIFICA ATTIVITA'
+  const [modalitaModifica, setModalitaModifica] = useState<boolean>(false);
+  const [idAttivitaInModifica, setIdAttivitaInModifica] = useState<string>("");
+
   const defaultNuovaAttivita: AttivitaAgenteCreateDto = {
     settimana: "",
     giorno: "",
@@ -167,12 +165,38 @@ const GestioneAgenti: React.FC = () => {
     valorePotenziale: null,
     followUp: "Da fare",
     statoProduzione: false,
+    statoLead: false,
     trasferta: false,
   };
 
   // ✅ FORM NUOVA ATTIVITÀ
   const [nuovaAttivita, setNuovaAttivita] =
     useState<AttivitaAgenteCreateDto>(defaultNuovaAttivita);
+
+  // ✅ HELPER FUNCTIONS PER TROVARE ID DAI NOMI (per la modifica)
+  const getTipoIdByNome = (nome?: string): number => {
+    if (!nome) return 0;
+    const tipo = tipiAttivita.find((t) => t.nome === nome);
+    return tipo?.id || 0;
+  };
+
+  const getEsitoIdByNome = (nome?: string): number => {
+    if (!nome) return 0;
+    const esito = esiti.find((e) => e.nome === nome);
+    return esito?.id || 0;
+  };
+
+  const getProdottoIdByNome = (nome?: string): number | undefined => {
+    if (!nome) return undefined;
+    const prodotto = prodotti.find((p) => p.nome === nome);
+    return prodotto?.id;
+  };
+
+  const getMotivoIdByNome = (nome?: string): number | undefined => {
+    if (!nome) return undefined;
+    const motivo = motiviNonProduzione.find((m) => m.nome === nome);
+    return motivo?.id;
+  };
 
   // ✅ HELPER PER TOKEN AUTH
   const getAuthHeaders = () => {
@@ -188,6 +212,129 @@ const GestioneAgenti: React.FC = () => {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     };
+  };
+
+  // ✅ FUNZIONI DI GESTIONE AZIONI
+  const visualizzaDettagli = (attivitaId: string) => {
+    navigate(`/dettagli-attivita/${attivitaId}`);
+  };
+
+  const eliminaAttivita = async (attivitaId: string, nomeCliente?: string) => {
+    const conferma = window.confirm(
+      `Sei sicuro di voler eliminare l'attività ${
+        nomeCliente ? `per ${nomeCliente}` : ""
+      }?`
+    );
+
+    if (!conferma) return;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/AttivitaAgenti/${attivitaId}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Errore eliminazione attività: ${response.status}`);
+      }
+
+      // Ricarica la lista delle attività
+      await fetchAttivita();
+      alert("Attività eliminata con successo!");
+    } catch (error) {
+      console.error("🚨 Errore eliminazione attività:", error);
+      alert("Errore nell'eliminazione dell'attività");
+    }
+  };
+
+  const modificaAttivita = (attivitaId: string) => {
+    console.log("🔧 Inizio modifica attività:", attivitaId);
+
+    // ✅ TROVA L'ATTIVITÀ DA MODIFICARE
+    const attivitaDaModificare = attivita.find((a) => a.id === attivitaId);
+
+    if (!attivitaDaModificare) {
+      console.error("❌ Attività non trovata:", attivitaId);
+      alert("Attività non trovata. La lista potrebbe non essere aggiornata.");
+      return;
+    }
+
+    console.log("📋 Dati attività da modificare:", attivitaDaModificare);
+
+    // ✅ CONVERTE I NOMI IN ID USANDO LE HELPER FUNCTIONS
+    const tipoAttivitaId = getTipoIdByNome(attivitaDaModificare.tipoAttivita);
+    const esitoId = getEsitoIdByNome(attivitaDaModificare.esito);
+    const prodottoId = getProdottoIdByNome(
+      attivitaDaModificare.prodottoSelezionato
+    );
+    const motivoId = getMotivoIdByNome(
+      attivitaDaModificare.motivoNonProduzione
+    );
+
+    console.log("🔍 ID conversioni:", {
+      tipoAttivita: `"${attivitaDaModificare.tipoAttivita}" → ${tipoAttivitaId}`,
+      esito: `"${attivitaDaModificare.esito}" → ${esitoId}`,
+      prodotto: `"${attivitaDaModificare.prodottoSelezionato}" → ${prodottoId}`,
+      motivo: `"${attivitaDaModificare.motivoNonProduzione}" → ${motivoId}`,
+    });
+
+    // ✅ POPOLA IL FORM CON I DATI ESISTENTI
+    const datiForm: AttivitaAgenteCreateDto = {
+      settimana: attivitaDaModificare.settimana,
+      giorno: attivitaDaModificare.giorno,
+      data: attivitaDaModificare.data,
+      agenteId: attivitaDaModificare.idAgente,
+      tipoAttivitaId: tipoAttivitaId,
+      cliente: attivitaDaModificare.cliente || "",
+      obiettivo: attivitaDaModificare.obiettivo || "",
+      esitoId: esitoId,
+      durata: attivitaDaModificare.durata || 0,
+      note: attivitaDaModificare.note || "",
+      valorePotenziale: attivitaDaModificare.valorePotenziale ?? null,
+      followUp: attivitaDaModificare.followUp || "Da fare",
+      statoProduzione: attivitaDaModificare.statoProduzione,
+      statoLead: attivitaDaModificare.statoLead,
+      prodottoId: prodottoId,
+      motivoNonProduzioneId: motivoId,
+      trasferta: attivitaDaModificare.trasferta || false,
+    };
+
+    console.log("📝 Dati form popolati:", datiForm);
+
+    // ✅ AGGIORNA TUTTI GLI STATI
+    setNuovaAttivita(datiForm);
+    setModalitaModifica(true);
+    setIdAttivitaInModifica(attivitaId);
+    setMostraFormAggiunta(true);
+
+    // ✅ SCROLL AUTOMATICO AL FORM CON EVIDENZIAZIONE - CORRETTO
+    setTimeout(() => {
+      const formElement = document.getElementById(
+        "form-attivita"
+      ) as HTMLElement;
+      if (formElement) {
+        // Scroll smooth al form
+        formElement.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+
+        // Evidenziazione temporanea
+        formElement.classList.add("border-warning");
+        formElement.style.boxShadow = "0 0 20px rgba(255, 193, 7, 0.5)";
+
+        // Rimuove l'evidenziazione dopo 3 secondi
+        setTimeout(() => {
+          formElement.classList.remove("border-warning");
+          formElement.style.boxShadow = "";
+        }, 3000);
+      }
+    }, 100);
+
+    console.log("✅ Modalità modifica attivata per ID:", attivitaId);
   };
 
   // ✅ FUNZIONI API - AGENTI
@@ -404,14 +551,33 @@ const GestioneAgenti: React.FC = () => {
     }
   };
 
-  // ✅ FUNZIONE PER SALVARE NUOVA ATTIVITÀ
+  // ✅ FUNZIONE PER SALVARE/MODIFICARE ATTIVITÀ
   const salvaAttivita = async () => {
+    // ✅ VALIDAZIONI OBBLIGATORIE
     if (!nuovaAttivita.agenteId || !nuovaAttivita.data) {
-      alert("Compila i campi obbligatori");
+      alert("Compila i campi obbligatori: Agente e Data");
       return;
     }
 
-    // Trovo i valori string dai lookup
+    // ✅ VALIDAZIONI AGGIUNTIVE
+    if (nuovaAttivita.tipoAttivitaId === 0) {
+      alert("Seleziona un tipo di attività");
+      return;
+    }
+
+    if (nuovaAttivita.esitoId === 0) {
+      alert("Seleziona un esito");
+      return;
+    }
+
+    if (!nuovaAttivita.cliente.trim()) {
+      const conferma = window.confirm(
+        "Il campo Cliente è vuoto. Vuoi continuare comunque?"
+      );
+      if (!conferma) return;
+    }
+
+    // ✅ TROVA I VALORI STRING DAI LOOKUP
     const tipo = tipiAttivita.find(
       (t) => t.id === nuovaAttivita.tipoAttivitaId
     );
@@ -421,45 +587,134 @@ const GestioneAgenti: React.FC = () => {
       (m) => m.id === nuovaAttivita.motivoNonProduzioneId
     );
 
-    // Costruisco payload conforme al BE
+    // ✅ VALIDAZIONI BUSINESS LOGIC
+    if (nuovaAttivita.statoProduzione && !nuovaAttivita.prodottoId) {
+      const conferma = window.confirm(
+        "Hai impostato 'Produzione = SÌ' ma non hai selezionato un prodotto. Vuoi continuare?"
+      );
+      if (!conferma) return;
+    }
+
+    if (
+      !nuovaAttivita.statoProduzione &&
+      !nuovaAttivita.motivoNonProduzioneId
+    ) {
+      const conferma = window.confirm(
+        "Hai impostato 'Produzione = NO' ma non hai selezionato un motivo. Vuoi continuare?"
+      );
+      if (!conferma) return;
+    }
+
+    // ✅ COSTRUISCE PAYLOAD CONFORME AL BACKEND
     const payload = {
       idAgente: nuovaAttivita.agenteId,
       settimana: nuovaAttivita.settimana,
       giorno: nuovaAttivita.giorno,
       data: nuovaAttivita.data,
       tipoAttivita: tipo?.nome || "",
-      cliente: nuovaAttivita.cliente,
-      obiettivo: nuovaAttivita.obiettivo,
+      cliente: nuovaAttivita.cliente.trim(),
+      obiettivo: nuovaAttivita.obiettivo.trim(),
       esito: esito?.nome || "",
       durata: nuovaAttivita.durata,
-      note: nuovaAttivita.note,
+      note: nuovaAttivita.note.trim(),
       valorePotenziale: nuovaAttivita.valorePotenziale,
       followUp: nuovaAttivita.followUp,
       statoProduzione: nuovaAttivita.statoProduzione,
+      statoLead: nuovaAttivita.statoLead,
       prodottoSelezionato: prodotto?.nome || undefined,
       motivoNonProduzione: motivo?.nome || undefined,
       trasferta: nuovaAttivita.trasferta,
     };
 
-    console.log("📤 Payload inviato:", payload);
+    // ✅ DETERMINA METODO E URL
+    const method = modalitaModifica ? "PUT" : "POST";
+    const url = modalitaModifica
+      ? `${API_URL}/api/AttivitaAgenti/${idAttivitaInModifica}`
+      : `${API_URL}/api/AttivitaAgenti`;
+
+    // ✅ LOG PER DEBUG
+    console.log(
+      `📤 ${modalitaModifica ? "MODIFICA" : "INSERIMENTO"} Attività:`
+    );
+    console.log("URL:", url);
+    console.log("Method:", method);
+    console.log("Payload:", JSON.stringify(payload, null, 2));
 
     try {
-      const response = await fetch(`${API_URL}/api/AttivitaAgenti`, {
-        method: "POST",
+      // ✅ CHIAMATA API
+      const response = await fetch(url, {
+        method,
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
+      // ✅ GESTIONE ERRORI HTTP
       if (!response.ok) {
-        throw new Error(`Errore salvataggio attività: ${response.status}`);
+        let errorMessage = `Errore ${
+          modalitaModifica ? "modifica" : "salvataggio"
+        } attività: ${response.status}`;
+
+        try {
+          const errorData = await response.text();
+          if (errorData) {
+            errorMessage += ` - ${errorData}`;
+          }
+        } catch (parseError) {
+          console.error("Errore nel parsing dell'errore:", parseError);
+        }
+
+        throw new Error(errorMessage);
       }
 
+      // ✅ SUCCESSO - AGGIORNA DATI E UI
+      console.log(
+        `✅ Attività ${
+          modalitaModifica ? "modificata" : "salvata"
+        } con successo`
+      );
+
+      // Ricarica la lista delle attività
       await fetchAttivita();
+
+      // Reset form e stati
+      setNuovaAttivita(defaultNuovaAttivita);
       setMostraFormAggiunta(false);
-      alert("Attività salvata con successo!");
+      setModalitaModifica(false);
+      setIdAttivitaInModifica("");
+
+      // Messaggio di successo
+      alert(
+        `Attività ${modalitaModifica ? "modificata" : "salvata"} con successo!`
+      );
     } catch (error) {
-      console.error("🚨 Errore salvataggio attività:", error);
-      alert("Errore nel salvataggio dell'attività");
+      // ✅ GESTIONE ERRORI
+      console.error(
+        `🚨 Errore ${modalitaModifica ? "modifica" : "salvataggio"} attività:`,
+        error
+      );
+
+      let userMessage = `Errore nel ${
+        modalitaModifica ? "modificare" : "salvare"
+      } l'attività.`;
+
+      if (error instanceof Error) {
+        // Errori specifici più user-friendly
+        if (error.message.includes("401")) {
+          userMessage = "Sessione scaduta. Effettua nuovamente il login.";
+        } else if (error.message.includes("403")) {
+          userMessage = "Non hai i permessi per questa operazione.";
+        } else if (error.message.includes("404")) {
+          userMessage = modalitaModifica
+            ? "L'attività da modificare non è stata trovata."
+            : "Endpoint non trovato.";
+        } else if (error.message.includes("500")) {
+          userMessage = "Errore interno del server. Riprova più tardi.";
+        } else {
+          userMessage += `\n\nDettagli: ${error.message}`;
+        }
+      }
+
+      alert(userMessage);
     }
   };
 
@@ -501,6 +756,11 @@ const GestioneAgenti: React.FC = () => {
       fetchAttivita();
     }
   }, [tipiAttivita, esiti]);
+
+  // ✅ RESET PAGINA QUANDO CAMBIANO I FILTRI
+  useEffect(() => {
+    setPaginaCorrente(1);
+  }, [settimanaSelezionata, giornoSelezionato, agenteSelezionato]);
 
   // ✅ GESTIONE TOGGLE MENU
   const toggleMenu = () => {
@@ -555,6 +815,13 @@ const GestioneAgenti: React.FC = () => {
     });
   };
 
+  const handleStatoLeadChange = (isLead: boolean) => {
+    setNuovaAttivita({
+      ...nuovaAttivita,
+      statoLead: isLead,
+    });
+  };
+
   const handleTipoAttivitaChange = (tipoId: number) => {
     const tipo = tipiAttivita.find((t) => t.id === tipoId);
     const isFuoriSede = tipo?.nome.toLowerCase().includes("fuori") || false;
@@ -572,6 +839,23 @@ const GestioneAgenti: React.FC = () => {
       // Reset trasferta se non è "Fuori sede"
       trasferta: isFuoriSede ? nuovaAttivita.trasferta || false : false,
     });
+  };
+
+  // ✅ FUNZIONI DI PAGINAZIONE
+  const vaiAllaPagina = (pagina: number) => {
+    setPaginaCorrente(pagina);
+  };
+
+  const vaiAllaPaginaPrecedente = () => {
+    if (paginaCorrente > 1) {
+      setPaginaCorrente(paginaCorrente - 1);
+    }
+  };
+
+  const vaiAllaPaginaSuccessiva = () => {
+    if (paginaCorrente < infoPaginazione.totalePagine) {
+      setPaginaCorrente(paginaCorrente + 1);
+    }
   };
 
   // ✅ DATI FILTRATI E STATISTICHE
@@ -605,6 +889,33 @@ const GestioneAgenti: React.FC = () => {
       return matchSettimana && matchGiorno && matchAgente;
     });
   }, [attivita, settimanaSelezionata, giornoSelezionato, agenteSelezionato]);
+
+  // ✅ DATI PAGINATI
+  const datiPaginati = useMemo(() => {
+    const startIndex = (paginaCorrente - 1) * recordPerPagina;
+    const endIndex = startIndex + recordPerPagina;
+    return datiFiltrati.slice(startIndex, endIndex);
+  }, [datiFiltrati, paginaCorrente, recordPerPagina]);
+
+  // ✅ INFORMAZIONI PAGINAZIONE
+  const infoPaginazione = useMemo(() => {
+    const totalePagine = Math.ceil(datiFiltrati.length / recordPerPagina);
+    const startRecord =
+      datiFiltrati.length === 0
+        ? 0
+        : (paginaCorrente - 1) * recordPerPagina + 1;
+    const endRecord = Math.min(
+      paginaCorrente * recordPerPagina,
+      datiFiltrati.length
+    );
+
+    return {
+      totalePagine,
+      startRecord,
+      endRecord,
+      totaleRecord: datiFiltrati.length,
+    };
+  }, [datiFiltrati.length, paginaCorrente, recordPerPagina]);
 
   const statistiche = useMemo((): StatisticheAgenti => {
     const totaleDurata = datiFiltrati.reduce<number>(
@@ -743,8 +1054,10 @@ const GestioneAgenti: React.FC = () => {
               <button
                 className="btn btn-outline-primary-dark"
                 onClick={() => {
-                  setNuovaAttivita(defaultNuovaAttivita); // ✅ reset valori
-                  setMostraFormAggiunta(true); // ✅ apri form
+                  setNuovaAttivita(defaultNuovaAttivita);
+                  setModalitaModifica(false);
+                  setIdAttivitaInModifica("");
+                  setMostraFormAggiunta(true);
                 }}
                 disabled={tipiAttivita.length === 0}
                 title={
@@ -919,14 +1232,24 @@ const GestioneAgenti: React.FC = () => {
             </div>
           </div>
 
-          {/* Form Aggiunta Attività */}
+          {/* Form Aggiunta/Modifica Attività */}
           {mostraFormAggiunta && (
             <div className="row mb-4">
               <div className="col-12">
-                <div className="card">
+                <div className="card" id="form-attivita">
+                  {" "}
+                  {/* 👈 ID AGGIUNTO */}
                   <div className="custom-card-header">
-                    <span>Nuova Attività</span>
-                    <i className="fa-solid fa-plus"></i>
+                    <span>
+                      {modalitaModifica
+                        ? "Modifica Attività"
+                        : "Nuova Attività"}
+                    </span>
+                    <i
+                      className={`fa-solid ${
+                        modalitaModifica ? "fa-edit" : "fa-plus"
+                      }`}
+                    ></i>
                   </div>
                   <div className="card-body">
                     <div className="row g-3">
@@ -1045,7 +1368,7 @@ const GestioneAgenti: React.FC = () => {
                         />
                       </div>
 
-                      {/* Trasferta - SEMPRE VISIBILE ma condizionale */}
+                      {/* Trasferta */}
                       <div className="col-md-4">
                         <label className="form-label">
                           Trasferta Richiesta
@@ -1105,18 +1428,12 @@ const GestioneAgenti: React.FC = () => {
                           <small className="text-muted">
                             <i className="fa-solid fa-info-circle me-1"></i>
                             Trasferta disponibile solo per attività "Fuori sede"
-                            {tipiAttivita.length > 0 && (
-                              <span className="d-block mt-1">
-                                Tipi disponibili:{" "}
-                                {tipiAttivita.map((t) => t.nome).join(", ")}
-                              </span>
-                            )}
                           </small>
                         ) : null}
                       </div>
 
                       {/* Stato Produzione */}
-                      <div className="col-md-6">
+                      <div className="col-md-3">
                         <label className="form-label">Stato Produzione</label>
                         <div className="d-flex align-items-center gap-3 mt-2">
                           <div className="form-check form-switch">
@@ -1144,6 +1461,42 @@ const GestioneAgenti: React.FC = () => {
                                 <span className="text-warning">
                                   <i className="fa-solid fa-times me-1"></i>
                                   PRODUZIONE - NO
+                                </span>
+                              )}
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stato Lead */}
+                      <div className="col-md-3">
+                        <label className="form-label">Lead</label>
+                        <div className="d-flex align-items-center gap-3 mt-2">
+                          <div className="form-check form-switch">
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              role="switch"
+                              id="statoLead"
+                              checked={nuovaAttivita.statoLead}
+                              onChange={(e) =>
+                                handleStatoLeadChange(e.target.checked)
+                              }
+                              style={{ transform: "scale(1.2)" }}
+                            />
+                            <label
+                              className="form-check-label fw-bold ms-2"
+                              htmlFor="statoLead"
+                            >
+                              {nuovaAttivita.statoLead ? (
+                                <span className="text-success">
+                                  <i className="fa-solid fa-check me-1"></i>
+                                  SEGNALAZIONE - SÌ
+                                </span>
+                              ) : (
+                                <span className="text-warning">
+                                  <i className="fa-solid fa-times me-1"></i>
+                                  SEGNALAZIONE - NO
                                 </span>
                               )}
                             </label>
@@ -1328,22 +1681,81 @@ const GestioneAgenti: React.FC = () => {
                         className="btn btn-success me-2"
                         onClick={salvaAttivita}
                       >
-                        <i className="fa-solid fa-save me-1"></i>
-                        Salva Attività
+                        <i
+                          className={`fa-solid ${
+                            modalitaModifica ? "fa-save" : "fa-plus"
+                          } me-1`}
+                        ></i>
+                        {modalitaModifica
+                          ? "Salva Modifiche"
+                          : "Salva Attività"}
                       </button>
                       <button
                         className="btn btn-secondary"
-                        onClick={() => setMostraFormAggiunta(false)}
+                        onClick={() => {
+                          setMostraFormAggiunta(false);
+                          setModalitaModifica(false);
+                          setIdAttivitaInModifica("");
+                          setNuovaAttivita(defaultNuovaAttivita);
+                        }}
                       >
                         <i className="fa-solid fa-times me-1"></i>
                         Annulla
                       </button>
+                      {modalitaModifica && (
+                        <button
+                          className="btn btn-outline-info ms-2"
+                          onClick={() => {
+                            setModalitaModifica(false);
+                            setIdAttivitaInModifica("");
+                            setNuovaAttivita(defaultNuovaAttivita);
+                          }}
+                        >
+                          <i className="fa-solid fa-plus me-1"></i>
+                          Nuova Attività
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           )}
+
+          {/* Controlli Paginazione - SOPRA LA TABELLA */}
+          <div className="row mb-3">
+            <div className="col-12">
+              <div className="d-flex justify-content-between align-items-center">
+                <div className="d-flex align-items-center gap-3">
+                  <label className="form-label mb-0">Mostra:</label>
+                  <select
+                    className="form-select"
+                    style={{ width: "auto" }}
+                    value={recordPerPagina}
+                    onChange={(e) => {
+                      setRecordPerPagina(parseInt(e.target.value));
+                      setPaginaCorrente(1);
+                    }}
+                  >
+                    <option value={5}>5 per pagina</option>
+                    <option value={10}>10 per pagina</option>
+                    <option value={25}>25 per pagina</option>
+                    <option value={50}>50 per pagina</option>
+                    <option value={100}>100 per pagina</option>
+                    <option value={datiFiltrati.length || 1}>
+                      Tutti ({datiFiltrati.length})
+                    </option>
+                  </select>
+                </div>
+
+                <div className="text-muted">
+                  {infoPaginazione.totaleRecord > 0
+                    ? `Mostrando ${infoPaginazione.startRecord}-${infoPaginazione.endRecord} di ${infoPaginazione.totaleRecord} risultati`
+                    : "Nessun risultato"}
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Tabella Attività */}
           <div className="row mb-4">
@@ -1364,116 +1776,289 @@ const GestioneAgenti: React.FC = () => {
                 </div>
                 <div className="card-body">
                   {datiFiltrati.length > 0 ? (
-                    <div className="table-responsive">
-                      <table className="table table-hover">
-                        <thead>
-                          <tr>
-                            <th>Settimana</th>
-                            <th>Giorno</th>
-                            <th>Data</th>
-                            <th>Agente</th>
-                            <th>Tipo</th>
-                            <th>Cliente</th>
-                            <th>Obiettivo</th>
-                            <th>Esito</th>
-                            <th>Durata</th>
-                            <th>Valore €</th>
-                            <th>Follow-up</th>
-                            <th>Produzione</th>
-                            <th>Prodotto/Motivo</th>
-                            <th>Trasferta</th>
-                            <th>Note</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {datiFiltrati.map((item, index) => (
-                            <tr key={item.id || index}>
-                              <td>{item.settimana}</td>
-                              <td>{item.giorno}</td>
-                              <td>{item.data}</td>
-                              <td className="fw-bold">
-                                {item.nomeAgente} {item.cognomeAgente}
-                              </td>
-                              <td>
-                                <span
-                                  className={getTipoAttivitaBadgeClass(
-                                    item.tipoAttivita
-                                  )}
-                                >
-                                  {item.tipoAttivita}
-                                </span>
-                              </td>
-                              <td>{item.cliente}</td>
-                              <td>{item.obiettivo}</td>
-                              <td>{item.esito}</td>
-                              <td>{item.durata}h</td>
-                              <td>
-                                {item.valorePotenziale
-                                  ? `€${item.valorePotenziale.toLocaleString()}`
-                                  : "-"}
-                              </td>
-                              <td>
-                                <span
-                                  className={getBadgeClass(item.followUp ?? "")}
-                                >
-                                  {item.followUp ?? "-"}
-                                </span>
-                              </td>
-                              <td>
-                                <span
-                                  className={getStatoProduzioneBadgeClass(
-                                    item.statoProduzione
-                                  )}
-                                >
-                                  {item.statoProduzione ? "SÌ" : "NO"}
-                                </span>
-                              </td>
-                              <td>
-                                {item.statoProduzione ? (
-                                  item.prodottoSelezionato ? (
-                                    <span
-                                      className={getProdottoBadgeClass(
-                                        item.prodottoSelezionato
-                                      )}
-                                    >
-                                      {item.prodottoSelezionato}
+                    <>
+                      <div className="table-responsive">
+                        <table className="table table-hover">
+                          <thead>
+                            <tr>
+                              <th>Settimana</th>
+                              <th>Giorno</th>
+                              <th>Data</th>
+                              <th>Agente</th>
+                              <th>Tipo</th>
+                              <th>Cliente</th>
+                              <th>Obiettivo</th>
+                              <th>Esito</th>
+                              <th>Durata</th>
+                              <th>Valore €</th>
+                              <th>Follow-up</th>
+                              <th>Produzione</th>
+                              <th>Segnalazione</th>
+                              <th>Prodotto/Motivo</th>
+                              <th>Trasferta</th>
+                              <th>Note</th>
+                              <th width="120">Azioni</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {datiPaginati.map((item, index) => (
+                              <tr key={item.id || index}>
+                                <td>{item.settimana}</td>
+                                <td>{item.giorno}</td>
+                                <td>{item.data}</td>
+                                <td className="fw-bold">
+                                  {item.nomeAgente} {item.cognomeAgente}
+                                </td>
+                                <td>
+                                  <span
+                                    className={getTipoAttivitaBadgeClass(
+                                      item.tipoAttivita
+                                    )}
+                                  >
+                                    {item.tipoAttivita}
+                                  </span>
+                                </td>
+                                <td>{item.cliente}</td>
+                                <td>{item.obiettivo}</td>
+                                <td>{item.esito}</td>
+                                <td>{item.durata}h</td>
+                                <td>
+                                  {item.valorePotenziale
+                                    ? `€${item.valorePotenziale.toLocaleString()}`
+                                    : "-"}
+                                </td>
+                                <td>
+                                  <span
+                                    className={getBadgeClass(
+                                      item.followUp ?? ""
+                                    )}
+                                  >
+                                    {item.followUp ?? "-"}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span
+                                    className={getStatoProduzioneBadgeClass(
+                                      item.statoProduzione
+                                    )}
+                                  >
+                                    {item.statoProduzione ? "SÌ" : "NO"}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span
+                                    className={getStatoProduzioneBadgeClass(
+                                      item.statoLead
+                                    )}
+                                  >
+                                    {item.statoLead ? "SÌ" : "NO"}
+                                  </span>
+                                </td>
+                                <td>
+                                  {item.statoProduzione ? (
+                                    item.prodottoSelezionato ? (
+                                      <span
+                                        className={getProdottoBadgeClass(
+                                          item.prodottoSelezionato
+                                        )}
+                                      >
+                                        {item.prodottoSelezionato}
+                                      </span>
+                                    ) : (
+                                      "-"
+                                    )
+                                  ) : item.motivoNonProduzione ? (
+                                    <span className="badge bg-secondary">
+                                      {item.motivoNonProduzione}
                                     </span>
                                   ) : (
                                     "-"
-                                  )
-                                ) : item.motivoNonProduzione ? (
-                                  <span className="badge bg-secondary">
-                                    {item.motivoNonProduzione}
-                                  </span>
-                                ) : (
-                                  "-"
-                                )}
-                              </td>
-                              <td>
-                                {item.trasferta !== undefined ? (
-                                  item.trasferta ? (
-                                    <span className="badge bg-info">
-                                      <i className="fa-solid fa-plane me-1"></i>
-                                      SÌ
-                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  {item.trasferta !== undefined ? (
+                                    item.trasferta ? (
+                                      <span className="badge bg-info">
+                                        <i className="fa-solid fa-plane me-1"></i>
+                                        SÌ
+                                      </span>
+                                    ) : (
+                                      <span className="badge bg-secondary">
+                                        <i className="fa-solid fa-building me-1"></i>
+                                        NO
+                                      </span>
+                                    )
                                   ) : (
-                                    <span className="badge bg-secondary">
-                                      <i className="fa-solid fa-building me-1"></i>
-                                      NO
+                                    <span className="badge bg-light text-dark">
+                                      N/A
                                     </span>
-                                  )
-                                ) : (
-                                  <span className="badge bg-light text-dark">
-                                    N/A
-                                  </span>
-                                )}
-                              </td>
-                              <td>{item.note}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                                  )}
+                                </td>
+                                <td>{item.note}</td>
+                                <td>
+                                  <div className="d-flex gap-1">
+                                    <button
+                                      className="btn btn-outline-primary btn-sm"
+                                      onClick={() =>
+                                        visualizzaDettagli(item.id)
+                                      }
+                                      title="Visualizza dettagli"
+                                    >
+                                      <i className="fa-solid fa-eye"></i>
+                                    </button>
+                                    <button
+                                      className="btn btn-outline-secondary btn-sm"
+                                      onClick={() => modificaAttivita(item.id)}
+                                      title="Modifica attività"
+                                    >
+                                      <i className="fa-solid fa-edit"></i>
+                                    </button>
+                                    <button
+                                      className="btn btn-outline-danger btn-sm"
+                                      onClick={() =>
+                                        eliminaAttivita(item.id, item.cliente)
+                                      }
+                                      title="Elimina attività"
+                                    >
+                                      <i className="fa-solid fa-trash"></i>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Controlli Paginazione - SOTTO LA TABELLA */}
+                      {infoPaginazione.totalePagine > 1 && (
+                        <div className="d-flex justify-content-between align-items-center mt-3">
+                          <div className="text-muted">
+                            Pagina {paginaCorrente} di{" "}
+                            {infoPaginazione.totalePagine}
+                          </div>
+
+                          <nav aria-label="Navigazione pagine">
+                            <ul className="pagination mb-0">
+                              <li
+                                className={`page-item ${
+                                  paginaCorrente === 1 ? "disabled" : ""
+                                }`}
+                              >
+                                <button
+                                  className="page-link"
+                                  onClick={() => vaiAllaPagina(1)}
+                                  disabled={paginaCorrente === 1}
+                                >
+                                  <i className="fa-solid fa-angles-left"></i>
+                                </button>
+                              </li>
+
+                              <li
+                                className={`page-item ${
+                                  paginaCorrente === 1 ? "disabled" : ""
+                                }`}
+                              >
+                                <button
+                                  className="page-link"
+                                  onClick={vaiAllaPaginaPrecedente}
+                                  disabled={paginaCorrente === 1}
+                                >
+                                  <i className="fa-solid fa-angle-left"></i>
+                                </button>
+                              </li>
+
+                              {Array.from(
+                                {
+                                  length: Math.min(
+                                    5,
+                                    infoPaginazione.totalePagine
+                                  ),
+                                },
+                                (_, i) => {
+                                  let pageNumber;
+                                  if (infoPaginazione.totalePagine <= 5) {
+                                    pageNumber = i + 1;
+                                  } else if (paginaCorrente <= 3) {
+                                    pageNumber = i + 1;
+                                  } else if (
+                                    paginaCorrente >=
+                                    infoPaginazione.totalePagine - 2
+                                  ) {
+                                    pageNumber =
+                                      infoPaginazione.totalePagine - 4 + i;
+                                  } else {
+                                    pageNumber = paginaCorrente - 2 + i;
+                                  }
+
+                                  return (
+                                    <li
+                                      key={pageNumber}
+                                      className={`page-item ${
+                                        paginaCorrente === pageNumber
+                                          ? "active"
+                                          : ""
+                                      }`}
+                                    >
+                                      <button
+                                        className="page-link"
+                                        onClick={() =>
+                                          vaiAllaPagina(pageNumber)
+                                        }
+                                      >
+                                        {pageNumber}
+                                      </button>
+                                    </li>
+                                  );
+                                }
+                              )}
+
+                              <li
+                                className={`page-item ${
+                                  paginaCorrente ===
+                                  infoPaginazione.totalePagine
+                                    ? "disabled"
+                                    : ""
+                                }`}
+                              >
+                                <button
+                                  className="page-link"
+                                  onClick={vaiAllaPaginaSuccessiva}
+                                  disabled={
+                                    paginaCorrente ===
+                                    infoPaginazione.totalePagine
+                                  }
+                                >
+                                  <i className="fa-solid fa-angle-right"></i>
+                                </button>
+                              </li>
+
+                              <li
+                                className={`page-item ${
+                                  paginaCorrente ===
+                                  infoPaginazione.totalePagine
+                                    ? "disabled"
+                                    : ""
+                                }`}
+                              >
+                                <button
+                                  className="page-link"
+                                  onClick={() =>
+                                    vaiAllaPagina(infoPaginazione.totalePagine)
+                                  }
+                                  disabled={
+                                    paginaCorrente ===
+                                    infoPaginazione.totalePagine
+                                  }
+                                >
+                                  <i className="fa-solid fa-angles-right"></i>
+                                </button>
+                              </li>
+                            </ul>
+                          </nav>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="text-center py-4">
                       <i className="fa-solid fa-search fa-3x text-muted mb-3"></i>
