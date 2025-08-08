@@ -385,4 +385,279 @@
   }
 }
 
-/* ✅ RIMOSSO: Animazioni logo eliminate */
+/* 2FA Container */
+.twofaContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.twofaHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.3s ease;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.backBtn:hover:not(:disabled) {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.twofaTitle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.twofaTitle h2 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.shieldIcon {
+  color: #3b82f6;
+}
+
+/* Recommended Apps Section */
+.recommendedApps {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.recommendedApps p {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  letter-spacing: 0.05em;
+}
+
+.authApps {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.authApp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.appIcon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.appIcon.microsoft {
+  background: linear-gradient(45deg, #00a1f1, #0078d4);
+}
+
+.appIcon.google {
+  background: linear-gradient(45deg, #4285f4, #34a853);
+}
+
+/* Setup Content */
+.setupContent, 
+.verifyContent {
+  text-align: center;
+}
+
+.setupContent p, 
+.verifyContent p {
+  color: #374151;
+  margin-bottom: 24px;
+}
+
+/* QR Code Container */
+.qrCodeContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.qrCode {
+  width: 200px;
+  height: 200px;
+  border-radius: 8px;
+}
+
+/* Backup Key Section */
+.backupKeySection {
+  margin-bottom: 32px;
+  text-align: left;
+}
+
+.backupKeySection p {
+  margin-bottom: 12px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.backupKeyContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.backupKey {
+  flex: 1;
+  background: none;
+  border: none;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.875rem;
+  color: #374151;
+  word-break: break-all;
+}
+
+.backupKeySection small {
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.copyBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.3s ease;
+  padding: 4px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copyBtn:hover:not(:disabled) {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* Verify Form */
+.verifyForm {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 2FA Input Styling */
+.twofaInput {
+  text-align: center !important;
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.2em !important;
+  padding: 20px !important;
+}
+
+/* Setup Success */
+.setupSuccess {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.successIcon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  font-size: 2rem;
+  color: white;
+  animation: successPulse 2s ease-in-out;
+}
+
+@keyframes successPulse {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.setupSuccess h3 {
+  color: #059669;
+  margin-bottom: 12px;
+}
+
+.setupSuccess p {
+  color: #6b7280;
+}
+
+/* ═══════════ Responsive Updates per 2FA ═══════════ */
+@media (max-width: 768px) {
+  .authApps {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .twofaTitle h2 {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .qrCode {
+    width: 160px;
+    height: 160px;
+  }
+  
+  .twofaHeader {
+    gap: 12px;
+  }
+  
+  .twofaTitle h2 {
+    font-size: 1.1rem;
+  }
+  
+  .setupContent p, 
+  .verifyContent p {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .twofaContainer {
+    gap: 20px;
+  }
+  
+  .backupKeyContainer {
+    padding: 12px;
+  }
+  
+  .backupKey {
+    font-size: 0.8rem;
+  }
+}
