@@ -165,7 +165,7 @@ const EWalletAnalytics: React.FC = () => {
 
   // Filtri per la ricerca dealer
   const [dealerSearchTerm, setDealerSearchTerm] = useState<string>("");
-  const [selectedProvincia, setSelectedProvincia] = useState<string>("");
+  const [_selectedProvincia, _setSelectedProvincia] = useState<string>("");
 
   // Modal dealer dettagli
   const [selectedDealerForModal, setSelectedDealerForModal] = useState<DealerSummary | null>(null);
@@ -1546,7 +1546,7 @@ const EWalletAnalytics: React.FC = () => {
                               </tr>
                             </thead>
                             <tbody>
-                              {getPaginatedDealers().map((dealer, index) => (
+                              {getPaginatedDealers().map((dealer, _index) => (
                                 <tr 
                                   key={dealer.dealerCodice}
                                   onClick={() => openDealerModal(dealer)}

@@ -9,9 +9,9 @@ export class EWalletTransactions {
    * - PRELIEVI se importo < 0
    */
   static CategorizeTransactions(
-    schProvacy1: string | null,
-    schTipoOperazione: string | null,
-    schDlrRagSoc: string | null,
+    _schProvacy1: string | null,
+    _schTipoOperazione: string | null,
+    _schDlrRagSoc: string | null,
     schDescrizioneCS: string | null,
     schImportoRic: number | null
   ): TipologiaEWallet {
