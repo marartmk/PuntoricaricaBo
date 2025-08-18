@@ -6,7 +6,7 @@ import Sidebar from "../../components/sidebar";
 import Topbar from "../../components/topbar";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-// ✅ CORRETTO: Interfacce aggiornate per matchare il payload reale dell'API
+// Interfacce per le statistiche E-Wallet
 interface EWalletStatistic {
   tipologiaServizio: string; // "PRELIEVI" | "DEPOSITI" | "ALTRO"
   nomeServizio: string;
@@ -49,6 +49,71 @@ interface EWalletStatsResponse {
   errors: unknown[];
 }
 
+// Interfacce per il nuovo endpoint E-Wallet
+interface EWalletDealerResponse {
+  success: boolean;
+  message: string;
+  data: {
+    dealers: EWalletDealer[];
+    statistiche: {
+      totaleDealers: number;
+      totaleOperazioni: number;
+      importoComplessivo: number;
+      importoMedio: number;
+      periodoAnalizzato: {
+        dataInizio?: string;
+        dataFine?: string;
+      };
+      tipoOperazione?: string;
+    };
+    paginazione: {
+      page: number;
+      pageSize: number;
+      totalPages: number;
+      totalCount: number;
+    };
+    filtriApplicati: {
+      dataInizio?: string;
+      dataFine?: string;
+      tipoOperazione?: string;
+      dealerCodice?: string;
+    };
+  };
+}
+
+interface EWalletDealer {
+  dealerCodice: string;
+  dealerRagSoc: string;
+  numeroOperazioni: number;
+  importoTotale: number;
+  importoMedio: number;
+  primaOperazione: string;
+  ultimaOperazione: string;
+  province: string[];
+  operazioni: EWalletOperazione[];
+}
+
+interface EWalletOperazione {
+  schId: string;
+  schDataOperazione: string;
+  schImportoRic: number;
+  schProvincia: string;
+  schStato: string;
+}
+
+// Interfaccia per dealer raggruppati (compatibile con nuovo endpoint)
+interface DealerSummary {
+  dealerCodice: string;
+  dealerRagSoc: string;
+  numeroOperazioni: number;
+  importoTotale: number;
+  importoMedio: number;
+  primaOperazione: string;
+  ultimaOperazione: string;
+  province: string[];
+  operazioni: EWalletOperazione[];
+}
+
 const EWalletAnalytics: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -88,19 +153,23 @@ const EWalletAnalytics: React.FC = () => {
   // Operazione selezionata
   const [selectedOperation, setSelectedOperation] = useState<string>("");
 
-  // Filtri per la lista dealer
+  // Filtro per tipo operazione
+  const [selectedOperationType, setSelectedOperationType] = useState<string>("");
+
+  // Stati per la gestione dealer
+  const [dealersList, setDealersList] = useState<DealerSummary[]>([]);
+  const [isLoadingDealers, setIsLoadingDealers] = useState<boolean>(false);
+  const [errorDealers, setErrorDealers] = useState<string>("");
+  const [dealersCurrentPage, setDealersCurrentPage] = useState<number>(1);
+  const [dealersItemsPerPage] = useState<number>(20);
+
+  // Filtri per la ricerca dealer
+  const [dealerSearchTerm, setDealerSearchTerm] = useState<string>("");
   const [selectedProvincia, setSelectedProvincia] = useState<string>("");
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [selectedOperationType, setSelectedOperationType] =
-    useState<string>("");
 
-  // Ordinamento
-  const [_sortColumn, _setSortColumn] = useState<string>("");
-  const [_sortDirection, _setSortDirection] = useState<"asc" | "desc">("asc");
-
-  // Paginazione
-  const [_currentPage, _setCurrentPage] = useState<number>(1);
-  const [_itemsPerPage] = useState<number>(20);
+  // Modal dealer dettagli
+  const [selectedDealerForModal, setSelectedDealerForModal] = useState<DealerSummary | null>(null);
+  const [showDealerModal, setShowDealerModal] = useState<boolean>(false);
 
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -142,7 +211,7 @@ const EWalletAnalytics: React.FC = () => {
     // Per viewMode === 'year' non passiamo né mese né date
 
     console.log(
-      "🔄 useEffect - Anno:",
+      "📄 useEffect - Anno:",
       selectedYear,
       "Mese:",
       monthToFetch,
@@ -162,6 +231,125 @@ const EWalletAnalytics: React.FC = () => {
     selectedOperationType,
   ]);
 
+  // Funzione per recuperare i dealer per operazione selezionata (NUOVO ENDPOINT)
+  const fetchDealersForOperation = async (operationType: "DEPOSITI" | "PRELIEVI") => {
+    setIsLoadingDealers(true);
+    setErrorDealers("");
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Token di autenticazione non trovato");
+      }
+
+      // Costruisci i parametri della data in base alla modalità di visualizzazione
+      let dataInizio = "";
+      let dataFine = "";
+
+      if (viewMode === "day") {
+        const year = selectedYear;
+        const month = String(selectedMonth || currentMonth).padStart(2, "0");
+        const day = String(selectedDay || currentDay).padStart(2, "0");
+        const dateString = `${year}-${month}-${day}`;
+        dataInizio = dateString;
+        dataFine = dateString;
+      } else if (viewMode === "month") {
+        const year = selectedYear;
+        const month = selectedMonth || currentMonth;
+        dataInizio = `${year}-${String(month).padStart(2, "0")}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        dataFine = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      } else if (viewMode === "year") {
+        dataInizio = `${selectedYear}-01-01`;
+        dataFine = `${selectedYear}-12-31`;
+      }
+
+      // 🎯 NUOVO ENDPOINT nel ReportsController - Più coerente e completo
+      let url = `${API_URL}/api/Reports/ewallet-analytics?page=1&pageSize=1000&tipoOperazione=${operationType}`;
+      
+      // Usa la stessa logica di filtri del ReportsController esistente
+      if (viewMode === "day" && dataInizio && dataFine) {
+        url += `&dataInizio=${dataInizio}&dataFine=${dataFine}`;
+      } else if (viewMode === "month" && selectedMonth) {
+        url += `&anno=${selectedYear}&mese=${selectedMonth}`;
+      } else if (viewMode === "year") {
+        url += `&anno=${selectedYear}`;
+      }
+
+      console.log("🔍 Chiamata NUOVO API E-Wallet Analytics:", url);
+      console.log("📅 Parametri - Tipo:", operationType, "Inizio:", dataInizio, "Fine:", dataFine);
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("isAuthenticated");
+          throw new Error("Sessione scaduta. Effettua nuovamente il login.");
+        }
+        throw new Error(`Errore nel caricamento: ${response.status}`);
+      }
+
+      const data: EWalletDealerResponse = await response.json();
+      console.log("📋 Risposta nuovo endpoint E-Wallet:", data);
+
+      if (data.success && data.data) {
+        console.log("✅ STATISTICHE DAL NUOVO ENDPOINT:");
+        console.log(`📊 Dealer trovati: ${data.data.statistiche.totaleDealers}`);
+        console.log(`📊 Operazioni totali: ${data.data.statistiche.totaleOperazioni}`);
+        console.log(`💰 Importo complessivo: €${data.data.statistiche.importoComplessivo.toFixed(2)}`);
+        console.log(`💰 Importo medio: €${data.data.statistiche.importoMedio.toFixed(2)}`);
+
+        // Converte i dealer dal nuovo formato al formato utilizzato dal frontend
+        const dealerList: DealerSummary[] = data.data.dealers.map(dealer => ({
+          dealerCodice: dealer.dealerCodice,
+          dealerRagSoc: dealer.dealerRagSoc,
+          numeroOperazioni: dealer.numeroOperazioni,
+          importoTotale: dealer.importoTotale,
+          importoMedio: dealer.importoMedio,
+          primaOperazione: dealer.primaOperazione,
+          ultimaOperazione: dealer.ultimaOperazione,
+          province: dealer.province || [],
+          operazioni: dealer.operazioni || []
+        }));
+
+        setDealersList(dealerList);
+        setDealersCurrentPage(1);
+        
+        console.log(`✅ ${dealerList.length} dealer caricati correttamente per ${operationType}`);
+        console.log("🎯 CONFRONTO IMPORTI:");
+        console.log(`📊 Backend dice: €${data.data.statistiche.importoComplessivo.toFixed(2)}`);
+        console.log(`📊 Frontend calcola: €${dealerList.reduce((sum, d) => sum + Math.abs(d.importoTotale), 0).toFixed(2)}`);
+        
+      } else {
+        throw new Error(data.message || "Errore nel recupero dei dati dealer dal nuovo endpoint");
+      }
+    } catch (error) {
+      console.error("🚨 Errore nuovo endpoint E-Wallet:", error);
+      if (error instanceof Error) {
+        setErrorDealers(error.message);
+      } else {
+        setErrorDealers("Errore imprevisto");
+      }
+    } finally {
+      setIsLoadingDealers(false);
+    }
+  };
+
+  useEffect(() => {
+    console.log("💰 ewalletTotals aggiornato:", ewalletTotals);
+  }, [ewalletTotals]);
+
+  useEffect(() => {
+    console.log("⏳ isLoadingEwallet:", isLoadingEwallet);
+  }, [isLoadingEwallet]);
+
   // Debug: Log degli stati quando cambiano
   useEffect(() => {
     console.log("💳 ewalletStats aggiornato:", ewalletStats);
@@ -179,7 +367,23 @@ const EWalletAnalytics: React.FC = () => {
     console.log("❌ errorEwallet:", errorEwallet);
   }, [errorEwallet]);
 
-  // ✅ CORRETTO: Funzione per filtrare solo PRELIEVI e DEPOSITI
+  // Debug: Log quando selectedOperation cambia e carica i dealer
+  useEffect(() => {
+    console.log("🎯 selectedOperation cambiato:", selectedOperation);
+    
+    if (selectedOperation) {
+      // Estrai il tipo di operazione dalla chiave
+      const operationType = selectedOperation.includes("PRELIEVI") ? "PRELIEVI" : "DEPOSITI";
+      console.log("🔄 Caricamento dealer per:", operationType);
+      fetchDealersForOperation(operationType as "DEPOSITI" | "PRELIEVI");
+    } else {
+      // Reset dei dealer quando non c'è selezione
+      setDealersList([]);
+      setErrorDealers("");
+    }
+  }, [selectedOperation, viewMode, selectedYear, selectedMonth, selectedDay]);
+
+  // Funzione per filtrare solo PRELIEVI e DEPOSITI
   const filterEWalletData = (data: EWalletStatistic[]): EWalletStatistic[] => {
     return data.filter(
       (item) =>
@@ -214,7 +418,6 @@ const EWalletAnalytics: React.FC = () => {
       if (dataFine) {
         url += `&DataFine=${dataFine}`;
       }
-      // ✅ CORRETTO: Usa tipologiaServizio invece di TipoOperazione
       if (selectedOperationType) {
         url += `&TipologiaServizio=${selectedOperationType}`;
       }
@@ -246,7 +449,7 @@ const EWalletAnalytics: React.FC = () => {
       if (data.success && data.data) {
         console.log("✅ Statistiche E-Wallet grezze:", data.data.statistiche);
 
-        // ✅ CORRETTO: Filtra solo PRELIEVI e DEPOSITI
+        // Filtra solo PRELIEVI e DEPOSITI
         const filteredStats = filterEWalletData(data.data.statistiche);
         console.log("✅ Statistiche E-Wallet filtrate:", filteredStats);
 
@@ -338,7 +541,7 @@ const EWalletAnalytics: React.FC = () => {
     localStorage.setItem("menuState", newState);
   };
 
-  // ✅ CORRETTO: Preparazione dati per grafico a torta usando i campi reali
+  // Preparazione dati per grafico a torta usando i campi reali
   const preparePieData = () => {
     console.log(
       "🥧 Preparazione dati grafico E-Wallet, ewalletStats:",
@@ -358,7 +561,7 @@ const EWalletAnalytics: React.FC = () => {
         fill: colorArray[index % colorArray.length],
         servizio: ewallet.nomeServizio,
         tipologia: ewallet.tipologiaServizio,
-        importoTotale: Math.abs(ewallet.importoTotale), // ✅ Usa valore assoluto per i prelievi
+        importoTotale: Math.abs(ewallet.importoTotale),
         importoMedio: Math.abs(ewallet.importoMedio),
         percentage: ewallet.percentuale.toFixed(1),
       };
@@ -368,7 +571,7 @@ const EWalletAnalytics: React.FC = () => {
     return pieData;
   };
 
-  // ✅ CORRETTO: Calcola il totale delle transazioni solo per PRELIEVI e DEPOSITI
+  // Calcola il totale delle transazioni solo per PRELIEVI e DEPOSITI
   const getTotalTransactions = () => {
     const total = ewalletStats.reduce(
       (sum, stat) => sum + stat.numeroOperazioni,
@@ -378,7 +581,7 @@ const EWalletAnalytics: React.FC = () => {
     return total;
   };
 
-  // ✅ CORRETTO: Calcola il totale del fatturato solo per PRELIEVI e DEPOSITI
+  // Calcola il totale del fatturato solo per PRELIEVI e DEPOSITI
   const getTotalRevenue = () => {
     const total = ewalletStats.reduce(
       (sum, stat) => sum + Math.abs(stat.importoTotale),
@@ -388,17 +591,17 @@ const EWalletAnalytics: React.FC = () => {
     return total;
   };
 
-  // ✅ CORRETTO: Calcola numero di tipologie (sempre 2: PRELIEVI + DEPOSITI)
+  // Calcola numero di tipologie (sempre 2: PRELIEVI + DEPOSITI)
   const getTotalTypes = () => {
     const uniqueTypes = new Set(
       ewalletStats.map((stat) => stat.tipologiaServizio)
     );
     const total = uniqueTypes.size;
-    console.log("🏢 Totale tipologie E-Wallet:", total);
+    console.log("🔢 Totale tipologie E-Wallet:", total);
     return total;
   };
 
-  // ✅ CORRETTO: Calcola i prelievi vs depositi
+  // Calcola i prelievi vs depositi
   const getPrelievoVsDeposito = () => {
     const prelievi = ewalletStats.find(
       (stat) => stat.tipologiaServizio === "PRELIEVI"
@@ -429,10 +632,69 @@ const EWalletAnalytics: React.FC = () => {
     return `${selectedYear}`;
   };
 
+  // Funzioni helper per la gestione dealer
+  const getFilteredDealers = () => {
+    let filtered = dealersList;
+
+    // Filtro per termine di ricerca
+    if (dealerSearchTerm) {
+      filtered = filtered.filter(
+        (dealer) =>
+          dealer.dealerCodice.toLowerCase().includes(dealerSearchTerm.toLowerCase()) ||
+          dealer.dealerRagSoc.toLowerCase().includes(dealerSearchTerm.toLowerCase())
+      );
+    }
+
+    return filtered;
+  };
+
+  const getPaginatedDealers = () => {
+    const filtered = getFilteredDealers();
+    const startIndex = (dealersCurrentPage - 1) * dealersItemsPerPage;
+    const endIndex = startIndex + dealersItemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  };
+
+  const getTotalDealersPages = () => {
+    const filtered = getFilteredDealers();
+    return Math.ceil(filtered.length / dealersItemsPerPage);
+  };
+
+  // Funzioni per gestire il modal dealer
+  const openDealerModal = (dealer: DealerSummary) => {
+    setSelectedDealerForModal(dealer);
+    setShowDealerModal(true);
+  };
+
+  const closeDealerModal = () => {
+    setShowDealerModal(false);
+    setSelectedDealerForModal(null);
+  };
+
   // Helper function per ottenere i giorni del mese
   const getDaysInMonth = (year: number, month: number) => {
     const daysInMonth = new Date(year, month, 0).getDate();
     return Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  };
+
+  // Funzione per aggiornare i dati
+  const handleRefreshData = () => {
+    let monthToFetch = null;
+    let dataInizio = null;
+    let dataFine = null;
+
+    if (viewMode === "day") {
+      const year = selectedYear;
+      const month = String(selectedMonth || currentMonth).padStart(2, "0");
+      const day = String(selectedDay || currentDay).padStart(2, "0");
+      const dateString = `${year}-${month}-${day}`;
+      dataInizio = dateString;
+      dataFine = dateString;
+    } else if (viewMode === "month") {
+      monthToFetch = selectedMonth;
+    }
+
+    fetchEWalletStats(selectedYear, monthToFetch, dataInizio, dataFine);
   };
 
   return (
@@ -512,7 +774,7 @@ const EWalletAnalytics: React.FC = () => {
                 </button>
               </div>
 
-              {/* ✅ CORRETTO: Filtro per tipologia operazione */}
+              {/* Filtro per tipologia operazione */}
               <div className="btn-group">
                 <select
                   className="form-select"
@@ -686,34 +948,7 @@ const EWalletAnalytics: React.FC = () => {
               </button>
               <button
                 className="btn btn-primary-dark"
-                onClick={() => {
-                  let monthToFetch = null;
-                  let dataInizio = null;
-                  let dataFine = null;
-
-                  if (viewMode === "day") {
-                    const year = selectedYear;
-                    const month = String(
-                      selectedMonth || currentMonth
-                    ).padStart(2, "0");
-                    const day = String(selectedDay || currentDay).padStart(
-                      2,
-                      "0"
-                    );
-                    const dateString = `${year}-${month}-${day}`;
-                    dataInizio = dateString;
-                    dataFine = dateString;
-                  } else if (viewMode === "month") {
-                    monthToFetch = selectedMonth;
-                  }
-
-                  fetchEWalletStats(
-                    selectedYear,
-                    monthToFetch,
-                    dataInizio,
-                    dataFine
-                  );
-                }}
+                onClick={handleRefreshData}
                 disabled={isLoadingEwallet}
               >
                 <i
@@ -802,33 +1037,7 @@ const EWalletAnalytics: React.FC = () => {
                         <p>{errorEwallet}</p>
                         <button
                           className="btn btn-primary-dark btn-sm mt-2"
-                          onClick={() => {
-                            let monthToFetch = null;
-                            let dataInizio = null;
-                            let dataFine = null;
-
-                            if (viewMode === "day") {
-                              const year = selectedYear;
-                              const month = String(
-                                selectedMonth || currentMonth
-                              ).padStart(2, "0");
-                              const day = String(
-                                selectedDay || currentDay
-                              ).padStart(2, "0");
-                              const dateString = `${year}-${month}-${day}`;
-                              dataInizio = dateString;
-                              dataFine = dateString;
-                            } else if (viewMode === "month") {
-                              monthToFetch = selectedMonth;
-                            }
-
-                            fetchEWalletStats(
-                              selectedYear,
-                              monthToFetch,
-                              dataInizio,
-                              dataFine
-                            );
-                          }}
+                          onClick={handleRefreshData}
                         >
                           <i className="fa-solid fa-refresh me-1"></i>
                           Riprova
@@ -934,6 +1143,16 @@ const EWalletAnalytics: React.FC = () => {
                   <i className="fa-solid fa-tachometer-alt"></i>
                 </div>
                 <div className="card-body">
+                  {/* Istruzioni per l'utente */}
+                  {!selectedOperation && ewalletStats.length > 0 && (
+                    <div className="alert alert-info d-flex align-items-center mb-3" role="alert">
+                      <i className="fa-solid fa-info-circle me-2"></i>
+                      <div>
+                        <strong>💡 Suggerimento:</strong> Clicca su una delle card sottostanti per visualizzare i dettagli dei dealer per quella specifica operazione E-Wallet.
+                      </div>
+                    </div>
+                  )}
+
                   {ewalletStats.length > 0 ? (
                     (() => {
                       const stats = getPrelievoVsDeposito();
@@ -1017,7 +1236,7 @@ const EWalletAnalytics: React.FC = () => {
             </div>
           </div>
 
-          {/* ✅ CORRETTO: Seconda riga - Solo PRELIEVI e DEPOSITI */}
+          {/* Seconda riga - Solo PRELIEVI e DEPOSITI */}
           <div className="row mb-4">
             <div className="col-12">
               <div className="card">
@@ -1062,19 +1281,28 @@ const EWalletAnalytics: React.FC = () => {
                                 cursor: "pointer",
                                 borderLeft: `4px solid ${cardColor}`,
                               }}
-                              onClick={() =>
-                                setSelectedOperation(
-                                  selectedOperation ===
-                                    `${ewallet.nomeServizio}-${ewallet.tipologiaServizio}`
-                                    ? ""
-                                    : `${ewallet.nomeServizio}-${ewallet.tipologiaServizio}`
-                                )
-                              }
+                              onClick={(e) => {
+                                e.preventDefault();
+                                const operationKey = `${ewallet.nomeServizio}-${ewallet.tipologiaServizio}`;
+                                console.log("🖱️ Click su operazione:", operationKey);
+                                console.log("🔍 Operazione corrente selezionata:", selectedOperation);
+                                
+                                if (selectedOperation === operationKey) {
+                                  setSelectedOperation("");
+                                  console.log("✅ Operazione deselezionata");
+                                } else {
+                                  setSelectedOperation(operationKey);
+                                  console.log("✅ Operazione selezionata:", operationKey);
+                                }
+                              }}
                             >
                               <div className="card-body">
                                 <div className="d-flex justify-content-between align-items-start mb-2">
                                   <h5 className="card-title mb-0">
                                     {ewallet.nomeServizio}
+                                    {selectedOperation === `${ewallet.nomeServizio}-${ewallet.tipologiaServizio}` && (
+                                      <i className="fa-solid fa-check-circle text-primary ms-2" title="Selezionato"></i>
+                                    )}
                                   </h5>
                                   <span
                                     className={`badge rounded-pill ${
@@ -1186,69 +1414,251 @@ const EWalletAnalytics: React.FC = () => {
             </div>
           </div>
 
-          {/* Terza riga: Lista Dealer per Operazione Selezionata (Placeholder) */}
+          {/* Terza riga: Lista Dealer per Operazione Selezionata */}
           {selectedOperation && (
             <div className="row mb-4">
               <div className="col-12">
-                <div className="card">
+                <div className="card border-primary">
                   <div className="custom-card-header">
                     <span>
+                      <i className="fa-solid fa-users me-2"></i>
                       Dealer per Operazione E-Wallet: {selectedOperation} -{" "}
                       {getCurrentPeriodText()}
                     </span>
                     <div className="menu-right">
                       <div className="menu-icon">
-                        <i className="fa-solid fa-users"></i>
+                        <i className="fa-solid fa-download"></i>
                       </div>
                       <div
                         className="menu-icon"
-                        onClick={() => setSelectedOperation("")}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          console.log("🔴 Chiusura sezione dealer");
+                          setSelectedOperation("");
+                        }}
+                        style={{ cursor: "pointer" }}
+                        title="Chiudi sezione"
                       >
                         <i className="fa-solid fa-times"></i>
                       </div>
                     </div>
                   </div>
                   <div className="card-body">
-                    {/* Filtri per la lista dealer */}
-                    <div className="row mb-3">
-                      <div className="col-md-6">
-                        <input
-                          type="text"
-                          className="form-control form-control-sm"
-                          placeholder="Cerca dealer..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                      </div>
-                      <div className="col-md-6">
-                        <select
-                          className="form-select form-select-sm"
-                          value={selectedProvincia}
-                          onChange={(e) => setSelectedProvincia(e.target.value)}
-                        >
-                          <option value="">Tutte le province</option>
-                          {/* TODO: Popolare con le province dal backend */}
-                        </select>
+                    {/* Alert di successo per confermare la selezione */}
+                    <div className="alert alert-success d-flex align-items-center mb-3" role="alert">
+                      <i className="fa-solid fa-check-circle me-2"></i>
+                      <div>
+                        <strong>Operazione selezionata:</strong> {selectedOperation}
+                        <br />
+                        <small>Periodo: {getCurrentPeriodText()} • {getFilteredDealers().length} dealer trovati</small>
                       </div>
                     </div>
 
-                    {/* Placeholder per la lista dealer */}
-                    <div className="chart-placeholder">
-                      <div className="text-center text-muted">
-                        <i className="fa-solid fa-construction fa-3x mb-3"></i>
-                        <h5>Sezione in Sviluppo</h5>
-                        <p>
-                          La lista dettagliata dei dealer per l'operazione
-                          E-Wallet "{selectedOperation}" nel periodo{" "}
-                          {getCurrentPeriodText()} sarà implementata nella
-                          prossima versione.
-                        </p>
-                        <p className="small">
-                          Saranno necessarie API aggiuntive per recuperare i
-                          dettagli dei dealer per ogni operazione E-Wallet.
-                        </p>
+                    {/* Filtri per la ricerca dealer */}
+                    <div className="row mb-3">
+                      <div className="col-md-6">
+                        <div className="input-group">
+                          <span className="input-group-text">
+                            <i className="fa-solid fa-search"></i>
+                          </span>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Cerca per codice o ragione sociale..."
+                            value={dealerSearchTerm}
+                            onChange={(e) => {
+                              setDealerSearchTerm(e.target.value);
+                              setDealersCurrentPage(1);
+                            }}
+                          />
+                          {dealerSearchTerm && (
+                            <button
+                              className="btn btn-outline-secondary"
+                              onClick={() => {
+                                setDealerSearchTerm("");
+                                setDealersCurrentPage(1);
+                              }}
+                            >
+                              <i className="fa-solid fa-times"></i>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="col-md-6">
+                        <div className="d-flex justify-content-end align-items-center gap-2">
+                          <small className="text-muted">
+                            {getFilteredDealers().length} dealer • 
+                            Totale: €{getFilteredDealers().reduce((sum, d) => sum + Math.abs(d.importoTotale), 0).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+                          </small>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Contenuto dealer */}
+                    {isLoadingDealers ? (
+                      <div className="chart-placeholder">
+                        <div className="text-center text-muted">
+                          <i className="fa-solid fa-spinner fa-spin fa-3x mb-3"></i>
+                          <h5>Caricamento dealer...</h5>
+                          <p>Recupero delle transazioni E-Wallet in corso...</p>
+                        </div>
+                      </div>
+                    ) : errorDealers ? (
+                      <div className="chart-placeholder">
+                        <div className="text-center text-danger">
+                          <i className="fa-solid fa-exclamation-triangle fa-3x mb-3"></i>
+                          <h5>Errore nel caricamento dealer</h5>
+                          <p>{errorDealers}</p>
+                          <button
+                            className="btn btn-primary-dark btn-sm mt-2"
+                            onClick={() => {
+                              const operationType = selectedOperation.includes("PRELIEVI") ? "PRELIEVI" : "DEPOSITI";
+                              fetchDealersForOperation(operationType as "DEPOSITI" | "PRELIEVI");
+                            }}
+                          >
+                            <i className="fa-solid fa-refresh me-1"></i>
+                            Riprova
+                          </button>
+                        </div>
+                      </div>
+                    ) : dealersList.length > 0 ? (
+                      <>
+                        {/* Tabella dealer */}
+                        <div className="table-responsive">
+                          <div className="alert alert-info d-flex align-items-center mb-2" role="alert">
+                            <i className="fa-solid fa-info-circle me-2"></i>
+                            <small>
+                              <strong>💡 Suggerimento:</strong> Clicca su una riga per vedere tutti i dettagli e le transazioni del dealer.
+                            </small>
+                          </div>
+                          <table className="table table-hover">
+                            <thead>
+                              <tr>
+                                <th style={{ width: "120px" }}>Codice</th>
+                                <th>Ragione Sociale</th>
+                                <th className="text-center" style={{ width: "100px" }}>Operazioni</th>
+                                <th className="text-end" style={{ width: "140px" }}>Importo Totale</th>
+                                <th className="text-center" style={{ width: "120px" }}>Prima</th>
+                                <th className="text-center" style={{ width: "120px" }}>Ultima</th>
+                                <th className="text-center" style={{ width: "60px" }}>
+                                  <i className="fa-solid fa-eye" title="Dettagli"></i>
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {getPaginatedDealers().map((dealer, index) => (
+                                <tr 
+                                  key={dealer.dealerCodice}
+                                  onClick={() => openDealerModal(dealer)}
+                                  style={{ cursor: "pointer" }}
+                                  title="Clicca per vedere i dettagli"
+                                >
+                                  <td>
+                                    <code className="badge bg-secondary">
+                                      {dealer.dealerCodice}
+                                    </code>
+                                  </td>
+                                  <td>
+                                    <div className="fw-bold">{dealer.dealerRagSoc}</div>
+                                    <small className="text-muted">
+                                      €{Math.abs(dealer.importoTotale / dealer.numeroOperazioni).toFixed(2)} medio
+                                    </small>
+                                  </td>
+                                  <td className="text-center">
+                                    <span className="badge bg-primary rounded-pill">
+                                      {dealer.numeroOperazioni}
+                                    </span>
+                                  </td>
+                                  <td className="text-end">
+                                    <div className={`fw-bold ${selectedOperation.includes("PRELIEVI") ? "text-danger" : "text-success"}`}>
+                                      {selectedOperation.includes("PRELIEVI") ? "-" : "+"}€{Math.abs(dealer.importoTotale).toLocaleString("it-IT", { 
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2 
+                                      })}
+                                    </div>
+                                  </td>
+                                  <td className="text-center">
+                                    <small>{new Date(dealer.primaOperazione).toLocaleDateString("it-IT")}</small>
+                                  </td>
+                                  <td className="text-center">
+                                    <small>{new Date(dealer.ultimaOperazione).toLocaleDateString("it-IT")}</small>
+                                  </td>
+                                  <td className="text-center">
+                                    <i className="fa-solid fa-search-plus text-primary" style={{ fontSize: "0.9rem" }}></i>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Paginazione */}
+                        {getTotalDealersPages() > 1 && (
+                          <nav aria-label="Paginazione dealer">
+                            <ul className="pagination justify-content-center">
+                              <li className={`page-item ${dealersCurrentPage === 1 ? "disabled" : ""}`}>
+                                <button
+                                  className="page-link"
+                                  onClick={() => setDealersCurrentPage(dealersCurrentPage - 1)}
+                                  disabled={dealersCurrentPage === 1}
+                                >
+                                  <i className="fa-solid fa-chevron-left"></i>
+                                </button>
+                              </li>
+                              
+                              {Array.from({ length: Math.min(5, getTotalDealersPages()) }, (_, i) => {
+                                const pageNum = Math.max(1, dealersCurrentPage - 2) + i;
+                                if (pageNum > getTotalDealersPages()) return null;
+                                
+                                return (
+                                  <li key={pageNum} className={`page-item ${dealersCurrentPage === pageNum ? "active" : ""}`}>
+                                    <button
+                                      className="page-link"
+                                      onClick={() => setDealersCurrentPage(pageNum)}
+                                    >
+                                      {pageNum}
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                              
+                              <li className={`page-item ${dealersCurrentPage === getTotalDealersPages() ? "disabled" : ""}`}>
+                                <button
+                                  className="page-link"
+                                  onClick={() => setDealersCurrentPage(dealersCurrentPage + 1)}
+                                  disabled={dealersCurrentPage === getTotalDealersPages()}
+                                >
+                                  <i className="fa-solid fa-chevron-right"></i>
+                                </button>
+                              </li>
+                            </ul>
+                            <div className="text-center mt-2">
+                              <small className="text-muted">
+                                Pagina {dealersCurrentPage} di {getTotalDealersPages()} • 
+                                Mostrando {getPaginatedDealers().length} di {getFilteredDealers().length} dealer
+                              </small>
+                            </div>
+                          </nav>
+                        )}
+                      </>
+                    ) : (
+                      <div className="chart-placeholder">
+                        <div className="text-center text-muted">
+                          <i className="fa-solid fa-users-slash fa-3x mb-3"></i>
+                          <h5>Nessun dealer trovato</h5>
+                          <p>
+                            Non sono stati trovati dealer per l'operazione{" "}
+                            <strong>{selectedOperation}</strong> nel periodo{" "}
+                            <strong>{getCurrentPeriodText()}</strong>.
+                          </p>
+                          {dealerSearchTerm && (
+                            <p className="small">
+                              Prova a modificare o rimuovere il filtro di ricerca.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1259,6 +1669,205 @@ const EWalletAnalytics: React.FC = () => {
             <p />
             <p />
           </div>
+
+          {/* Modal Dettagli Dealer */}
+          {showDealerModal && selectedDealerForModal && (
+            <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+              <div className="modal-dialog modal-xl">
+                <div className="modal-content">
+                  <div className="modal-header custom-card-header">
+                    <h5 className="modal-title mb-0">
+                      <i className="fa-solid fa-user-tie me-2"></i>
+                      Dettagli Dealer: {selectedDealerForModal.dealerRagSoc}
+                    </h5>
+                    <button
+                      type="button"
+                      className="btn-close btn-close-white"
+                      onClick={closeDealerModal}
+                      aria-label="Close"
+                    ></button>
+                  </div>
+                  
+                  <div className="modal-body">
+                    {/* Header con informazioni dealer */}
+                    <div className="row mb-4">
+                      <div className="col-md-8">
+                        <div className="card h-100">
+                          <div className="card-body">
+                            <h6 className="card-title text-primary">
+                              <i className="fa-solid fa-building me-2"></i>
+                              Informazioni Dealer
+                            </h6>
+                            <div className="row">
+                              <div className="col-sm-6">
+                                <strong>Codice:</strong>
+                                <div className="mb-2">
+                                  <code className="badge bg-secondary fs-6 p-2">
+                                    {selectedDealerForModal.dealerCodice}
+                                  </code>
+                                </div>
+                                <strong>Ragione Sociale:</strong>
+                                <div className="fw-bold text-dark">
+                                  {selectedDealerForModal.dealerRagSoc}
+                                </div>
+                              </div>
+                              <div className="col-sm-6">
+                                <strong>Province:</strong>
+                                <div className="mb-2">
+                                  {selectedDealerForModal.province.length > 0 ? (
+                                    selectedDealerForModal.province.map((prov, idx) => (
+                                      <span key={idx} className="badge bg-info me-1">
+                                        {prov}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-muted">Non specificato</span>
+                                  )}
+                                </div>
+                                <strong>Periodo attività:</strong>
+                                <div className="text-muted small">
+                                  Dal {new Date(selectedDealerForModal.primaOperazione).toLocaleDateString("it-IT")} al {" "}
+                                  {new Date(selectedDealerForModal.ultimaOperazione).toLocaleDateString("it-IT")}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="col-md-4">
+                        <div className="card h-100 bg-light">
+                          <div className="card-body text-center">
+                            <h6 className="card-title text-primary">
+                              <i className="fa-solid fa-chart-bar me-2"></i>
+                              Statistiche E-Wallet
+                            </h6>
+                            <div className="row">
+                              <div className="col-12 mb-3">
+                                <div className="display-6 fw-bold text-primary">
+                                  {selectedDealerForModal.numeroOperazioni}
+                                </div>
+                                <small className="text-muted">Operazioni Totali</small>
+                              </div>
+                              <div className="col-12 mb-3">
+                                <div className={`h4 fw-bold ${selectedOperation.includes("PRELIEVI") ? "text-danger" : "text-success"}`}>
+                                  {selectedOperation.includes("PRELIEVI") ? "-" : "+"}€{Math.abs(selectedDealerForModal.importoTotale).toLocaleString("it-IT", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                  })}
+                                </div>
+                                <small className="text-muted">Importo Totale</small>
+                              </div>
+                              <div className="col-12">
+                                <div className="h5 fw-bold text-info">
+                                  €{Math.abs(selectedDealerForModal.importoMedio).toFixed(2)}
+                                </div>
+                                <small className="text-muted">Importo Medio</small>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tabella transazioni */}
+                    <div className="card">
+                      <div className="card-header">
+                        <div className="d-flex justify-content-between align-items-center">
+                          <h6 className="mb-0">
+                            <i className="fa-solid fa-receipt me-2"></i>
+                            Transazioni E-Wallet ({selectedDealerForModal.operazioni.length})
+                          </h6>
+                          <div className="text-muted small">
+                            Tipo: <strong>{selectedOperation.replace("Deposito e-Wallet-", "")}</strong>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="card-body p-0">
+                        <div className="table-responsive" style={{ maxHeight: "400px", overflowY: "auto" }}>
+                          <table className="table table-sm table-hover mb-0">
+                            <thead className="table-dark sticky-top">
+                              <tr>
+                                <th style={{ width: "120px" }}>Numero</th>
+                                <th style={{ width: "120px" }}>Data</th>
+                                <th className="text-end" style={{ width: "120px" }}>Importo</th>
+                                <th style={{ width: "100px" }}>Provincia</th>
+                                <th style={{ width: "80px" }}>Stato</th>
+                                <th>Descrizione</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {selectedDealerForModal.operazioni.map((operazione, idx) => (
+                                <tr key={`${operazione.schId}-${idx}`}>
+                                  <td>
+                                    <code className="small">{operazione.schId}</code>
+                                  </td>
+                                  <td>
+                                    <small>
+                                      {new Date(operazione.schDataOperazione).toLocaleDateString("it-IT")}
+                                      <br />
+                                      <span className="text-muted">
+                                        {new Date(operazione.schDataOperazione).toLocaleTimeString("it-IT", {
+                                          hour: "2-digit",
+                                          minute: "2-digit"
+                                        })}
+                                      </span>
+                                    </small>
+                                  </td>
+                                  <td className="text-end">
+                                    <span className={`fw-bold ${operazione.schImportoRic < 0 ? "text-danger" : "text-success"}`}>
+                                      {operazione.schImportoRic < 0 ? "-" : "+"}€{Math.abs(operazione.schImportoRic).toFixed(2)}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {operazione.schProvincia && (
+                                      <span className="badge bg-secondary small">
+                                        {operazione.schProvincia}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="text-center">
+                                    <span className={`badge ${operazione.schStato === "Y" ? "bg-success" : "bg-warning"}`}>
+                                      {operazione.schStato === "Y" ? "OK" : operazione.schStato}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <small className="text-muted">AP WALLET</small>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="modal-footer">
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary-dark"
+                      onClick={() => {
+                        // Qui potresti aggiungere l'export delle transazioni del dealer
+                        console.log("Export dealer:", selectedDealerForModal.dealerCodice);
+                      }}
+                    >
+                      <i className="fa-solid fa-download me-1"></i>
+                      Esporta Transazioni
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary-dark"
+                      onClick={closeDealerModal}
+                    >
+                      <i className="fa-solid fa-check me-1"></i>
+                      Chiudi
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
