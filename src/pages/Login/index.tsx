@@ -2,8 +2,16 @@ import { useState, useEffect } from "react";
 import type { FC } from "react";
 import type { FormEvent } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
-import { Eye, EyeOff, User, LogIn, Shield, Copy, Check, ArrowLeft } from "lucide-react";
-import styles from "./styles.module.css"; // 👈 CSS Modules aggiornato
+import {
+  Eye,
+  EyeOff,
+  User,
+  LogIn,
+  Shield,
+  Copy,
+  ArrowLeft,
+} from "lucide-react";
+import styles from "./styles.module.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -12,11 +20,11 @@ interface LoginData {
   fullName: string;
   email: string;
   id: string;
+  idUser: string;
   idCompany: string;
   companyName: string;
   role: string;
   expiresAt: string;
-  // ✅ AGGIUNTO: Proprietà per gestire 2FA
   requires2FA?: boolean;
   needsSetup2FA?: boolean;
 }
@@ -28,24 +36,22 @@ interface LoginResponse {
   errors: string[];
 }
 
-// ✅ AGGIUNTO: Interfacce per 2FA
 interface Setup2FAResponse {
-  success: boolean;
-  data: {
-    qrCodeUrl: string;
-    backupKey: string;
-  };
-  message: string;
+  secret: string; // La backup key per inserimento manuale
+  otpAuthUrl: string; // L'URL da convertire in QR code
 }
 
+// ✅ CORRETTO: L'API verify ritorna solo success
 interface Verify2FAResponse {
   success: boolean;
-  message: string;
-  data: LoginData;
 }
 
-// ✅ AGGIUNTO: Tipo per gestire gli step di autenticazione
-type AuthStep = 'LOGIN_FORM' | 'SETUP_2FA' | 'VERIFY_2FA';
+type AuthStep = "LOGIN_FORM" | "SETUP_2FA" | "VERIFY_2FA";
+
+const generateQRCodeUrl = (otpAuthUrl: string): string => {
+  const encodedUrl = encodeURIComponent(otpAuthUrl);
+  return `https://api.qrserver.com/v1/create-qr-code/?data=${encodedUrl}&size=256x256&ecc=M`;
+};
 
 const Login: FC = () => {
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -54,14 +60,21 @@ const Login: FC = () => {
   const [error, setError] = useState("");
   const [message] = useState("Accesso Area Backoffice");
 
-  // ✅ AGGIUNTO: Stati per la gestione 2FA
-  const [authStep, setAuthStep] = useState<AuthStep>('LOGIN_FORM');
+  // Stati per gestione 2FA
+  const [authStep, setAuthStep] = useState<AuthStep>("LOGIN_FORM");
   const [twoFACode, setTwoFACode] = useState("");
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [backupKey, setBackupKey] = useState("");
-  const [setupComplete, setSetupComplete] = useState(false);
+  const [showBackupKey, setShowBackupKey] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [currentToken, setCurrentToken] = useState(""); // Per mantenere il token tra le chiamate
+  const [setupComplete, setSetupComplete] = useState(false);
+  const [currentToken, setCurrentToken] = useState("");
+  const [currentUserId, setCurrentUserId] = useState("");
+
+  // ✅ AGGIUNTO: Stato per salvare i dati completi dal login iniziale
+  const [currentLoginData, setCurrentLoginData] = useState<LoginData | null>(
+    null
+  );
 
   /* redirect se già loggato */
   useEffect(() => {
@@ -70,11 +83,9 @@ const Login: FC = () => {
     }
   }, []);
 
-  // ✅ MODIFICATO: Gestisce anche il codice 2FA
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === 'twoFACode') {
-      // Solo 6 cifre per il codice 2FA
+    if (name === "twoFACode") {
       if (value.length <= 6 && /^\d*$/.test(value)) {
         setTwoFACode(value);
       }
@@ -87,20 +98,18 @@ const Login: FC = () => {
     if (error) setError("");
   };
 
-  // ✅ AGGIUNTO: Gestione tasto Enter per tutti i form
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      if (authStep === 'LOGIN_FORM') {
+    if (e.key === "Enter") {
+      if (authStep === "LOGIN_FORM") {
         handleLogin(e as any);
-      } else if (authStep === 'SETUP_2FA' || authStep === 'VERIFY_2FA') {
+      } else if (authStep === "SETUP_2FA" || authStep === "VERIFY_2FA") {
         handleVerify2FA();
       }
     }
   };
 
-  // ✅ MODIFICATO: Validazione per tutti gli step
   const validateForm = () => {
-    if (authStep === 'LOGIN_FORM') {
+    if (authStep === "LOGIN_FORM") {
       if (!formData.username.trim()) {
         setError("Username è richiesto");
         return false;
@@ -109,7 +118,7 @@ const Login: FC = () => {
         setError("Password è richiesta");
         return false;
       }
-    } else if (authStep === 'VERIFY_2FA' || authStep === 'SETUP_2FA') {
+    } else if (authStep === "VERIFY_2FA" || authStep === "SETUP_2FA") {
       if (twoFACode.length !== 6) {
         setError("Inserisci un codice a 6 cifre");
         return false;
@@ -118,8 +127,7 @@ const Login: FC = () => {
     return true;
   };
 
-  // ✅ MODIFICATO: Login originale + gestione 2FA
-  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (!validateForm()) return;
 
@@ -143,36 +151,32 @@ const Login: FC = () => {
 
       const result: LoginResponse = await res.json();
 
-      // ✅ Controllo se il login è avvenuto con successo
       if (!result.success) {
         setError(result.message || "Errore durante il login");
         return;
       }
 
-      // ✅ Gestione errori dall'array errors
       if (result.errors && result.errors.length > 0) {
         setError(result.errors.join(", "));
         return;
       }
 
-      // ✅ Estrazione dati dalla proprietà data
       const { data } = result;
 
-      // ✅ AGGIUNTO: Gestione flussi 2FA
       if (data.needsSetup2FA) {
-        // Prima volta - setup 2FA
         setCurrentToken(data.token);
-        await initiate2FASetup(data.token);
-        setAuthStep('SETUP_2FA');
+        setCurrentUserId(data.idUser);
+        setCurrentLoginData(data); // ✅ AGGIUNTO: Salva tutti i dati
+        await initiate2FASetup(data.token, data.idUser, data.email);
+        setAuthStep("SETUP_2FA");
       } else if (data.requires2FA) {
-        // Login successivi - richiedi codice 2FA
         setCurrentToken(data.token);
-        setAuthStep('VERIFY_2FA');
+        setCurrentUserId(data.idUser);
+        setCurrentLoginData(data); // ✅ AGGIUNTO: Salva tutti i dati
+        setAuthStep("VERIFY_2FA");
       } else {
-        // Login normale senza 2FA
         completeLogin(data);
       }
-
     } catch (error: unknown) {
       console.error("Errore durante il login:", error);
 
@@ -193,34 +197,43 @@ const Login: FC = () => {
     }
   };
 
-  // ✅ AGGIUNTO: Inizia il setup 2FA
-  const initiate2FASetup = async (token: string) => {
+  const initiate2FASetup = async (
+    token: string,
+    userId: string,
+    email: string
+  ) => {
     try {
-      const res = await fetch(`${API_URL}/api/TwoFactor/setup`, {
+      const setupUrl = `${API_URL}/api/TwoFactor/setup?userid=${encodeURIComponent(
+        userId
+      )}&email=${encodeURIComponent(email)}`;
+
+      const res = await fetch(setupUrl, {
         method: "GET",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      if (!res.ok) throw new Error("Errore durante il setup 2FA");
+      if (!res.ok) {
+        throw new Error(`Errore HTTP: ${res.status}`);
+      }
 
       const result: Setup2FAResponse = await res.json();
-      
-      if (result.success) {
-        setQrCodeUrl(result.data.qrCodeUrl);
-        setBackupKey(result.data.backupKey);
-      } else {
-        setError("Errore durante il setup 2FA");
-      }
+
+      const qrImageUrl = generateQRCodeUrl(result.otpAuthUrl);
+      setQrCodeUrl(qrImageUrl);
+      setBackupKey(result.secret);
+
+      console.log("OTP Auth URL:", result.otpAuthUrl);
+      console.log("QR Image URL:", qrImageUrl);
     } catch (error) {
       console.error("Errore setup 2FA:", error);
       setError("Impossibile configurare l'autenticazione a due fattori");
     }
   };
 
-  // ✅ AGGIUNTO: Verifica codice 2FA
+  // ✅ CORRETTO: Funzione per verificare il codice 2FA
   const handleVerify2FA = async () => {
     if (!validateForm()) return;
 
@@ -230,32 +243,37 @@ const Login: FC = () => {
     try {
       const res = await fetch(`${API_URL}/api/TwoFactor/verify`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${currentToken}`
+          Authorization: `Bearer ${currentToken}`,
         },
-        body: JSON.stringify({ 
-          code: twoFACode 
+        body: JSON.stringify({
+          userId: currentUserId,
+          code: twoFACode,
         }),
       });
 
       const result: Verify2FAResponse = await res.json();
 
       if (!res.ok || !result.success) {
-        setError(result.message || "Codice non valido");
+        setError("Codice non valido");
         return;
       }
 
-      if (authStep === 'SETUP_2FA') {
-        setSetupComplete(true);
-        // Attendi un momento poi completa il login
-        setTimeout(() => {
-          completeLogin(result.data);
-        }, 1500);
-      } else {
-        completeLogin(result.data);
+      // ✅ CORRETTO: Usa i dati salvati dal login iniziale
+      if (!currentLoginData) {
+        setError("Errore: dati di login mancanti");
+        return;
       }
 
+      if (authStep === "SETUP_2FA") {
+        setSetupComplete(true);
+        setTimeout(() => {
+          completeLogin(currentLoginData);
+        }, 1500);
+      } else {
+        completeLogin(currentLoginData);
+      }
     } catch (error) {
       console.error("Errore verifica 2FA:", error);
       setError("Errore durante la verifica del codice");
@@ -264,48 +282,51 @@ const Login: FC = () => {
     }
   };
 
-  // ✅ ORIGINALE: Completa il login (invariato)
   const completeLogin = (data: LoginData) => {
-    // ✅ Salvataggio token JWT e dati utente
     localStorage.setItem("token", data.token);
     localStorage.setItem("isAuthenticated", "true");
     localStorage.setItem("IdCompany", data.idCompany || "");
     localStorage.setItem("fullName", data.fullName || "");
     localStorage.setItem("userId", data.id || "");
+    localStorage.setItem("idUser", data.idUser || "");
     localStorage.setItem("userLevel", data.role || "");
     localStorage.setItem("companyName", data.companyName || "");
     localStorage.setItem("userEmail", data.email || "");
     localStorage.setItem("tokenExpiresAt", data.expiresAt || "");
-    localStorage.setItem(
-      "isExternalUser",
-      String(data.role === "External")
-    );
+    localStorage.setItem("isExternalUser", String(data.role === "External"));
 
-    // 🔁 Redirect condizionato basato sul ruolo
     window.location.href =
       data.role === "External" ? "/external-dashboard" : "/dashboard";
   };
 
-  // ✅ AGGIUNTO: Funzioni di utilità per 2FA
+  const toggleBackupKey = () => {
+    setShowBackupKey(!showBackupKey);
+  };
+
   const copyBackupKey = async () => {
     try {
       await navigator.clipboard.writeText(backupKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy backup key:', err);
+      console.error("Failed to copy backup key:", err);
     }
   };
 
   const goBack = () => {
-    if (authStep === 'VERIFY_2FA' || authStep === 'SETUP_2FA') {
-      setAuthStep('LOGIN_FORM');
+    if (authStep === "VERIFY_2FA" || authStep === "SETUP_2FA") {
+      setAuthStep("LOGIN_FORM");
       setError("");
       setTwoFACode("");
+      setQrCodeUrl("");
+      setBackupKey("");
+      setShowBackupKey(false);
+      setCopied(false);
+      setSetupComplete(false);
+      setCurrentLoginData(null);
     }
   };
 
-  // ✅ AGGIUNTO: Render setup 2FA
   const renderSetup2FA = () => (
     <div className={styles.twofaContainer}>
       <div className={styles.twofaHeader}>
@@ -322,7 +343,7 @@ const Login: FC = () => {
         <>
           <div className={styles.recommendedApps}>
             <p>App da utilizzare</p>
-            <div className={styles.authApps}>              
+            <div className={styles.authApps}>
               <div className={styles.authApp}>
                 <div className={`${styles.appIcon} ${styles.google}`}></div>
                 <span>Google Authenticator</span>
@@ -332,25 +353,49 @@ const Login: FC = () => {
 
           <div className={styles.setupContent}>
             <p>Apri la tua app di autenticazione e scansiona il codice QR:</p>
-            
+
             <div className={styles.qrCodeContainer}>
-              {qrCodeUrl && <img src={qrCodeUrl} alt="QR Code per 2FA" className={styles.qrCode} />}
+              {qrCodeUrl && (
+                <img
+                  src={qrCodeUrl}
+                  alt="QR Code per 2FA"
+                  className={styles.qrCode}
+                />
+              )}
             </div>
 
             <div className={styles.backupKeySection}>
-              <p><strong>Chiave di backup:</strong></p>
-              <div className={styles.backupKeyContainer}>
-                <code className={styles.backupKey}>{backupKey}</code>
-                <button 
-                  type="button" 
-                  onClick={copyBackupKey}
-                  className={styles.copyBtn}
-                  title="Copia chiave di backup"
+              <p className={styles.backupKeyLabel}>
+                Non riesci a scansionare il QR code?
+              </p>
+              <p className={styles.backupKeySubtext}>
+                Inserisci la chiave manualmente:
+              </p>
+
+              {!showBackupKey ? (
+                <button
+                  type="button"
+                  onClick={toggleBackupKey}
+                  className={styles.showKeyBtn}
                 >
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  Mostra Chiave
                 </button>
-              </div>
-              <small>Salva questa chiave in un posto sicuro. Ti servirà se perdi l'accesso al dispositivo.</small>
+              ) : (
+                <div className={styles.backupKeyContainer}>
+                  <code className={styles.backupKey}>{backupKey}</code>
+                  <button
+                    type="button"
+                    onClick={copyBackupKey}
+                    className={styles.copyBtn}
+                    title="Copia chiave"
+                  >
+                    <Copy size={16} />
+                  </button>
+                  {copied && (
+                    <span className={styles.copiedFeedback}>Copiato!</span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className={styles.verifyForm}>
@@ -401,7 +446,6 @@ const Login: FC = () => {
     </div>
   );
 
-  // ✅ AGGIUNTO: Render verifica 2FA
   const renderVerify2FA = () => (
     <div className={styles.twofaContainer}>
       <div className={styles.twofaHeader}>
@@ -415,8 +459,10 @@ const Login: FC = () => {
       </div>
 
       <div className={styles.verifyContent}>
-        <p>Apri la tua app di autenticazione e inserisci il codice a 6 cifre:</p>
-        
+        <p>
+          Apri la tua app di autenticazione e inserisci il codice a 6 cifre:
+        </p>
+
         <div className={styles.verifyForm}>
           <div className={styles.inputGroup}>
             <input
@@ -459,23 +505,18 @@ const Login: FC = () => {
 
   return (
     <div className={styles.loginPage}>
-      {/* Elementi geometrici decorativi */}
       <div className={styles.geometricElement}></div>
       <div className={styles.geometricElement}></div>
       <div className={styles.geometricElement}></div>
 
-      {/* Overlay con effetto blur */}
       <div className={styles.loginOverlay} />
 
-      {/* Form di login moderno */}
       <div className={styles.loginFormWrapper}>
         <h1 className={styles.loginTitle}>{message}</h1>
 
         <div className={styles.loginForm}>
-          {/* ✅ MODIFICATO: Rendering condizionale basato su authStep */}
-          {authStep === 'LOGIN_FORM' && (
+          {authStep === "LOGIN_FORM" && (
             <>
-              {/* Campo Username */}
               <div className={styles.inputGroup}>
                 <input
                   name="username"
@@ -492,7 +533,6 @@ const Login: FC = () => {
                 </div>
               </div>
 
-              {/* Campo Password */}
               <div className={styles.inputGroup}>
                 <input
                   name="password"
@@ -521,16 +561,16 @@ const Login: FC = () => {
                 </button>
               </div>
 
-              {/* Messaggio di errore */}
               {error && <div className={styles.errorMsg}>{error}</div>}
 
-              {/* Pulsante di submit */}
               <button
                 type="submit"
                 onClick={handleLogin}
                 disabled={loading}
                 className={styles.submitBtn}
-                aria-label={loading ? "Accesso in corso..." : "Effettua il login"}
+                aria-label={
+                  loading ? "Accesso in corso..." : "Effettua il login"
+                }
               >
                 {loading ? (
                   <>
@@ -547,11 +587,8 @@ const Login: FC = () => {
             </>
           )}
 
-          {/* ✅ AGGIUNTO: Rendering per setup 2FA */}
-          {authStep === 'SETUP_2FA' && renderSetup2FA()}
-          
-          {/* ✅ AGGIUNTO: Rendering per verifica 2FA */}
-          {authStep === 'VERIFY_2FA' && renderVerify2FA()}
+          {authStep === "SETUP_2FA" && renderSetup2FA()}
+          {authStep === "VERIFY_2FA" && renderVerify2FA()}
         </div>
 
         <p className={styles.loginFooter}>

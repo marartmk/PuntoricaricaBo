@@ -4,13 +4,15 @@ import {
   ArrowLeft,
   Search,
   Calendar,
-  Truck,
   ShoppingCart,
   Users,
   BarChart,
   MonitorSmartphone,
   Store,
   UsersRound,
+  LineChart,
+  TrendingUp,
+  Activity,
 } from "lucide-react";
 
 import "./sidebar.css";
@@ -61,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
           className="list-group-item"
           onClick={() => navigate("/gestione-agenti")}
         >
-          <Truck className="icon" />
+          <UsersRound className="icon" />
           <span className="item-text">Gestione Agenti</span>
         </button>
         <button
@@ -100,15 +102,22 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
           className="list-group-item"
           onClick={() => navigate("/dealer-analytics")}
         >
-          <UsersRound className="icon" />
+          <LineChart className="icon" />
           <span className="item-text">Dealer Analytics</span>
         </button>
          <button
           className="list-group-item"
           onClick={() => navigate("/services-analytics")}
         >
-          <UsersRound className="icon" />
+          <TrendingUp className="icon" />
           <span className="item-text">Services Analytics</span>
+        </button>
+         <button
+          className="list-group-item"
+          onClick={() => navigate("/elwallet-analytics")}
+        >
+          <Activity className="icon" />
+          <span className="item-text">e-Wallet Analytics</span>
         </button>
       </div>
     </div>

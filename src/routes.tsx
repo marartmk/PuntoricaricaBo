@@ -8,6 +8,7 @@ import DealerAnalytics from "./pages/DealerAnalytics";
 import ServicesAnalytics from "./pages/ServicesAnalytics";
 import GestioneAgenti from "./pages/GestioneAgenti";
 import DettagliAttivita from "./pages/GestioneAgenti/DettagliAttivita";
+import EWalletAnalytics from "./pages/EWallet";
 
 // Componente per proteggere le route
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -78,6 +79,16 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <DettagliAttivita />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Rotte protette */}
+      <Route
+        path="/elwallet-analytics"
+        element={
+          <ProtectedRoute>
+            <EWalletAnalytics />
           </ProtectedRoute>
         }
       />

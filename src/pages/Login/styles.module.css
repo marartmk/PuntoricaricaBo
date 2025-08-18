@@ -97,15 +97,19 @@
   z-index: 2;
 }
 
-/* ✅ RIMOSSO: Sezione logo completamente eliminata */
-
 /* ─────────── Form Container Moderno ─────────── */
 .loginFormWrapper {
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 450px; /* Leggermente più largo */
+  max-width: 450px; /* Default per login normale */
   padding: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ✅ AGGIUNTO: Container più largo quando è in modalità 2FA */
+.loginFormWrapper:has(.twofaContainer) {
+  max-width: 520px; /* Più largo per 2FA */
 }
 
 .loginTitle {
@@ -131,6 +135,13 @@
   flex-direction: column;
   gap: 24px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* ✅ MODIFICATO: Padding maggiore per form 2FA */
+.loginForm:has(.twofaContainer) {
+  padding: 48px 40px; /* Più spazioso */
+  gap: 28px;
 }
 
 /* ─────────── Input Groups Moderni ─────────── */
@@ -297,12 +308,348 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
+/* ─────────── 2FA Container Migliorato ─────────── */
+.twofaContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 32px; /* ✅ AUMENTATO da 24px a 32px */
+  width: 100%;
+}
+
+.twofaHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px; /* ✅ AUMENTATO da 8px */
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.3s ease;
+  padding: 10px; /* ✅ AUMENTATO da 8px */
+  border-radius: 10px; /* ✅ AUMENTATO da 8px */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px; /* ✅ AGGIUNTO: dimensione minima */
+  height: 40px; /* ✅ AGGIUNTO: altezza fissa */
+}
+
+.backBtn:hover:not(:disabled) {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  transform: translateX(-2px); /* ✅ AGGIUNTO: animazione laterale */
+}
+
+.twofaTitle {
+  display: flex;
+  align-items: center;
+  gap: 14px; /* ✅ AUMENTATO da 12px */
+  flex: 1;
+}
+
+.twofaTitle h2,
+.twofaTitle h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.75rem; /* ✅ AUMENTATO da 1.5rem */
+  font-weight: 700;
+  line-height: 1.2; /* ✅ AGGIUNTO per migliore leggibilità */
+}
+
+.shieldIcon {
+  color: #3b82f6;
+  width: 28px; /* ✅ SPECIFICATO dimensioni più grandi */
+  height: 28px;
+}
+
+/* ✅ MIGLIORATO: Sezione App Raccomandate */
+.recommendedApps {
+  text-align: center;
+  margin-bottom: 32px; /* ✅ AUMENTATO da 24px */
+  padding: 24px; /* ✅ AGGIUNTO padding */
+  background: #f8fafc; /* ✅ AGGIUNTO sfondo leggero */
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.recommendedApps p {
+  color: #374151; /* ✅ SCURITO da #6b7280 */
+  font-size: 1rem; /* ✅ AUMENTATO da 0.875rem */
+  font-weight: 600;
+  margin-bottom: 20px; /* ✅ AUMENTATO da 16px */
+  letter-spacing: 0.02em; /* ✅ RIDOTTO da 0.05em */
+}
+
+.authApps {
+  display: flex;
+  gap: 20px; /* ✅ AUMENTATO da 16px */
+  justify-content: center;
+  flex-wrap: wrap; /* ✅ AGGIUNTO per responsive */
+}
+
+.authApp {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* ✅ AUMENTATO da 8px */
+  padding: 16px 24px; /* ✅ AUMENTATO da 12px 16px */
+  background: #ffffff;
+  border: 2px solid #e2e8f0; /* ✅ AGGIUNTO bordo */
+  border-radius: 14px; /* ✅ AUMENTATO da 12px */
+  font-size: 0.95rem; /* ✅ AUMENTATO da 0.875rem */
+  font-weight: 600; /* ✅ AUMENTATO da 500 */
+  color: #374151;
+  transition: all 0.3s ease; /* ✅ AGGIUNTO transizione */
+  cursor: default; /* ✅ AGGIUNTO */
+}
+
+.authApp:hover {
+  border-color: #3b82f6; /* ✅ AGGIUNTO effetto hover */
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.appIcon {
+  width: 28px; /* ✅ AUMENTATO da 24px */
+  height: 28px;
+  border-radius: 8px; /* ✅ AUMENTATO da 6px */
+  flex-shrink: 0; /* ✅ AGGIUNTO */
+}
+
+.appIcon.microsoft {
+  background: linear-gradient(45deg, #00a1f1, #0078d4);
+}
+
+.appIcon.google {
+  background: linear-gradient(45deg, #4285f4, #34a853);
+  box-shadow: 0 2px 4px rgba(66, 133, 244, 0.3); /* ✅ AGGIUNTO ombra */
+}
+
+/* ✅ MIGLIORATO: Contenuto Setup */
+.setupContent, 
+.verifyContent {
+  text-align: center;
+}
+
+.setupContent > p:first-child, 
+.verifyContent > p:first-child {
+  color: #374151;
+  font-size: 1.1rem; /* ✅ AUMENTATO da dimensione standard */
+  margin-bottom: 32px; /* ✅ AUMENTATO da 24px */
+  line-height: 1.5; /* ✅ AGGIUNTO */
+  font-weight: 500; /* ✅ AGGIUNTO */
+}
+
+/* ✅ MIGLIORATO: Container QR Code */
+.qrCodeContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 36px; /* ✅ AUMENTATO da 32px */
+  padding: 32px; /* ✅ AUMENTATO da 20px */
+  background: #ffffff;
+  border-radius: 20px; /* ✅ AUMENTATO da 16px */
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06); /* ✅ MIGLIORATO ombra */
+  border: 2px solid #f1f5f9; /* ✅ AGGIUNTO bordo sottile */
+}
+
+.qrCode {
+  width: 220px; /* ✅ AUMENTATO da 200px */
+  height: 220px;
+  border-radius: 12px; /* ✅ AUMENTATO da 8px */
+}
+
+/* ✅ WEAVR STYLE: Backup Key Section */
+.backupKeySection {
+  text-align: center;
+  margin-bottom: 36px;
+  padding: 24px;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.backupKeyLabel {
+  color: #374151;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.backupKeySubtext {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.showKeyBtn {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: all 0.3s ease;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.showKeyBtn:hover {
+  color: #2563eb;
+  background: rgba(59, 130, 246, 0.05);
+  text-decoration: none;
+}
+
+.backupKeyContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  margin-top: 12px;
+  position: relative;
+}
+
+.backupKey {
+  flex: 1;
+  background: none;
+  border: none;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 0.85rem;
+  color: #1f2937;
+  word-break: break-all;
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.copyBtn {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  cursor: pointer;
+  color: #3b82f6;
+  transition: all 0.3s ease;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.copyBtn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: scale(1.05);
+}
+
+.copiedFeedback {
+  position: absolute;
+  right: -60px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #10b981;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  animation: fadeInOut 2s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-50%) translateX(-10px); }
+  20% { opacity: 1; transform: translateY(-50%) translateX(0); }
+  80% { opacity: 1; transform: translateY(-50%) translateX(0); }
+  100% { opacity: 0; transform: translateY(-50%) translateX(-10px); }
+}
+
+/* ✅ MIGLIORATO: Form di Verifica */
+.verifyForm {
+  display: flex;
+  flex-direction: column;
+  gap: 28px; /* ✅ AUMENTATO da 24px */
+}
+
+/* ✅ MIGLIORATO: Input 2FA */
+.twofaInput {
+  text-align: center !important;
+  font-size: 1.8rem !important; /* ✅ AUMENTATO da 1.5rem */
+  font-weight: 700 !important; /* ✅ AUMENTATO da 600 */
+  letter-spacing: 0.25em !important; /* ✅ AUMENTATO da 0.2em */
+  padding: 24px !important; /* ✅ AUMENTATO da 20px */
+  border-width: 3px !important; /* ✅ AUMENTATO da 2px */
+  min-height: 70px !important; /* ✅ AGGIUNTO */
+}
+
+.twofaInput:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 
+    0 0 0 6px rgba(59, 130, 246, 0.15) !important, /* ✅ AUMENTATO da 4px */
+    0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* ✅ MIGLIORATO: Success State */
+.setupSuccess {
+  text-align: center;
+  padding: 48px 0; /* ✅ AUMENTATO da 40px */
+}
+
+.successIcon {
+  width: 90px; /* ✅ AUMENTATO da 80px */
+  height: 90px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 28px; /* ✅ AUMENTATO da 24px */
+  font-size: 2.5rem; /* ✅ AUMENTATO da 2rem */
+  color: white;
+  animation: successPulse 2s ease-in-out;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4); /* ✅ AGGIUNTO */
+}
+
+@keyframes successPulse {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.setupSuccess h3 {
+  color: #059669;
+  margin-bottom: 16px; /* ✅ AUMENTATO da 12px */
+  font-size: 1.4rem; /* ✅ AGGIUNTO */
+  font-weight: 700; /* ✅ AGGIUNTO */
+}
+
+.setupSuccess p {
+  color: #6b7280;
+  font-size: 1.05rem; /* ✅ AGGIUNTO */
+  line-height: 1.5; /* ✅ AGGIUNTO */
+}
+
 /* ─────────── Responsive Design ─────────── */
 @media (max-width: 1024px) {
   .loginPage {
     padding-left: 40px;
     padding-right: 10%; /* ✅ CAMBIA a 15% o 18% */
     background-size: auto 70%;
+  }
+  
+  .loginFormWrapper:has(.twofaContainer) {
+    max-width: 480px; /* Leggermente ridotto */
   }
 }
 
@@ -319,15 +666,36 @@
     max-width: 100%;
   }
   
+  .loginFormWrapper:has(.twofaContainer) {
+    max-width: 100%;
+  }
+  
   .loginTitle {
     text-align: center; /* Su mobile torniamo al centro */
     font-size: 2.8rem; /* ✅ AUMENTATO da 2rem */
   }
+  
+  .loginForm:has(.twofaContainer) {
+    padding: 40px 32px;
+  }
+  
+  .twofaTitle h2,
+  .twofaTitle h3 {
+    font-size: 1.5rem;
+  }
+  
+  .authApps {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .authApp {
+    max-width: 280px;
+  }
 }
 
 @media (max-width: 640px) {
-  /* ✅ RIMOSSO: Regole logo eliminate */
-  
   .loginTitle {
     font-size: 2.2rem; /* ✅ AUMENTATO da 1.75rem */
     margin-bottom: 32px;
@@ -338,6 +706,10 @@
     border-radius: 20px;
   }
   
+  .loginForm:has(.twofaContainer) {
+    padding: 32px 24px;
+  }
+  
   .input {
     padding: 14px 18px 14px 52px;
     border-radius: 14px;
@@ -346,6 +718,32 @@
   .submitBtn {
     padding: 14px 20px;
     border-radius: 14px;
+  }
+  
+  .qrCode {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .twofaTitle h2,
+  .twofaTitle h3 {
+    font-size: 1.25rem;
+  }
+  
+  .setupContent > p:first-child, 
+  .verifyContent > p:first-child {
+    font-size: 1rem;
+  }
+  
+  .twofaInput {
+    font-size: 1.5rem !important;
+    padding: 20px !important;
+    min-height: 60px !important;
+  }
+  
+  .recommendedApps {
+    padding: 20px;
+    margin-bottom: 28px;
   }
   
   /* Riduzione elementi decorativi su mobile */
@@ -367,6 +765,18 @@
   .loginForm {
     padding: 28px 20px;
   }
+  
+  .twofaContainer {
+    gap: 24px;
+  }
+  
+  /* ✅ RIMOSSO: riferimenti backup key dal responsive */
+  
+  .successIcon {
+    width: 70px;
+    height: 70px;
+    font-size: 2rem;
+  }
 }
 
 /* ─────────── Animazioni di entrata ─────────── */
@@ -382,282 +792,5 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-/* 2FA Container */
-.twofaContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.twofaHeader {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 8px;
-}
-
-.backBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #64748b;
-  transition: all 0.3s ease;
-  padding: 8px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.backBtn:hover:not(:disabled) {
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
-}
-
-.twofaTitle {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-}
-
-.twofaTitle h2 {
-  margin: 0;
-  color: #1f2937;
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.shieldIcon {
-  color: #3b82f6;
-}
-
-/* Recommended Apps Section */
-.recommendedApps {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.recommendedApps p {
-  color: #6b7280;
-  font-size: 0.875rem;
-  font-weight: 600;
-  margin-bottom: 16px;
-  letter-spacing: 0.05em;
-}
-
-.authApps {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-}
-
-.authApp {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-
-.appIcon {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-}
-
-.appIcon.microsoft {
-  background: linear-gradient(45deg, #00a1f1, #0078d4);
-}
-
-.appIcon.google {
-  background: linear-gradient(45deg, #4285f4, #34a853);
-}
-
-/* Setup Content */
-.setupContent, 
-.verifyContent {
-  text-align: center;
-}
-
-.setupContent p, 
-.verifyContent p {
-  color: #374151;
-  margin-bottom: 24px;
-}
-
-/* QR Code Container */
-.qrCodeContainer {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 32px;
-  padding: 20px;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.qrCode {
-  width: 200px;
-  height: 200px;
-  border-radius: 8px;
-}
-
-/* Backup Key Section */
-.backupKeySection {
-  margin-bottom: 32px;
-  text-align: left;
-}
-
-.backupKeySection p {
-  margin-bottom: 12px;
-  color: #374151;
-  font-weight: 600;
-}
-
-.backupKeyContainer {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-  margin-bottom: 8px;
-}
-
-.backupKey {
-  flex: 1;
-  background: none;
-  border: none;
-  font-family: 'Monaco', 'Menlo', monospace;
-  font-size: 0.875rem;
-  color: #374151;
-  word-break: break-all;
-}
-
-.backupKeySection small {
-  color: #6b7280;
-  font-size: 0.8rem;
-}
-
-.copyBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #64748b;
-  transition: all 0.3s ease;
-  padding: 4px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.copyBtn:hover:not(:disabled) {
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
-}
-
-/* Verify Form */
-.verifyForm {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* 2FA Input Styling */
-.twofaInput {
-  text-align: center !important;
-  font-size: 1.5rem !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.2em !important;
-  padding: 20px !important;
-}
-
-/* Setup Success */
-.setupSuccess {
-  text-align: center;
-  padding: 40px 0;
-}
-
-.successIcon {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #10b981, #059669);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 24px;
-  font-size: 2rem;
-  color: white;
-  animation: successPulse 2s ease-in-out;
-}
-
-@keyframes successPulse {
-  0% { transform: scale(0); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
-
-.setupSuccess h3 {
-  color: #059669;
-  margin-bottom: 12px;
-}
-
-.setupSuccess p {
-  color: #6b7280;
-}
-
-/* ═══════════ Responsive Updates per 2FA ═══════════ */
-@media (max-width: 768px) {
-  .authApps {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .twofaTitle h2 {
-    font-size: 1.25rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .qrCode {
-    width: 160px;
-    height: 160px;
-  }
-  
-  .twofaHeader {
-    gap: 12px;
-  }
-  
-  .twofaTitle h2 {
-    font-size: 1.1rem;
-  }
-  
-  .setupContent p, 
-  .verifyContent p {
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .twofaContainer {
-    gap: 20px;
-  }
-  
-  .backupKeyContainer {
-    padding: 12px;
-  }
-  
-  .backupKey {
-    font-size: 0.8rem;
   }
 }
