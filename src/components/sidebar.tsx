@@ -119,6 +119,13 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
           <Activity className="icon" />
           <span className="item-text">e-Wallet Analytics</span>
         </button>
+          <button
+          className="list-group-item"
+          onClick={() => navigate("/elwallet-onboarding")}
+        >
+          <Activity className="icon" />
+          <span className="item-text">e-Wallet On Boarding</span>
+        </button>
       </div>
     </div>
   );

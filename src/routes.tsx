@@ -9,6 +9,7 @@ import ServicesAnalytics from "./pages/ServicesAnalytics";
 import GestioneAgenti from "./pages/GestioneAgenti";
 import DettagliAttivita from "./pages/GestioneAgenti/DettagliAttivita";
 import EWalletAnalytics from "./pages/EWallet";
+import OnBoardingAnalytics from "./pages/EWalletOnBoarding";
 
 // Componente per proteggere le route
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -89,6 +90,16 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <EWalletAnalytics />
+          </ProtectedRoute>
+        }
+      />
+
+       {/* Rotte protette */}
+      <Route
+        path="/elwallet-onboarding"
+        element={
+          <ProtectedRoute>
+            <OnBoardingAnalytics />
           </ProtectedRoute>
         }
       />
