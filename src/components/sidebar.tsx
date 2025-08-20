@@ -54,10 +54,10 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
         </button>
         <button
           className="list-group-item"
-          onClick={() => navigate("/testpage")}
+          onClick={() => navigate("/task-management")}
         >
           <Calendar className="icon" />
-          <span className="item-text">Calendario Operatori</span>
+          <span className="item-text">Task Management</span>
         </button>
         <button
           className="list-group-item"

@@ -11,6 +11,7 @@ import DettagliAttivita from "./pages/GestioneAgenti/DettagliAttivita";
 import EWalletAnalytics from "./pages/EWallet";
 import OnBoardingAnalytics from "./pages/EWalletOnBoarding";
 import AnagraficaAgenti from "./pages/AnagraficaAgenti";
+import TaskManagement from "./pages/Tasks";
 
 // Componente per proteggere le route
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -111,6 +112,16 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <AnagraficaAgenti />
+          </ProtectedRoute>
+        }
+      />
+
+       {/* Rotte protette */}
+      <Route
+        path="/task-management"
+        element={
+          <ProtectedRoute>
+            <TaskManagement />
           </ProtectedRoute>
         }
       />
