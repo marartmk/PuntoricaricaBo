@@ -10,6 +10,7 @@ import GestioneAgenti from "./pages/GestioneAgenti";
 import DettagliAttivita from "./pages/GestioneAgenti/DettagliAttivita";
 import EWalletAnalytics from "./pages/EWallet";
 import OnBoardingAnalytics from "./pages/EWalletOnBoarding";
+import AnagraficaAgenti from "./pages/AnagraficaAgenti";
 
 // Componente per proteggere le route
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -100,6 +101,16 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <OnBoardingAnalytics />
+          </ProtectedRoute>
+        }
+      />
+
+    {/* Rotte protette */}
+      <Route
+        path="/anagrafica-agenti"
+        element={
+          <ProtectedRoute>
+            <AnagraficaAgenti />
           </ProtectedRoute>
         }
       />

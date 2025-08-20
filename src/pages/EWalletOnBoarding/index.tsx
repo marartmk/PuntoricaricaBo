@@ -45,14 +45,14 @@ interface OnBoardingTotals {
   generatedAt: string;
 }
 
-interface _OnBoardingFilters {
-  anno: number;
-  mese: number | null;
-  dataInizio: string | null;
-  dataFine: string | null;
-  stepMinimo: number | null;
-  soloCompletate: boolean;
-}
+// interface OnBoardingFilters {
+//   anno: number;
+//   mese: number | null;
+//   dataInizio: string | null;
+//   dataFine: string | null;
+//   stepMinimo: number | null;
+//   soloCompletate: boolean;
+// }
 
 interface UserRegistration {
   identificativoRegistrazione: string;
@@ -714,7 +714,7 @@ const OnBoardingAnalytics: React.FC = () => {
     console.log("🥧 Preparazione dati grafico On Boarding:", onboardingStats);
     if (!onboardingStats.length) return [];
 
-    const pieData = onboardingStats.map((step, index) => {
+    const pieData = onboardingStats.map((step, _index) => {
       const colorArray =
         chartColors[`STEP_${step.stepNumero}` as keyof typeof chartColors] ||
         chartColors.DEFAULT;
@@ -737,7 +737,7 @@ const OnBoardingAnalytics: React.FC = () => {
   const prepareBarData = () => {
     if (!onboardingStats.length) return [];
 
-    return onboardingStats.map((step, index) => ({
+    return onboardingStats.map((step, _index) => ({
       step: `Step ${step.stepNumero}`,
       completamento: step.percentualeCompletamento,
       abbandono:
@@ -1128,9 +1128,7 @@ const OnBoardingAnalytics: React.FC = () => {
           >
             <i className="fa-solid fa-database me-2"></i>
             <div>
-              <strong>Dati Reali:</strong> Questa pagina utilizza dati reali dal
-              database AdmiralPay_PROD. I dati vengono aggiornati in tempo
-              reale.
+              <strong>Dati Reali:</strong> Questa pagina utilizza dati aggiornati in tempo reale.
             </div>
           </div>
 
@@ -1411,7 +1409,7 @@ const OnBoardingAnalytics: React.FC = () => {
                 <div className="card-body">
                   {onboardingStats.length > 0 ? (
                     <div className="row g-3">
-                      {onboardingStats.map((step, index) => {
+                      {onboardingStats.map((step, _index) => {
                         const colorArray =
                           chartColors[
                             `STEP_${step.stepNumero}` as keyof typeof chartColors
@@ -2100,12 +2098,12 @@ const OnBoardingAnalytics: React.FC = () => {
                       <div className="card-body">
                         <div className="timeline">
                           {selectedUserForModal.stepDettagli.map(
-                            (step, idx) => {
+                            (step, _idx) => {
                               const isCompleted = step.stato === "COMPLETATO";
                               const isInProgress = step.stato === "IN_CORSO";
                               const isFailed = step.stato === "FALLITO";
-                              const isNotStarted =
-                                step.stato === "NON_INIZIATO";
+                              // const isNotStarted =
+                              //   step.stato === "NON_INIZIATO";
 
                               return (
                                 <div

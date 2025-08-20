@@ -82,10 +82,10 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
         </button>
         <button
           className="list-group-item"
-          onClick={() => navigate("/device-registry")}
+          onClick={() => navigate("/anagrafica-agenti")}
         >
           <MonitorSmartphone className="icon" />
-          <span className="item-text">Anagrafica Fornitori</span>
+          <span className="item-text">Anagrafica Agenti</span>
         </button>
         <button
           className="list-group-item"

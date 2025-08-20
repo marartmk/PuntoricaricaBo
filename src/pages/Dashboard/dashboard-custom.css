@@ -1,0 +1,1381 @@
+/* dashboard-custom.css - Dashboard moderna pulita e funzionale */
+
+/* ================================
+   RESET E VARIABILI
+   ================================ */
+:root {
+  --primary-color: #002454;
+  --secondary-color: #003875;
+  --success-color: #28a745;
+  --warning-color: #f39c12;
+  --purple-color: #9b59b6;
+  --gray-color: #6c757d;
+  --dark-gray: #495057;
+  --white: #ffffff;
+  --light-bg: #f8f9fa;
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --card-hover-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* ================================
+   KPI CARDS - STILE UNIFICATO
+   ================================ */
+.dashboard-page .kpi-card {
+  background: var(--white);
+  border-radius: 8px;
+  padding: 20px;
+  height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--card-shadow);
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+  position: relative;
+  margin-bottom: 20px;
+}
+
+/* Variante compatta */
+.dashboard-page .kpi-card-compact {
+  padding: 18px;
+  height: 150px;
+}
+
+.dashboard-page .kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-hover-shadow);
+  border-color: var(--primary-color);
+}
+
+/* Varianti colori KPI Cards */
+.dashboard-page .kpi-card-primary {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: var(--white);
+  border: none;
+}
+
+.dashboard-page .kpi-card-secondary {
+  background: linear-gradient(135deg, var(--secondary-color) 0%, #004a99 100%);
+  color: var(--white);
+  border: none;
+}
+
+.dashboard-page .kpi-card-success {
+  background: linear-gradient(135deg, var(--success-color) 0%, #20c997 100%);
+  color: var(--white);
+  border: none;
+}
+
+.dashboard-page .kpi-card-warning {
+  background: linear-gradient(135deg, var(--warning-color) 0%, #f1c40f 100%);
+  color: var(--white);
+  border: none;
+}
+
+.dashboard-page .kpi-card-purple {
+  background: linear-gradient(135deg, var(--purple-color) 0%, #8e44ad 100%);
+  color: var(--white);
+  border: none;
+}
+
+.dashboard-page .kpi-card-calendar {
+  background: linear-gradient(135deg, var(--gray-color) 0%, var(--dark-gray) 100%);
+  color: var(--white);
+  border: none;
+  height: 160px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Header delle KPI Cards */
+.dashboard-page .kpi-header-simple {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dashboard-page .kpi-icon-small {
+  font-size: 18px;
+  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dashboard-page .kpi-period-simple {
+  font-size: 10px;
+  opacity: 0.8;
+  font-weight: 500;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Valori delle KPI Cards */
+.dashboard-page .kpi-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+  color: var(--white);
+}
+
+.dashboard-page .kpi-label {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.9;
+  margin-bottom: 6px;
+}
+
+/* Trend e informazioni aggiuntive */
+.dashboard-page .kpi-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  opacity: 0.8;
+  font-weight: 400;
+}
+
+.dashboard-page .kpi-trend i {
+  font-size: 9px;
+}
+
+.dashboard-page .kpi-sub-info {
+  font-size: 11px;
+  opacity: 0.7;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+
+/* ================================
+   BOX DEALER CON MINI GRAFICO A TORTA
+   ================================ */
+.dashboard-page .dealer-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+}
+
+.dashboard-page .dealer-box-left {
+  flex: 1;
+}
+
+.dashboard-page .dealer-main-number {
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+  color: var(--white);
+}
+
+.dashboard-page .dealer-sub-text {
+  font-size: 11px;
+  opacity: 0.8;
+  color: var(--white);
+  margin-top: 4px;
+}
+
+/* Donut più grande e centrato */
+.dashboard-page .dealer-box-right {
+  flex-shrink: 0;
+  margin-left: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+}
+
+.dashboard-page .mini-pie-chart {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* IMPORTANT: niente rotazione globale dell'SVG,
+   la rotazione è applicata SOLO all'arco nel JSX */
+.dashboard-page .mini-pie-chart svg {
+  transform: none;
+}
+
+/* ================================
+   BOX OGGI - STILE UNIFICATO
+   ================================ */
+.dashboard-page .today-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  gap: 16px;
+}
+
+.dashboard-page .today-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.dashboard-page .today-date-section {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.dashboard-page .kpi-value-date {
+  font-size: 2.8rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 4px;
+  color: var(--white);
+}
+
+.dashboard-page .today-day-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2px;
+}
+
+.dashboard-page .today-month-year {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dashboard-page .today-stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dashboard-page .today-stat-box {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dashboard-page .today-stat-number {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.dashboard-page .today-stat-text {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+.dashboard-page .today-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.dashboard-page .today-stat-item {
+  flex: 1;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dashboard-page .today-stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--white);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.dashboard-page .today-stat-label {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* ================================
+   GRAFICO DEALER COMPATTO - CSS CHART
+   ================================ */
+.dashboard-page .dealer-chart-compact {
+  margin-top: 12px;
+}
+
+.dashboard-page .chart-bars-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard-page .chart-bar-container-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.dashboard-page .chart-bar {
+  height: 4px;
+  border-radius: 2px;
+  transition: all 0.8s ease;
+  min-width: 15px;
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+}
+
+.dashboard-page .chart-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.dashboard-page .chart-bar-active {
+  background: linear-gradient(90deg, #ffffff 0%, rgba(255, 255, 255, 0.8) 100%);
+  box-shadow: 0 1px 4px rgba(255, 255, 255, 0.3);
+}
+
+.dashboard-page .chart-bar-inactive {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.2) 100%);
+}
+
+.dashboard-page .chart-label-compact {
+  font-size: 10px;
+  opacity: 0.8;
+  font-weight: 500;
+  min-width: 35px;
+  text-align: left;
+}
+
+.dashboard-page .chart-percentage {
+  font-size: 10px;
+  opacity: 0.9;
+  font-weight: 600;
+  min-width: 25px;
+  text-align: right;
+}
+
+/* ================================
+   AI ASSISTANT SECTION
+   ================================ */
+.dashboard-page .ai-assistant-section {
+  background: linear-gradient(135deg, var(--light-bg) 0%, #e9ecef 100%);
+  border-radius: 24px;
+  padding: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
+  margin-bottom: 30px;
+}
+
+.dashboard-page .ai-assistant-container {
+  background: linear-gradient(145deg, #ffffff 0%, var(--light-bg) 100%);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+}
+
+.dashboard-page .ai-assistant-container:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.1), 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-page .ai-assistant-header {
+  background: linear-gradient(145deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: var(--white);
+  padding: 24px 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-page .ai-assistant-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%, rgba(255, 255, 255, 0.1) 100%);
+  pointer-events: none;
+}
+
+.dashboard-page .ai-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-page .ai-header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.dashboard-page .ai-icon-large {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  animation: pulse 3s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.dashboard-page .ai-header-text h3 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.dashboard-page .ai-header-text p {
+  margin: 0;
+  font-size: 16px;
+  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dashboard-page .ai-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dashboard-page .ai-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: blink 2s infinite;
+}
+
+.dashboard-page .ai-status-indicator.online {
+  background: var(--success-color);
+  box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+.dashboard-page .ai-status span {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dashboard-page .ai-assistant-body {
+  padding: 32px;
+}
+
+/* Chat Container */
+.dashboard-page .ai-chat-container {
+  min-height: 400px;
+  max-height: 500px;
+  overflow-y: auto;
+  margin-bottom: 24px;
+  background: linear-gradient(145deg, var(--light-bg) 0%, #e9ecef 100%);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #dee2e6;
+}
+
+.dashboard-page .ai-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.dashboard-page .welcome-content {
+  max-width: 600px;
+}
+
+.dashboard-page .welcome-icon {
+  font-size: 48px;
+  color: var(--primary-color);
+  margin-bottom: 20px;
+}
+
+.dashboard-page .welcome-content h4 {
+  color: #2c3e50;
+  font-weight: 700;
+  margin-bottom: 16px;
+  font-size: 24px;
+}
+
+.dashboard-page .welcome-content p {
+  color: var(--gray-color);
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.dashboard-page .quick-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.dashboard-page .quick-actions .btn {
+  border-radius: 20px;
+  font-weight: 600;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+}
+
+.dashboard-page .quick-actions .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Messages */
+.dashboard-page .ai-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard-page .ai-message {
+  display: flex;
+  max-width: 85%;
+}
+
+.dashboard-page .ai-message.user {
+  align-self: flex-end;
+}
+
+.dashboard-page .ai-message.ai {
+  align-self: flex-start;
+}
+
+.dashboard-page .message-content {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid #e9ecef;
+  width: 100%;
+}
+
+.dashboard-page .ai-message.user .message-content {
+  background: linear-gradient(145deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: var(--white);
+}
+
+.dashboard-page .message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.dashboard-page .sender {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-page .timestamp {
+  font-size: 11px;
+}
+
+.dashboard-page .message-text {
+  line-height: 1.5;
+  font-size: 15px;
+}
+
+/* Typing Indicator */
+.dashboard-page .typing-indicator {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.dashboard-page .typing-indicator span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gray-color);
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.dashboard-page .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+.dashboard-page .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+  0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Input Container */
+.dashboard-page .ai-input-container {
+  background: linear-gradient(145deg, #ffffff 0%, var(--light-bg) 100%);
+  border-radius: 16px;
+  padding: 20px;
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.dashboard-page .ai-input-container:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(0, 36, 84, 0.25);
+}
+
+.dashboard-page .ai-input-wrapper {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.dashboard-page .ai-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  resize: none;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #2c3e50;
+  outline: none;
+  font-family: inherit;
+}
+
+.dashboard-page .ai-input::placeholder {
+  color: #adb5bd;
+  font-style: italic;
+}
+
+.dashboard-page .ai-send-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(145deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: var(--white);
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dashboard-page .ai-send-btn:hover:not(:disabled) {
+  background: linear-gradient(145deg, var(--secondary-color) 0%, #004a99 100%);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 36, 84, 0.3);
+}
+
+.dashboard-page .ai-send-btn:disabled {
+  background: var(--gray-color);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Stati di caricamento ed errore */
+.dashboard-page .kpi-loading,
+.dashboard-page .kpi-error,
+.dashboard-page .kpi-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  gap: 12px;
+}
+
+.dashboard-page .kpi-loading i,
+.dashboard-page .kpi-error i,
+.dashboard-page .kpi-empty i {
+  opacity: 0.6;
+  margin-bottom: 8px;
+}
+
+.dashboard-page .kpi-loading span,
+.dashboard-page .kpi-error span,
+.dashboard-page .kpi-empty span {
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+/* ================================
+   RESPONSIVE DESIGN
+   ================================ */
+@media (max-width: 1400px) {
+  .dashboard-page .kpi-card {
+    height: 145px;
+    padding: 16px;
+  }
+  
+  .dashboard-page .kpi-card-compact {
+    padding: 14px;
+    height: 135px;
+  }
+  
+  .dashboard-page .kpi-value {
+    font-size: 1.6rem;
+  }
+  
+  .dashboard-page .dealer-main-number {
+    font-size: 1.9rem;
+  }
+  
+  .dashboard-page .kpi-value-date {
+    font-size: 2.4rem;
+  }
+  
+  .dashboard-page .ai-assistant-section {
+    padding: 28px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .dashboard-page .kpi-card {
+    height: 135px;
+    padding: 14px;
+  }
+  
+  .dashboard-page .kpi-card-compact {
+    padding: 12px;
+    height: 125px;
+  }
+  
+  .dashboard-page .kpi-value {
+    font-size: 1.5rem;
+  }
+  
+  .dashboard-page .dealer-main-number {
+    font-size: 1.7rem;
+  }
+  
+  .dashboard-page .kpi-value-date {
+    font-size: 2.1rem;
+  }
+  
+  .dashboard-page .ai-assistant-section {
+    padding: 24px;
+  }
+  
+  .dashboard-page .ai-header-left {
+    gap: 16px;
+  }
+  
+  .dashboard-page .ai-icon-large {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+  }
+  
+  .dashboard-page .ai-header-text h3 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 992px) {
+  .dashboard-page .kpi-card {
+    height: 125px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .dashboard-page .kpi-card-compact {
+    padding: 10px;
+    height: 115px;
+  }
+  
+  .dashboard-page .kpi-value {
+    font-size: 1.4rem;
+  }
+  
+  .dashboard-page .dealer-main-number {
+    font-size: 1.5rem;
+  }
+  
+  .dashboard-page .kpi-value-date {
+    font-size: 1.8rem;
+  }
+  
+  .dashboard-page .today-stat-number {
+    font-size: 12px;
+  }
+  
+  .dashboard-page .today-stat-text {
+    font-size: 8px;
+  }
+  
+  .dashboard-page .today-stat-value {
+    font-size: 1.2rem;
+  }
+  
+  .dashboard-page .ai-assistant-body {
+    padding: 24px;
+  }
+  
+  .dashboard-page .ai-chat-container {
+    min-height: 300px;
+    max-height: 400px;
+  }
+  
+  .dashboard-page .quick-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .dashboard-page .quick-actions .btn {
+    min-width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-page .kpi-card {
+    height: 115px;
+    padding: 10px;
+  }
+  
+  .dashboard-page .kpi-card-compact {
+    padding: 8px;
+    height: 105px;
+  }
+  
+  .dashboard-page .kpi-value {
+    font-size: 1.2rem;
+  }
+  
+  .dashboard-page .dealer-main-number {
+    font-size: 1.3rem;
+  }
+  
+  .dashboard-page .kpi-value-date {
+    font-size: 1.5rem;
+  }
+  
+  .dashboard-page .today-container {
+    gap: 12px;
+  }
+  
+  .dashboard-page .today-stat-box {
+    padding: 6px 8px;
+  }
+  
+  .dashboard-page .today-stat-number {
+    font-size: 11px;
+  }
+  
+  .dashboard-page .today-stat-text {
+    font-size: 7px;
+  }
+  
+  .dashboard-page .today-stat-value {
+    font-size: 1rem;
+  }
+  
+  .dashboard-page .today-stats {
+    flex-direction: column;
+  }
+  
+  .dashboard-page .ai-assistant-section {
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .dashboard-page .ai-assistant-header {
+    padding: 20px 24px;
+  }
+  
+  .dashboard-page .ai-header-content {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+  
+  .dashboard-page .ai-header-left {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .dashboard-page .ai-header-text h3 {
+    font-size: 20px;
+  }
+  
+  .dashboard-page .ai-header-text p {
+    font-size: 14px;
+  }
+  
+  .dashboard-page .ai-assistant-body {
+    padding: 20px;
+  }
+  
+  .dashboard-page .ai-chat-container {
+    min-height: 250px;
+    max-height: 350px;
+    padding: 16px;
+  }
+  
+  .dashboard-page .welcome-content h4 {
+    font-size: 20px;
+  }
+  
+  .dashboard-page .welcome-content p {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 576px) {
+  .dashboard-page .kpi-card {
+    height: 100px;
+    padding: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .dashboard-page .kpi-card-compact {
+    padding: 6px;
+    height: 90px;
+  }
+  
+  .dashboard-page .kpi-value {
+    font-size: 1.1rem;
+  }
+  
+  .dashboard-page .dealer-main-number {
+    font-size: 1.2rem;
+  }
+  
+  .dashboard-page .kpi-value-date {
+    font-size: 1.3rem;
+  }
+  
+  .dashboard-page .kpi-label {
+    font-size: 11px;
+  }
+  
+  .dashboard-page .today-container {
+    gap: 8px;
+  }
+  
+  .dashboard-page .today-stat-box {
+    padding: 4px 6px;
+  }
+  
+  .dashboard-page .today-stat-number {
+    font-size: 10px;
+  }
+  
+  .dashboard-page .today-stat-text {
+    font-size: 6px;
+  }
+  
+  .dashboard-page .today-stat-value {
+    font-size: 0.9rem;
+  }
+  
+  .dashboard-page .ai-assistant-section {
+    padding: 16px;
+  }
+  
+  .dashboard-page .ai-assistant-header {
+    padding: 16px 20px;
+  }
+  
+  .dashboard-page .ai-icon-large {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+  
+  .dashboard-page .ai-header-text h3 {
+    font-size: 18px;
+  }
+  
+  .dashboard-page .ai-assistant-body {
+    padding: 16px;
+  }
+  
+  .dashboard-page .ai-chat-container {
+    min-height: 200px;
+    max-height: 300px;
+    padding: 12px;
+  }
+  
+  .dashboard-page .ai-input-container {
+    padding: 16px;
+  }
+  
+  .dashboard-page .ai-input-wrapper {
+    gap: 8px;
+  }
+  
+  .dashboard-page .ai-send-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  
+  .dashboard-page .mini-pie-chart svg {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+/* ================================
+   ANIMAZIONI
+   ================================ */
+.dashboard-page .kpi-card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.dashboard-page .ai-assistant-section {
+  animation: fadeIn 0.6s ease-out 0.3s both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hover effect semplificato */
+.dashboard-page .kpi-card {
+  cursor: pointer;
+}
+
+/* Effetti di focus migliorati */
+.dashboard-page .ai-input:focus {
+  outline: none;
+}
+
+/* Personalizzazioni specifiche per la pagina Dashboard */
+.dashboard-page .btn-primary-dark {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: var(--white) !important;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+.dashboard-page .btn-primary-dark:hover {
+  background-color: var(--secondary-color) !important;
+  border-color: var(--secondary-color) !important;
+  color: var(--white) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 36, 84, 0.3);
+}
+
+.dashboard-page .btn-primary-dark:disabled {
+  background-color: var(--gray-color) !important;
+  border-color: var(--gray-color) !important;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Header della dashboard */
+.dashboard-page .container-fluid h2 {
+  color: #2c3e50 !important;
+  font-weight: 700;
+  font-size: 1.75rem;
+  margin-bottom: 0;
+}
+
+.dashboard-page .container-fluid h2 i {
+  color: var(--primary-color);
+}
+
+/* Fix per il Bootstrap grid system */
+.dashboard-page .row.g-4 {
+  --bs-gutter-x: 1.5rem;
+  --bs-gutter-y: 1.5rem;
+}
+
+/* Assicura che le card abbiano la stessa altezza */
+.dashboard-page .row.g-4 > * {
+  display: flex;
+}
+
+.dashboard-page .row.g-4 .kpi-card {
+  width: 100%;
+}
+
+/* Scroll personalizzato per chat */
+.dashboard-page .ai-chat-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-page .ai-chat-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.dashboard-page .ai-chat-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 36, 84, 0.3);
+  border-radius: 3px;
+}
+
+.dashboard-page .ai-chat-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 36, 84, 0.5);
+}
+
+/* FIX per il box Oggi (calendario) */
+.dashboard-page .kpi-card-calendar {
+  height: 160px !important;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  overflow: visible;
+}
+
+.dashboard-page .kpi-card-calendar .today-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;   /* centra verticalmente */
+  height: 100%;
+}
+
+.dashboard-page .kpi-card-calendar .today-date-section {
+  text-align: left;          /* data allineata a sinistra */
+  margin-bottom: 12px;
+}
+
+.dashboard-page .kpi-card-calendar .today-stats {
+  display: flex;
+  justify-content: center;   /* centra orizzontalmente i dettagli */
+  align-items: center;
+  gap: 40px;                 /* spazio tra le due statistiche */
+  margin-top: 0;             /* rimuove spinta in basso */
+}
+.dashboard-page .kpi-card-calendar .today-stat-item {
+  background: none;          /* niente box sfumato */
+  border: none;
+  padding: 0;
+}
+
+.dashboard-page .kpi-card-calendar .today-stat-value {
+  font-size: 1.6rem;         /* più grande */
+  font-weight: 800;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+
+.dashboard-page .kpi-card-calendar .today-stat-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.9);
+}
+
+/* Media query aggiuntiva per il box Oggi */
+@media (max-width: 992px) {
+  .dashboard-page .kpi-card-calendar .kpi-value-date {
+    font-size: 2.2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-page .kpi-card-calendar .kpi-value-date {
+    font-size: 2rem;
+  }
+}
+
+/* === BOX OGGI: dettagli in colonna, centrati e senza sfumature === */
+.dashboard-page .kpi-card-calendar .today-content {
+  display: flex;
+  flex-direction: row;              /* data a sinistra, dettagli a destra/centro */
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.dashboard-page .kpi-card-calendar .today-date-section {
+  text-align: left;                 /* data come gli altri box */
+  margin: 0;
+}
+
+/* Dettagli: una sotto l’altra, centrati verticalmente al centro box */
+.dashboard-page .kpi-card-calendar .today-stats {
+  display: flex !important;
+  flex-direction: column !important; /* ⬅️ uno sotto l’altro */
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 10px;
+  margin-top: 0 !important;          /* non spingerli in basso */
+}
+
+/* Niente “frosted glass”/sfumature */
+.dashboard-page .kpi-card-calendar .today-stat-item,
+.dashboard-page .kpi-card-calendar .today-stat-box {
+  background: transparent !important;
+  border: 0 !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Tipografia più leggibile e centrata */
+.dashboard-page .kpi-card-calendar .today-stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  color: #fff;
+}
+
+.dashboard-page .kpi-card-calendar .today-stat-label {
+  font-size: 0.9rem;
+  text-align: center;
+  color: rgba(255,255,255,0.9);
+}
+
+/* === FIX BOX OGGI === */
+.dashboard-page .kpi-card-calendar {
+  height: 150px !important;     /* stessa altezza degli altri box */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.dashboard-page .kpi-card-calendar .today-content {
+  display: flex;
+  flex-direction: row;           /* data a sinistra, stats a destra */
+  align-items: center;           /* centra verticalmente */
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 10px;               /* spinge un po’ dentro le stats */
+}
+
+.dashboard-page .kpi-card-calendar .today-date-section {
+  text-align: left;              /* data come gli altri box */
+  margin: 0;
+}
+
+.dashboard-page .kpi-card-calendar .today-stats {
+  display: flex;
+  flex-direction: column;        /* valori uno sotto l’altro */
+  justify-content: center;       /* centrati verticalmente */
+  align-items: flex-start;       /* allineati a sinistra */
+  gap: 6px;                      /* spazio tra i due valori */
+}
+
+.dashboard-page .kpi-card-calendar .today-stat-item {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  text-align: left;              /* allineati come testo normale */
+}
+
+.dashboard-page .kpi-card-calendar .today-stat-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.dashboard-page .kpi-card-calendar .today-stat-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.9);
+  margin: 0;
+}
+/* === FIX AI ASSISTANT CONTAINER === */
+.dashboard-page .ai-assistant-section {
+  background: transparent !important;   /* niente fondo grigio */
+  border: none !important;              /* rimuove bordo */
+  box-shadow: none !important;          /* rimuove ombra */
+  padding: 0 !important;                /* elimina spazi extra */
+  margin-top: 0 !important;             /* allinea con i box sopra */
+}
+
+.dashboard-page .ai-assistant-container {
+  border-radius: 8px;                   /* stesso radius degli altri box */
+  box-shadow: 0 2px 8px rgba(0,0,0,.1); /* stessa ombra dei box KPI */
+  border: 1px solid #e9ecef;            /* stesso bordo sottile */
+  margin-top: 0 !important;
+}
+
+/* Header blu parte a filo come negli altri box */
+.dashboard-page .ai-assistant-header {
+  border-radius: 8px 8px 0 0;           /* solo angoli superiori arrotondati */
+  margin: 0;
+}
+/* === HEADER AI ASSISTANT COMPATTO === */
+.dashboard-page .ai-assistant-header {
+  padding: 12px 20px;              /* riduce altezza verticale */
+  min-height: auto;                /* evita altezza fissa */
+}
+
+.dashboard-page .ai-icon-large {
+  width: 40px;                     /* più piccolo */
+  height: 40px;
+  font-size: 20px;                 /* icona interna più piccola */
+  border-radius: 10px;
+}
+
+.dashboard-page .ai-header-text h3 {
+  font-size: 20px;                 /* titolo più piccolo */
+  margin: 0 0 4px 0;
+}
+
+.dashboard-page .ai-header-text p {
+  font-size: 13px;                 /* sottotitolo più piccolo */
+  margin: 0;
+}
+/* da TOGLIERE */
+.dashboard-page {
+  max-width: 100%;
+  margin: 0 auto;
+  padding-right: 20px;
+  padding-left: 0px;
+}
+

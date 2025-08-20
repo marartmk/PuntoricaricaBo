@@ -169,6 +169,16 @@ const GestioneAgenti: React.FC = () => {
     trasferta: false,
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
   // ✅ FORM NUOVA ATTIVITÀ
   const [nuovaAttivita, setNuovaAttivita] =
     useState<AttivitaAgenteCreateDto>(defaultNuovaAttivita);
@@ -1781,7 +1791,7 @@ const GestioneAgenti: React.FC = () => {
                         <table className="table table-hover">
                           <thead>
                             <tr>
-                              <th>Settimana</th>
+                              {/* <th>Settimana</th> */}
                               <th>Giorno</th>
                               <th>Data</th>
                               <th>Agente</th>
@@ -1796,16 +1806,16 @@ const GestioneAgenti: React.FC = () => {
                               <th>Segnalazione</th>
                               <th>Prodotto/Motivo</th>
                               <th>Trasferta</th>
-                              <th>Note</th>
+                              {/* <th>Note</th> */}
                               <th style={{ width: "120px" }}>Azioni</th>
                             </tr>
                           </thead>
                           <tbody>
                             {datiPaginati.map((item, index) => (
                               <tr key={item.id || index}>
-                                <td>{item.settimana}</td>
+                                {/* <td>{item.settimana}</td> */}
                                 <td>{item.giorno}</td>
-                                <td>{item.data}</td>
+                                <td>{formatDate(item.data)}</td>
                                 <td className="fw-bold">
                                   {item.nomeAgente} {item.cognomeAgente}
                                 </td>
@@ -1894,7 +1904,7 @@ const GestioneAgenti: React.FC = () => {
                                     </span>
                                   )}
                                 </td>
-                                <td>{item.note}</td>
+                                {/* <td>{item.note}</td> */}
                                 <td>
                                   <div className="d-flex gap-1">
                                     <button
