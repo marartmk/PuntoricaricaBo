@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import '../../pages/Dashboard/dashboard.css';
-import './tasks-custom.css';
-import Sidebar from '../../components/sidebar';
-import Topbar from '../../components/topbar';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import "../../pages/Dashboard/dashboard.css";
+import "./tasks-custom.css";
+import Sidebar from "../../components/sidebar";
+import Topbar from "../../components/topbar";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-// ✅ INTERFACCE PER TASK MANAGEMENT
+// âœ… INTERFACCE PER TASK MANAGEMENT
 interface Cliente {
   id: string;
   nome: string;
@@ -27,8 +27,9 @@ interface Agente {
   cognome: string;
   email: string;
   telefono?: string;
-  reparto: string;
+  reparto?: string;
   attivo: boolean;
+  codiceAgente?: string;
 }
 
 interface TaskIntervento {
@@ -37,11 +38,17 @@ interface TaskIntervento {
   operatoreId: string;
   nomeOperatore: string;
   cognomeOperatore: string;
-  tipoIntervento: 'Chiamata' | 'Email' | 'Note' | 'Assegnazione' | 'Cambio Stato' | 'Altro';
+  tipoIntervento:
+    | "Chiamata"
+    | "Email"
+    | "Note"
+    | "Assegnazione"
+    | "Cambio Stato"
+    | "Altro";
   descrizione: string;
   dataIntervento: string;
-  durata?: number; // in minuti
-  esitoIntervento?: 'Positivo' | 'Negativo' | 'Neutrale' | 'Da Ricontattare';
+  durata?: number;
+  esitoIntervento?: "Positivo" | "Negativo" | "Neutrale" | "Da Ricontattare";
   prossimaAzione?: string;
   dataProximoContatto?: string;
 }
@@ -51,16 +58,28 @@ interface Task {
   numeroTask: string;
   titolo: string;
   descrizione: string;
-  stato: 'Aperto' | 'In Corso' | 'In Attesa' | 'Completato' | 'Chiuso' | 'Sospeso';
-  priorita: 'Bassa' | 'Media' | 'Alta' | 'Urgente';
+  stato:
+    | "Aperto"
+    | "In Corso"
+    | "In Attesa"
+    | "Completato"
+    | "Chiuso"
+    | "Sospeso";
+  priorita: "Bassa" | "Media" | "Alta" | "Urgente";
   cliente: Cliente;
   agenteAssegnato?: Agente;
   dataCreazione: string;
   dataUltimaModifica?: string;
   dataScadenza?: string;
   dataChiusura?: string;
-  origine: 'Email' | 'Telefono' | 'Sito Web' | 'Manuale' | 'Chat' | 'Social';
-  categoria: 'Vendita' | 'Supporto' | 'Tecnico' | 'Amministrativo' | 'Reclamo' | 'Informazioni';
+  origine: "Email" | "Telefono" | "Sito Web" | "Manuale" | "Chat" | "Social";
+  categoria:
+    | "Vendita"
+    | "Supporto"
+    | "Tecnico"
+    | "Amministrativo"
+    | "Reclamo"
+    | "Informazioni";
   valorePotenziale?: number;
   note?: string;
   interventI: TaskIntervento[];
@@ -73,20 +92,25 @@ interface TaskStats {
   inCorso: number;
   completati: number;
   scaduti: number;
-  mediaRisoluzione: number; // giorni
+  mediaRisoluzione: number;
   valoreTotalePotenziale: number;
 }
 
 interface NuovoTaskForm {
   titolo: string;
   descrizione: string;
-  priorita: 'Bassa' | 'Media' | 'Alta' | 'Urgente';
-  categoria: 'Vendita' | 'Supporto' | 'Tecnico' | 'Amministrativo' | 'Reclamo' | 'Informazioni';
+  priorita: "Bassa" | "Media" | "Alta" | "Urgente";
+  categoria:
+    | "Vendita"
+    | "Supporto"
+    | "Tecnico"
+    | "Amministrativo"
+    | "Reclamo"
+    | "Informazioni";
   agenteAssegnatoId: string;
   dataScadenza: string;
   valorePotenziale?: number;
   note: string;
-  // Dati cliente
   clienteNome: string;
   clienteCognome: string;
   clienteEmail: string;
@@ -97,46 +121,90 @@ interface NuovoTaskForm {
   clienteTipoAttivita: string;
 }
 
-const TaskManagement: React.FC = () => {
-  const navigate = useNavigate();
-  const [menuState, setMenuState] = useState<'open' | 'closed'>('open');
+// âœ… INTERFACCE API BACKEND
+interface AgenteDto {
+  id: string;
+  codiceAgente: string;
+  nome: string;
+  cognome: string;
+  email?: string;
+  telefono?: string;
+  indirizzo?: string;
+  citta?: string;
+  provincia?: string;
+  cap?: string;
+  attivo: boolean;
+  dataInserimento: string;
+  dataUltimaModifica?: string;
+}
 
-  // ✅ CONFIGURAZIONE API
+interface ApiResponseDto<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  errors?: string[];
+}
+
+interface PaginatedResponse<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+const TaskManagement: React.FC = () => {
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navigate = useNavigate();
+  const [menuState, setMenuState] = useState<"open" | "closed">("open");
+
+  // âœ… CONFIGURAZIONE API
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // ✅ STATI PRINCIPALI
+  // âœ… STATI PRINCIPALI
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [agenti, setAgenti] = useState<Agente[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
 
-  // ✅ STATI FILTRI E VISUALIZZAZIONE
-  const [activeTab, setActiveTab] = useState<'aperti' | 'tutti' | 'completati' | 'scaduti'>('aperti');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedPriority, setSelectedPriority] = useState<string>('tutte');
-  const [selectedAgent, setSelectedAgent] = useState<string>('tutti');
-  const [selectedCategory, setSelectedCategory] = useState<string>('tutte');
-  const [selectedStatus, setSelectedStatus] = useState<string>('tutti');
+  // âœ… STATI AGENTI
+  const [agenti, setAgenti] = useState<AgenteDto[]>([]);
+  const [isLoadingAgenti, setIsLoadingAgenti] = useState<boolean>(false);
+  const [errorAgenti, setErrorAgenti] = useState<string>("");
 
-  // ✅ STATI FORM E MODALI
+  // âœ… STATI PAGINAZIONE SERVER
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [serverTotalPages, setServerTotalPages] = useState<number>(0);
+
+  // âœ… STATI FILTRI E VISUALIZZAZIONE
+  const [activeTab, setActiveTab] = useState<
+    "aperti" | "tutti" | "completati" | "scaduti"
+  >("aperti");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedPriority, setSelectedPriority] = useState<string>("tutte");
+  const [selectedAgent, setSelectedAgent] = useState<string>("tutti");
+  const [selectedCategory, setSelectedCategory] = useState<string>("tutte");
+  const [selectedStatus, setSelectedStatus] = useState<string>("tutti");
+
+  // âœ… STATI FORM E MODALI
   const [showNewTaskForm, setShowNewTaskForm] = useState<boolean>(false);
   const [showTaskDetail, setShowTaskDetail] = useState<boolean>(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showReassignModal, setShowReassignModal] = useState<boolean>(false);
   const [taskToReassign, setTaskToReassign] = useState<Task | null>(null);
-  const [showAddInterventionModal, setShowAddInterventionModal] = useState<boolean>(false);
+  const [showAddInterventionModal, setShowAddInterventionModal] =
+    useState<boolean>(false);
 
-  // ✅ STATI PER RIASSEGNAZIONE
-  const [newAssigneeId, setNewAssigneeId] = useState<string>('');
-  const [reassignReason, setReassignReason] = useState<string>('');
+  // âœ… STATI PER RIASSEGNAZIONE
+  const [newAssigneeId, setNewAssigneeId] = useState<string>("");
+  const [reassignReason, setReassignReason] = useState<string>("");
 
-  // ✅ STATI PER NUOVO INTERVENTO
-  const defaultNewIntervention: Omit<TaskIntervento, 'id' | 'taskId'> = {
-    operatoreId: '',
-    nomeOperatore: '',
-    cognomeOperatore: '',
-    tipoIntervento: 'Note',
-    descrizione: '',
+  // âœ… STATI PER NUOVO INTERVENTO
+  const defaultNewIntervention: Omit<TaskIntervento, "id" | "taskId"> = {
+    operatoreId: "",
+    nomeOperatore: "",
+    cognomeOperatore: "",
+    tipoIntervento: "Note",
+    descrizione: "",
     dataIntervento: new Date().toISOString(),
     durata: undefined,
     esitoIntervento: undefined,
@@ -144,361 +212,545 @@ const TaskManagement: React.FC = () => {
     dataProximoContatto: undefined,
   };
 
-  const [newIntervention, setNewIntervention] = useState<Omit<TaskIntervento, 'id' | 'taskId'>>(defaultNewIntervention);
+  const [newIntervention, setNewIntervention] = useState<
+    Omit<TaskIntervento, "id" | "taskId">
+  >(defaultNewIntervention);
 
-  // ✅ PAGINAZIONE
+  // âœ… PAGINAZIONE
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
 
-  // ✅ FORM NUOVO TASK
+  // âœ… FORM NUOVO TASK
   const defaultNewTask: NuovoTaskForm = {
-    titolo: '',
-    descrizione: '',
-    priorita: 'Media',
-    categoria: 'Vendita',
-    agenteAssegnatoId: '',
-    dataScadenza: '',
+    titolo: "",
+    descrizione: "",
+    priorita: "Media",
+    categoria: "Vendita",
+    agenteAssegnatoId: "",
+    dataScadenza: "",
     valorePotenziale: undefined,
-    note: '',
-    clienteNome: '',
-    clienteCognome: '',
-    clienteEmail: '',
-    clienteTelefono: '',
-    clienteCitta: '',
-    clienteProvincia: '',
-    clienteAzienda: '',
-    clienteTipoAttivita: '',
+    note: "",
+    clienteNome: "",
+    clienteCognome: "",
+    clienteEmail: "",
+    clienteTelefono: "",
+    clienteCitta: "",
+    clienteProvincia: "",
+    clienteAzienda: "",
+    clienteTipoAttivita: "",
   };
 
   const [newTask, setNewTask] = useState<NuovoTaskForm>(defaultNewTask);
 
-  // ✅ CARICAMENTO MENU STATE
-  useEffect(() => {
-    const savedMenuState = localStorage.getItem('menuState');
-    if (savedMenuState === 'closed') {
-      setMenuState('closed');
+  // âœ… HELPER PER TOKEN AUTH
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error(
+        "Token di autenticazione non trovato. Effettua il login dalla pagina di accesso."
+      );
     }
-  }, []);
-
-  // ✅ DATI FAKE - AGENTI
-  const agentiFake: Agente[] = [
-    {
-      id: 'agent-1',
-      nome: 'Marco',
-      cognome: 'Rossi',
-      email: 'm.rossi@company.com',
-      telefono: '+39 339 1234567',
-      reparto: 'Commerciale',
-      attivo: true,
-    },
-    {
-      id: 'agent-2',
-      nome: 'Anna',
-      cognome: 'Verdi',
-      email: 'a.verdi@company.com',
-      telefono: '+39 338 7654321',
-      reparto: 'Supporto',
-      attivo: true,
-    },
-    {
-      id: 'agent-3',
-      nome: 'Luigi',
-      cognome: 'Bianchi',
-      email: 'l.bianchi@company.com',
-      telefono: '+39 347 9876543',
-      reparto: 'Tecnico',
-      attivo: true,
-    },
-    {
-      id: 'agent-4',
-      nome: 'Sofia',
-      cognome: 'Neri',
-      email: 's.neri@company.com',
-      telefono: '+39 345 5551234',
-      reparto: 'Commerciale',
-      attivo: true,
-    },
-  ];
-
-  // ✅ DATI FAKE - TASK
-  const tasksFake: Task[] = [
-    {
-      id: 'task-1',
-      numeroTask: 'TSK-001',
-      titolo: 'Richiesta informazioni POS',
-      descrizione: 'Cliente interessato a soluzioni POS per la sua attività',
-      stato: 'Aperto',
-      priorita: 'Alta',
-      cliente: {
-        id: 'client-1',
-        nome: 'Marco',
-        cognome: 'Amicone',
-        email: 'aaaamiconeasssicurazioni@gmail.com',
-        telefono: '3389105515',
-        citta: 'San Valentino in abruzzo citeriore',
-        provincia: 'PE',
-        tipoAttivita: 'Assicurazioni',
-        azienda: 'Amicone Assicurazioni',
-      },
-      agenteAssegnato: agentiFake[0],
-      dataCreazione: '2025-08-20T10:30:00Z',
-      dataScadenza: '2025-08-25T17:00:00Z',
-      origine: 'Email',
-      categoria: 'Vendita',
-      valorePotenziale: 2500,
-      interventI: [
-        {
-          id: 'int-1',
-          taskId: 'task-1',
-          operatoreId: 'agent-1',
-          nomeOperatore: 'Marco',
-          cognomeOperatore: 'Rossi',
-          tipoIntervento: 'Email',
-          descrizione: 'Inviata email di risposta con documentazione POS',
-          dataIntervento: '2025-08-20T11:00:00Z',
-          esitoIntervento: 'Positivo',
-          prossimaAzione: 'Chiamata di follow-up',
-          dataProximoContatto: '2025-08-21T09:00:00Z',
-        }
-      ],
-      tags: ['pos', 'vendita', 'assicurazioni'],
-    },
-    {
-      id: 'task-2',
-      numeroTask: 'TSK-002',
-      titolo: 'Supporto tecnico dispositivo',
-      descrizione: 'Problema con lettore carte cliente esistente',
-      stato: 'In Corso',
-      priorita: 'Media',
-      cliente: {
-        id: 'client-2',
-        nome: 'Giulia',
-        cognome: 'Ferrari',
-        email: 'g.ferrari@ristorante.it',
-        telefono: '+39 334 9876543',
-        citta: 'Milano',
-        provincia: 'MI',
-        tipoAttivita: 'Ristorazione',
-        azienda: 'Ristorante Da Giulia',
-      },
-      agenteAssegnato: agentiFake[2],
-      dataCreazione: '2025-08-19T14:20:00Z',
-      dataScadenza: '2025-08-22T18:00:00Z',
-      origine: 'Telefono',
-      categoria: 'Tecnico',
-      interventI: [
-        {
-          id: 'int-2',
-          taskId: 'task-2',
-          operatoreId: 'agent-2',
-          nomeOperatore: 'Anna',
-          cognomeOperatore: 'Verdi',
-          tipoIntervento: 'Chiamata',
-          descrizione: 'Ricevuta chiamata cliente, diagnosticato problema hardware',
-          dataIntervento: '2025-08-19T14:30:00Z',
-          durata: 15,
-          esitoIntervento: 'Neutrale',
-        },
-        {
-          id: 'int-3',
-          taskId: 'task-2',
-          operatoreId: 'agent-3',
-          nomeOperatore: 'Luigi',
-          cognomeOperatore: 'Bianchi',
-          tipoIntervento: 'Assegnazione',
-          descrizione: 'Task riassegnato al reparto tecnico',
-          dataIntervento: '2025-08-19T15:00:00Z',
-        }
-      ],
-      tags: ['supporto', 'hardware', 'lettore'],
-    },
-    {
-      id: 'task-3',
-      numeroTask: 'TSK-003',
-      titolo: 'Preventivo personalizzato',
-      descrizione: 'Richiesta preventivo per soluzione multi-sede',
-      stato: 'Completato',
-      priorita: 'Alta',
-      cliente: {
-        id: 'client-3',
-        nome: 'Roberto',
-        cognome: 'Viola',
-        email: 'r.viola@catenastore.com',
-        telefono: '+39 320 1122334',
-        citta: 'Roma',
-        provincia: 'RM',
-        tipoAttivita: 'Retail',
-        azienda: 'Catena Store Roma',
-      },
-      agenteAssegnato: agentiFake[3],
-      dataCreazione: '2025-08-15T09:00:00Z',
-      dataScadenza: '2025-08-20T17:00:00Z',
-      dataChiusura: '2025-08-19T16:30:00Z',
-      origine: 'Sito Web',
-      categoria: 'Vendita',
-      valorePotenziale: 15000,
-      interventI: [
-        {
-          id: 'int-4',
-          taskId: 'task-3',
-          operatoreId: 'agent-4',
-          nomeOperatore: 'Sofia',
-          cognomeOperatore: 'Neri',
-          tipoIntervento: 'Chiamata',
-          descrizione: 'Chiamata per raccolta requisiti dettagliati',
-          dataIntervento: '2025-08-15T10:00:00Z',
-          durata: 45,
-          esitoIntervento: 'Positivo',
-        },
-        {
-          id: 'int-5',
-          taskId: 'task-3',
-          operatoreId: 'agent-4',
-          nomeOperatore: 'Sofia',
-          cognomeOperatore: 'Neri',
-          tipoIntervento: 'Email',
-          descrizione: 'Inviato preventivo personalizzato',
-          dataIntervento: '2025-08-18T11:00:00Z',
-          esitoIntervento: 'Positivo',
-        },
-        {
-          id: 'int-6',
-          taskId: 'task-3',
-          operatoreId: 'agent-4',
-          nomeOperatore: 'Sofia',
-          cognomeOperatore: 'Neri',
-          tipoIntervento: 'Cambio Stato',
-          descrizione: 'Task completato - preventivo accettato dal cliente',
-          dataIntervento: '2025-08-19T16:30:00Z',
-          esitoIntervento: 'Positivo',
-        }
-      ],
-      tags: ['preventivo', 'multi-sede', 'retail'],
-    },
-    {
-      id: 'task-4',
-      numeroTask: 'TSK-004',
-      titolo: 'Reclamo fatturazione',
-      descrizione: 'Cliente segnala errore su fattura del mese scorso',
-      stato: 'In Attesa',
-      priorita: 'Urgente',
-      cliente: {
-        id: 'client-4',
-        nome: 'Maria',
-        cognome: 'Russo',
-        email: 'm.russo@farmacia.it',
-        telefono: '+39 366 7788990',
-        citta: 'Napoli',
-        provincia: 'NA',
-        tipoAttivita: 'Farmacia',
-        azienda: 'Farmacia San Giuseppe',
-      },
-      agenteAssegnato: agentiFake[1],
-      dataCreazione: '2025-08-20T08:15:00Z',
-      dataScadenza: '2025-08-21T17:00:00Z',
-      origine: 'Email',
-      categoria: 'Reclamo',
-      interventI: [
-        {
-          id: 'int-7',
-          taskId: 'task-4',
-          operatoreId: 'agent-2',
-          nomeOperatore: 'Anna',
-          cognomeOperatore: 'Verdi',
-          tipoIntervento: 'Note',
-          descrizione: 'Analisi fattura - identificato errore importo servizi aggiuntivi',
-          dataIntervento: '2025-08-20T09:00:00Z',
-          prossimaAzione: 'Contattare amministrazione per correzione',
-        }
-      ],
-      tags: ['reclamo', 'fatturazione', 'urgente'],
-    },
-    {
-      id: 'task-5',
-      numeroTask: 'TSK-005',
-      titolo: 'Demo prodotto online',
-      descrizione: 'Schedulare demo per nuovo cliente potenziale',
-      stato: 'Sospeso',
-      priorita: 'Bassa',
-      cliente: {
-        id: 'client-5',
-        nome: 'Francesco',
-        cognome: 'Gialli',
-        email: 'f.gialli@officina.it',
-        telefono: '+39 333 4455667',
-        citta: 'Torino',
-        provincia: 'TO',
-        tipoAttivita: 'Officina meccanica',
-        azienda: 'Officina Gialli & Figli',
-      },
-      dataCreazione: '2025-08-18T16:45:00Z',
-      dataScadenza: '2025-08-30T17:00:00Z',
-      origine: 'Chat',
-      categoria: 'Vendita',
-      valorePotenziale: 800,
-      interventI: [
-        {
-          id: 'int-8',
-          taskId: 'task-5',
-          operatoreId: 'agent-1',
-          nomeOperatore: 'Marco',
-          cognomeOperatore: 'Rossi',
-          tipoIntervento: 'Note',
-          descrizione: 'Cliente al momento non disponibile per demo - da ricontattare a settembre',
-          dataIntervento: '2025-08-18T17:00:00Z',
-          dataProximoContatto: '2025-09-01T09:00:00Z',
-        }
-      ],
-      tags: ['demo', 'prospect', 'settembre'],
-    },
-  ];
-
-  // ✅ INIZIALIZZAZIONE DATI
-  useEffect(() => {
-    setAgenti(agentiFake);
-    setTasks(tasksFake);
-  }, []);
-
-  // ✅ FUNZIONE TOGGLE MENU
-  const toggleMenu = () => {
-    const newState = menuState === 'open' ? 'closed' : 'open';
-    setMenuState(newState);
-    localStorage.setItem('menuState', newState);
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    };
   };
 
-  // ✅ STATISTICHE TASKS
+  // âœ… DATI FAKE PER FALLBACK
+  const generateTasksFake = (): Task[] => [
+    {
+      id: "task-1",
+      numeroTask: "TSK-001",
+      titolo: "Richiesta informazioni POS",
+      descrizione: "Cliente interessato a soluzioni POS per la sua attività",
+      stato: "Aperto",
+      priorita: "Alta",
+      cliente: {
+        id: "client-1",
+        nome: "Marco",
+        cognome: "Amicone",
+        email: "aaaamiconeasssicurazioni@gmail.com",
+        telefono: "3389105515",
+        citta: "San Valentino in abruzzo citeriore",
+        provincia: "PE",
+        tipoAttivita: "Assicurazioni",
+        azienda: "Amicone Assicurazioni",
+      },
+      agenteAssegnato: {
+        id: "fake-1",
+        nome: "Marco",
+        cognome: "Rossi",
+        email: "m.rossi@company.com",
+        telefono: "+39 339 1234567",
+        reparto: "Commerciale",
+        attivo: true,
+        codiceAgente: "AGE001",
+      },
+      dataCreazione: "2025-08-20T10:30:00Z",
+      dataScadenza: "2025-08-25T17:00:00Z",
+      origine: "Email",
+      categoria: "Vendita",
+      valorePotenziale: 2500,
+      interventI: [], // IMPORTANTE: sempre array vuoto, mai undefined
+      tags: ["pos", "vendita", "assicurazioni"],
+    },
+    {
+      id: "task-2",
+      numeroTask: "TSK-002",
+      titolo: "Supporto tecnico dispositivo",
+      descrizione: "Problema con lettore carte cliente esistente",
+      stato: "In Corso",
+      priorita: "Media",
+      cliente: {
+        id: "client-2",
+        nome: "Giulia",
+        cognome: "Ferrari",
+        email: "g.ferrari@ristorante.it",
+        telefono: "+39 334 9876543",
+        citta: "Milano",
+        provincia: "MI",
+        tipoAttivita: "Ristorazione",
+        azienda: "Ristorante Da Giulia",
+      },
+      agenteAssegnato: {
+        id: "fake-3",
+        nome: "Luigi",
+        cognome: "Bianchi",
+        email: "l.bianchi@company.com",
+        telefono: "+39 347 9876543",
+        reparto: "Tecnico",
+        attivo: true,
+        codiceAgente: "AGE003",
+      },
+      dataCreazione: "2025-08-19T14:20:00Z",
+      dataScadenza: "2025-08-22T18:00:00Z",
+      origine: "Telefono",
+      categoria: "Tecnico",
+      interventI: [], // IMPORTANTE: sempre array vuoto, mai undefined
+      tags: ["supporto", "hardware", "lettore"],
+    },
+  ];
+
+  // âœ… FUNZIONE API PER RECUPERARE AGENTI
+  const fetchAgenti = async () => {
+    setIsLoadingAgenti(true);
+    setErrorAgenti("");
+    console.log("ðŸ“¡ Iniziando caricamento agenti...");
+
+    try {
+      const headers = getAuthHeaders();
+      const url = `${API_URL}/api/Agenti?pageSize=1000`;
+      console.log("ðŸŒ URL chiamata agenti:", url);
+
+      const response = await fetch(url, { method: "GET", headers });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("isAuthenticated");
+          throw new Error("Sessione scaduta. Effettua nuovamente il login.");
+        }
+        const errorText = await response.text();
+        throw new Error(
+          `Errore nel caricamento agenti: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data: ApiResponseDto<PaginatedResponse<AgenteDto>> =
+        await response.json();
+      console.log("ðŸ“Š Dati ricevuti agenti:", data);
+
+      if (data.success && data.data && data.data.items) {
+        console.log("âœ… Agenti caricati:", data.data.items.length);
+        const agentiAttivi = data.data.items.filter((agente) => agente.attivo);
+        setAgenti(agentiAttivi);
+      } else {
+        throw new Error(data.message || "Errore nel recupero agenti");
+      }
+    } catch (error) {
+      console.error("ðŸš¨ Errore caricamento agenti:", error);
+
+      // FALLBACK: Usa dati fake
+      const agentiFake: AgenteDto[] = [
+        {
+          id: "fake-1",
+          codiceAgente: "AGE001",
+          nome: "Marco",
+          cognome: "Rossi",
+          email: "m.rossi@company.com",
+          telefono: "+39 339 1234567",
+          attivo: true,
+          dataInserimento: new Date().toISOString(),
+        },
+        {
+          id: "fake-2",
+          codiceAgente: "AGE002",
+          nome: "Anna",
+          cognome: "Verdi",
+          email: "a.verdi@company.com",
+          telefono: "+39 338 7654321",
+          attivo: true,
+          dataInserimento: new Date().toISOString(),
+        },
+      ];
+
+      setAgenti(agentiFake);
+      setErrorAgenti(
+        error instanceof Error
+          ? `API Error: ${error.message} (usando dati fake)`
+          : "Errore imprevisto nel caricamento agenti (usando dati fake)"
+      );
+    } finally {
+      setIsLoadingAgenti(false);
+    }
+  };
+
+  // âœ… FUNZIONE API PER RECUPERARE TASKS
+  const fetchTasks = async (filters?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    stato?: string;
+    priorita?: string;
+    categoria?: string;
+    agenteId?: string;
+    scaduti?: boolean;
+  }) => {
+    setIsLoading(true);
+    setError("");
+    console.log("ðŸ“¡ Iniziando caricamento tasks...");
+
+    try {
+      const headers = getAuthHeaders();
+      const params = new URLSearchParams();
+
+      if (filters?.page) params.append("page", filters.page.toString());
+      if (filters?.pageSize)
+        params.append("pageSize", filters.pageSize.toString());
+      if (filters?.search) params.append("search", filters.search);
+      if (filters?.stato && filters.stato !== "tutti")
+        params.append("stato", filters.stato);
+      if (filters?.priorita && filters.priorita !== "tutte")
+        params.append("priorita", filters.priorita);
+      if (filters?.categoria && filters.categoria !== "tutte")
+        params.append("categoria", filters.categoria);
+      if (filters?.agenteId && filters.agenteId !== "tutti")
+        params.append("agenteId", filters.agenteId);
+      if (filters?.scaduti) params.append("scaduti", "true");
+
+      const url = `${API_URL}/api/Tasks?${params.toString()}`;
+      console.log("ðŸŒ URL chiamata tasks:", url);
+
+      const response = await fetch(url, { method: "GET", headers });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("isAuthenticated");
+          throw new Error("Sessione scaduta. Effettua nuovamente il login.");
+        }
+        const errorText = await response.text();
+        throw new Error(
+          `Errore nel caricamento tasks: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data: ApiResponseDto<PaginatedResponse<Task>> =
+        await response.json();
+      console.log("ðŸ“Š Dati ricevuti tasks:", data);
+
+      if (data.success && data.data && data.data.items) {
+        console.log("✅ Tasks caricati:", data.data.items.length);
+
+        const tasksWithInterventi = data.data.items.map((task) => ({
+          ...task,
+          interventI: task.interventI || [],
+        }));
+
+        setTasks(tasksWithInterventi); // ← QUESTA è la riga corretta!
+        setTotalCount(data.data.totalCount);
+        setServerTotalPages(data.data.totalPages);
+        return data.data;
+      } else {
+        throw new Error(data.message || "Errore nel recupero tasks");
+      }
+    } catch (error) {
+      console.error("ðŸš¨ Errore caricamento tasks:", error);
+
+      // FALLBACK: Usa dati fake
+      console.warn("ðŸ”„ Usando dati fake per tasks...");
+      const tasksFakeLocal = generateTasksFake();
+      setTasks(tasksFakeLocal);
+      setTotalCount(tasksFakeLocal.length);
+      setServerTotalPages(1);
+
+      setError(
+        error instanceof Error
+          ? `API Error: ${error.message} (usando dati fake)`
+          : "Errore imprevisto nel caricamento tasks (usando dati fake)"
+      );
+
+      return {
+        items: tasksFakeLocal,
+        totalCount: tasksFakeLocal.length,
+        page: 1,
+        pageSize: 20,
+        totalPages: 1,
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // âœ… FUNZIONE API PER CREARE NUOVO TASK
+  const createTask = async (taskData: {
+    titolo: string;
+    descrizione: string;
+    priorita: string;
+    categoria: string;
+    idAgenteAssegnato?: string;
+    dataScadenza?: string;
+    valorePotenziale?: number;
+    note?: string;
+    cliente: {
+      nome: string;
+      cognome?: string;
+      email: string;
+      telefono?: string;
+      citta?: string;
+      provincia?: string;
+      azienda?: string;
+      tipoAttivita?: string;
+    };
+    tags?: string[];
+  }) => {
+    try {
+      const headers = getAuthHeaders();
+      const url = `${API_URL}/api/Tasks`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(taskData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Errore nella creazione task: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data: ApiResponseDto<Task> = await response.json();
+
+      if (data.success && data.data) {
+        console.log("âœ… Task creato:", data.data);
+        return data.data;
+      } else {
+        throw new Error(data.message || "Errore nella creazione task");
+      }
+    } catch (error) {
+      console.error("ðŸš¨ Errore creazione task:", error);
+      throw error;
+    }
+  };
+
+  // âœ… FUNZIONE API PER AGGIORNARE TASK
+  const updateTask = async (taskId: string, taskData: Partial<Task>) => {
+    try {
+      const headers = getAuthHeaders();
+      const url = `${API_URL}/api/Tasks/${taskId}`;
+
+      const response = await fetch(url, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ ...taskData, id: taskId }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Errore nell'aggiornamento task: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data: ApiResponseDto<Task> = await response.json();
+
+      if (data.success && data.data) {
+        console.log("âœ… Task aggiornato:", data.data);
+        return data.data;
+      } else {
+        throw new Error(data.message || "Errore nell'aggiornamento task");
+      }
+    } catch (error) {
+      console.error("ðŸš¨ Errore aggiornamento task:", error);
+      throw error;
+    }
+  };
+
+  // âœ… FUNZIONE API PER AGGIUNGERE INTERVENTO
+  const addTaskIntervention = async (
+    taskId: string,
+    interventoData: {
+      operatoreId: string;
+      nomeOperatore: string;
+      cognomeOperatore: string;
+      tipoIntervento: string;
+      descrizione: string;
+      durata?: number;
+      esitoIntervento?: string;
+      prossimaAzione?: string;
+      dataProximoContatto?: string;
+    }
+  ) => {
+    try {
+      const headers = getAuthHeaders();
+      const url = `${API_URL}/api/Tasks/${taskId}/interventi`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(interventoData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Errore nell'aggiunta intervento: ${response.status} - ${errorText}`
+        );
+      }
+
+      const data: ApiResponseDto<TaskIntervento> = await response.json();
+
+      if (data.success && data.data) {
+        console.log("âœ… Intervento aggiunto:", data.data);
+        return data.data;
+      } else {
+        throw new Error(data.message || "Errore nell'aggiunta intervento");
+      }
+    } catch (error) {
+      console.error("ðŸš¨ Errore aggiunta intervento:", error);
+      throw error;
+    }
+  };
+
+  // âœ… GESTIONE FILTRI COLLEGATA ALLE API
+  const handleFilterChange = () => {
+    setCurrentPage(1);
+    fetchTasks({
+      page: 1,
+      pageSize: itemsPerPage,
+      search: searchTerm || undefined,
+      stato: activeTab === "tutti" ? undefined : activeTab,
+      priorita: selectedPriority === "tutte" ? undefined : selectedPriority,
+      categoria: selectedCategory === "tutte" ? undefined : selectedCategory,
+      agenteId: selectedAgent === "tutti" ? undefined : selectedAgent,
+      scaduti: activeTab === "scaduti" ? true : undefined,
+    });
+  };
+
+  // âœ… GESTIONE PAGINAZIONE COLLEGATA ALLE API
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    fetchTasks({
+      page: newPage,
+      pageSize: itemsPerPage,
+      search: searchTerm || undefined,
+      stato: activeTab === "tutti" ? undefined : activeTab,
+      priorita: selectedPriority === "tutte" ? undefined : selectedPriority,
+      categoria: selectedCategory === "tutte" ? undefined : selectedCategory,
+      agenteId: selectedAgent === "tutti" ? undefined : selectedAgent,
+      scaduti: activeTab === "scaduti" ? true : undefined,
+    });
+  };
+
+  // âœ… CARICAMENTO INIZIALE
+  useEffect(() => {
+    const savedMenuState = localStorage.getItem("menuState");
+    if (savedMenuState === "closed") {
+      setMenuState("closed");
+    }
+
+    if (!API_URL) {
+      setError("VITE_API_URL non configurato nel file .env");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("Token di autenticazione non trovato. Effettua il login.");
+      return;
+    }
+
+    const loadInitialData = async () => {
+      try {
+        await fetchAgenti();
+        await fetchTasks({ page: 1, pageSize: itemsPerPage });
+        console.log("âœ… Dati iniziali caricati");
+      } catch (error) {
+        console.error("ðŸš¨ Errore caricamento dati iniziali:", error);
+      }
+    };
+
+    loadInitialData();
+  }, [API_URL]);
+
+  // âœ… FUNZIONE TOGGLE MENU
+  const toggleMenu = () => {
+    const newState = menuState === "open" ? "closed" : "open";
+    setMenuState(newState);
+    localStorage.setItem("menuState", newState);
+  };
+
+  // âœ… STATISTICHE TASKS
   const stats = useMemo((): TaskStats => {
     const oggi = new Date();
-    const scaduti = tasks.filter(task => {
-      if (!task.dataScadenza || task.stato === 'Completato' || task.stato === 'Chiuso') return false;
+    const scaduti = tasks.filter((task) => {
+      if (
+        !task.dataScadenza ||
+        task.stato === "Completato" ||
+        task.stato === "Chiuso"
+      )
+        return false;
       return new Date(task.dataScadenza) < oggi;
     }).length;
 
-    const completati = tasks.filter(task => task.stato === 'Completato' || task.stato === 'Chiuso');
-    
-    // Calcola media giorni risoluzione (solo per task completati)
-    const mediaRisoluzione = completati.length > 0 
-      ? completati.reduce((acc, task) => {
-          if (task.dataChiusura) {
-            const giorni = Math.ceil((new Date(task.dataChiusura).getTime() - new Date(task.dataCreazione).getTime()) / (1000 * 60 * 60 * 24));
-            return acc + giorni;
-          }
-          return acc;
-        }, 0) / completati.length
-      : 0;
+    const completati = tasks.filter(
+      (task) => task.stato === "Completato" || task.stato === "Chiuso"
+    );
+
+    const mediaRisoluzione =
+      completati.length > 0
+        ? completati.reduce((acc, task) => {
+            if (task.dataChiusura) {
+              const giorni = Math.ceil(
+                (new Date(task.dataChiusura).getTime() -
+                  new Date(task.dataCreazione).getTime()) /
+                  (1000 * 60 * 60 * 24)
+              );
+              return acc + giorni;
+            }
+            return acc;
+          }, 0) / completati.length
+        : 0;
 
     return {
-      totaleTask: tasks.length,
-      aperti: tasks.filter(t => t.stato === 'Aperto').length,
-      inCorso: tasks.filter(t => t.stato === 'In Corso' || t.stato === 'In Attesa').length,
+      totaleTask: totalCount || tasks.length,
+      aperti: tasks.filter((t) => t.stato === "Aperto").length,
+      inCorso: tasks.filter(
+        (t) => t.stato === "In Corso" || t.stato === "In Attesa"
+      ).length,
       completati: completati.length,
       scaduti,
       mediaRisoluzione: Math.round(mediaRisoluzione * 10) / 10,
-      valoreTotalePotenziale: tasks.reduce((acc, t) => acc + (t.valorePotenziale || 0), 0),
+      valoreTotalePotenziale: tasks.reduce(
+        (acc, t) => acc + (t.valorePotenziale || 0),
+        0
+      ),
     };
-  }, [tasks]);
+  }, [tasks, totalCount]);
 
-  // ✅ DATI PER GRAFICO STATI
+  // âœ… DATI PER GRAFICO STATI
   const chartData = useMemo(() => {
     const statiCount = tasks.reduce((acc, task) => {
       acc[task.stato] = (acc[task.stato] || 0) + 1;
@@ -506,114 +758,99 @@ const TaskManagement: React.FC = () => {
     }, {} as Record<string, number>);
 
     const colors = {
-      'Aperto': '#ffc107',
-      'In Corso': '#17a2b8', 
-      'In Attesa': '#fd7e14',
-      'Completato': '#28a745',
-      'Chiuso': '#6c757d',
-      'Sospeso': '#dc3545',
+      Aperto: "#ffc107",
+      "In Corso": "#17a2b8",
+      "In Attesa": "#fd7e14",
+      Completato: "#28a745",
+      Chiuso: "#6c757d",
+      Sospeso: "#dc3545",
     };
 
     return Object.entries(statiCount).map(([stato, count]) => ({
       name: stato,
       value: count,
-      fill: colors[stato as keyof typeof colors] || '#6c757d',
+      fill: colors[stato as keyof typeof colors] || "#6c757d",
     }));
   }, [tasks]);
 
-  // ✅ FILTRI
-  const filteredTasks = useMemo(() => {
-    return tasks.filter(task => {
-      // Filtro tab attivo
-      if (activeTab === 'aperti' && task.stato !== 'Aperto') return false;
-      if (activeTab === 'completati' && !['Completato', 'Chiuso'].includes(task.stato)) return false;
-      if (activeTab === 'scaduti') {
-        if (['Completato', 'Chiuso'].includes(task.stato)) return false;
-        if (!task.dataScadenza) return false;
-        if (new Date(task.dataScadenza) >= new Date()) return false;
-      }
-
-      // Filtro ricerca
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        if (!task.numeroTask.toLowerCase().includes(term) &&
-            !task.titolo.toLowerCase().includes(term) &&
-            !task.cliente.nome.toLowerCase().includes(term) &&
-            !task.cliente.email.toLowerCase().includes(term)) return false;
-      }
-
-      // Altri filtri
-      if (selectedPriority !== 'tutte' && task.priorita !== selectedPriority) return false;
-      if (selectedAgent !== 'tutti' && task.agenteAssegnato?.id !== selectedAgent) return false;
-      if (selectedCategory !== 'tutte' && task.categoria !== selectedCategory) return false;
-      if (selectedStatus !== 'tutti' && task.stato !== selectedStatus) return false;
-
-      return true;
-    });
-  }, [tasks, activeTab, searchTerm, selectedPriority, selectedAgent, selectedCategory, selectedStatus]);
-
-  // ✅ PAGINAZIONE
-  const paginatedTasks = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredTasks.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredTasks, currentPage, itemsPerPage]);
-
-  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
-
-  // ✅ BADGE FUNCTIONS
+  // âœ… BADGE FUNCTIONS
   const getPriorityBadgeClass = (priorita: string) => {
     switch (priorita) {
-      case 'Urgente': return 'badge bg-danger';
-      case 'Alta': return 'badge bg-warning text-dark';
-      case 'Media': return 'badge bg-info';
-      case 'Bassa': return 'badge bg-secondary';
-      default: return 'badge bg-light text-dark';
+      case "Urgente":
+        return "badge bg-danger";
+      case "Alta":
+        return "badge bg-warning text-dark";
+      case "Media":
+        return "badge bg-info";
+      case "Bassa":
+        return "badge bg-secondary";
+      default:
+        return "badge bg-light text-dark";
     }
   };
 
   const getStatusBadgeClass = (stato: string) => {
     switch (stato) {
-      case 'Aperto': return 'badge bg-warning text-dark';
-      case 'In Corso': return 'badge bg-info';
-      case 'In Attesa': return 'badge bg-primary';
-      case 'Completato': return 'badge bg-success';
-      case 'Chiuso': return 'badge bg-secondary';
-      case 'Sospeso': return 'badge bg-danger';
-      default: return 'badge bg-light text-dark';
+      case "Aperto":
+        return "badge bg-warning text-dark";
+      case "In Corso":
+        return "badge bg-info";
+      case "In Attesa":
+        return "badge bg-primary";
+      case "Completato":
+        return "badge bg-success";
+      case "Chiuso":
+        return "badge bg-secondary";
+      case "Sospeso":
+        return "badge bg-danger";
+      default:
+        return "badge bg-light text-dark";
     }
   };
 
   const getCategoryBadgeClass = (categoria: string) => {
     switch (categoria) {
-      case 'Vendita': return 'badge bg-success';
-      case 'Supporto': return 'badge bg-info';
-      case 'Tecnico': return 'badge bg-primary';
-      case 'Amministrativo': return 'badge bg-secondary';
-      case 'Reclamo': return 'badge bg-danger';
-      case 'Informazioni': return 'badge bg-light text-dark';
-      default: return 'badge bg-light text-dark';
+      case "Vendita":
+        return "badge bg-success";
+      case "Supporto":
+        return "badge bg-info";
+      case "Tecnico":
+        return "badge bg-primary";
+      case "Amministrativo":
+        return "badge bg-secondary";
+      case "Reclamo":
+        return "badge bg-danger";
+      case "Informazioni":
+        return "badge bg-light text-dark";
+      default:
+        return "badge bg-light text-dark";
     }
   };
 
-  // ✅ HELPER FUNCTIONS
+  // âœ… HELPER FUNCTIONS
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('it-IT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const isTaskOverdue = (task: Task) => {
-    if (!task.dataScadenza || ['Completato', 'Chiuso'].includes(task.stato)) return false;
+    if (!task.dataScadenza || ["Completato", "Chiuso"].includes(task.stato))
+      return false;
     return new Date(task.dataScadenza) < new Date();
   };
 
-  // ✅ AZIONI TASK
+  // âœ… AZIONI TASK
   const handleTaskClick = (task: Task) => {
-    setSelectedTask(task);
+    const taskWithInterventi = {
+      ...task,
+      interventI: task.interventI || [],
+    };
+    setSelectedTask(taskWithInterventi);
     setShowTaskDetail(true);
   };
 
@@ -622,199 +859,259 @@ const TaskManagement: React.FC = () => {
     setShowReassignModal(true);
   };
 
-  const saveNewTask = () => {
-    // Qui andrà la chiamata API
-    console.log('Salvataggio nuovo task:', newTask);
-    
-    // Per ora aggiungiamo fake data
-    const nuovoCliente: Cliente = {
-      id: `client-${Date.now()}`,
-      nome: newTask.clienteNome,
-      cognome: newTask.clienteCognome,
-      email: newTask.clienteEmail,
-      telefono: newTask.clienteTelefono,
-      citta: newTask.clienteCitta,
-      provincia: newTask.clienteProvincia,
-      azienda: newTask.clienteAzienda,
-      tipoAttivita: newTask.clienteTipoAttivita,
-    };
+  // âœ… SALVA NUOVO TASK
+  const saveNewTask = async () => {
+    if (!newTask.titolo.trim()) {
+      alert("Il titolo del task Ã¨ obbligatorio");
+      return;
+    }
 
-    const nuovoTask: Task = {
-      id: `task-${Date.now()}`,
-      numeroTask: `TSK-${String(tasks.length + 1).padStart(3, '0')}`,
-      titolo: newTask.titolo,
-      descrizione: newTask.descrizione,
-      stato: 'Aperto',
-      priorita: newTask.priorita,
-      cliente: nuovoCliente,
-      agenteAssegnato: agenti.find(a => a.id === newTask.agenteAssegnatoId),
-      dataCreazione: new Date().toISOString(),
-      dataScadenza: newTask.dataScadenza,
-      origine: 'Manuale',
-      categoria: newTask.categoria,
-      valorePotenziale: newTask.valorePotenziale,
-      note: newTask.note,
-      interventI: [],
-      tags: [],
-    };
+    if (!newTask.clienteNome.trim() || !newTask.clienteEmail.trim()) {
+      alert("Nome e email del cliente sono obbligatori");
+      return;
+    }
 
-    setTasks([nuovoTask, ...tasks]);
-    setNewTask(defaultNewTask);
-    setShowNewTaskForm(false);
-    alert('Task creato con successo!');
+    setIsLoading(true);
+
+    try {
+      const taskData = {
+        titolo: newTask.titolo,
+        descrizione: newTask.descrizione,
+        priorita: newTask.priorita,
+        categoria: newTask.categoria,
+        idAgenteAssegnato: newTask.agenteAssegnatoId || undefined,
+        dataScadenza: newTask.dataScadenza || undefined,
+        valorePotenziale: newTask.valorePotenziale,
+        note: newTask.note,
+        cliente: {
+          nome: newTask.clienteNome,
+          cognome: newTask.clienteCognome,
+          email: newTask.clienteEmail,
+          telefono: newTask.clienteTelefono,
+          citta: newTask.clienteCitta,
+          provincia: newTask.clienteProvincia,
+          azienda: newTask.clienteAzienda,
+          tipoAttivita: newTask.clienteTipoAttivita,
+        },
+        tags: [],
+      };
+
+      await createTask(taskData);
+      setNewTask(defaultNewTask);
+      setShowNewTaskForm(false);
+      alert("Task creato con successo!");
+
+      // Ricarica i tasks
+      await fetchTasks({ page: 1, pageSize: itemsPerPage });
+    } catch (error) {
+      console.error("ðŸš¨ Errore salvataggio task:", error);
+      alert(
+        `Errore nella creazione del task: ${
+          error instanceof Error ? error.message : "Errore sconosciuto"
+        }`
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // ✅ FUNZIONE PER RIASSEGNARE TASK
-  const confirmReassignTask = () => {
+  // âœ… RIASSEGNA TASK
+  const confirmReassignTask = async () => {
     if (!taskToReassign || !newAssigneeId) return;
 
-    const nuovoAgente = agenti.find(a => a.id === newAssigneeId);
-    if (!nuovoAgente) return;
+    setIsLoading(true);
 
-    // Aggiorna il task
-    const taskAggiornato = {
-      ...taskToReassign,
-      agenteAssegnato: nuovoAgente,
-      dataUltimaModifica: new Date().toISOString(),
-    };
+    try {
+      // Usa 'as any' per evitare il controllo TypeScript
+      const taskAggiornato = await updateTask(taskToReassign.id, {
+        idAgenteAssegnato: newAssigneeId,
+      } as Partial<Task>);
 
-    // Aggiungi intervento di riassegnazione
-    const interventoRiassegnazione: TaskIntervento = {
-      id: `int-${Date.now()}`,
-      taskId: taskToReassign.id,
-      operatoreId: 'current-user', // Da sostituire con l'utente corrente
-      nomeOperatore: 'Sistema',
-      cognomeOperatore: 'Admin',
-      tipoIntervento: 'Assegnazione',
-      descrizione: `Task riassegnato da ${taskToReassign.agenteAssegnato?.nome || 'Non assegnato'} a ${nuovoAgente.nome} ${nuovoAgente.cognome}. Motivo: ${reassignReason}`,
-      dataIntervento: new Date().toISOString(),
-    };
+      setTasks(
+        tasks.map((task) =>
+          task.id === taskToReassign.id ? taskAggiornato : task
+        )
+      );
 
-    taskAggiornato.interventI = [...taskAggiornato.interventI, interventoRiassegnazione];
+      setShowReassignModal(false);
+      setTaskToReassign(null);
+      setNewAssigneeId("");
+      setReassignReason("");
 
-    // Aggiorna la lista dei task
-    setTasks(tasks.map(task => 
-      task.id === taskToReassign.id ? taskAggiornato : task
-    ));
+      if (selectedTask?.id === taskToReassign.id) {
+        setSelectedTask(taskAggiornato);
+      }
 
-    // Reset stati
-    setShowReassignModal(false);
-    setTaskToReassign(null);
-    setNewAssigneeId('');
-    setReassignReason('');
-
-    // Se il dettaglio è aperto, aggiorna il task selezionato
-    if (selectedTask?.id === taskToReassign.id) {
-      setSelectedTask(taskAggiornato);
+      alert("Task riassegnato con successo!");
+    } catch (error) {
+      console.error("🚨 Errore riassegnazione task:", error);
+      alert(
+        `Errore nella riassegnazione: ${
+          error instanceof Error ? error.message : "Errore sconosciuto"
+        }`
+      );
+    } finally {
+      setIsLoading(false);
     }
-
-    alert('Task riassegnato con successo!');
   };
 
-  // ✅ FUNZIONE PER CAMBIARE STATO TASK
-  const changeTaskStatus = (taskId: string, nuovoStato: Task['stato']) => {
-    const task = tasks.find(t => t.id === taskId);
+  // âœ… CAMBIA STATO TASK
+  const changeTaskStatus = async (
+    taskId: string,
+    nuovoStato: Task["stato"]
+  ) => {
+    const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    const taskAggiornato = {
-      ...task,
-      stato: nuovoStato,
-      dataUltimaModifica: new Date().toISOString(),
-      ...(nuovoStato === 'Completato' || nuovoStato === 'Chiuso' ? { dataChiusura: new Date().toISOString() } : {}),
-    };
+    setIsLoading(true);
 
-    // Aggiungi intervento di cambio stato
-    const interventoCambioStato: TaskIntervento = {
-      id: `int-${Date.now()}`,
-      taskId: taskId,
-      operatoreId: 'current-user', // Da sostituire con l'utente corrente
-      nomeOperatore: 'Sistema',
-      cognomeOperatore: 'Admin',
-      tipoIntervento: 'Cambio Stato',
-      descrizione: `Stato cambiato da ${task.stato} a ${nuovoStato}`,
-      dataIntervento: new Date().toISOString(),
-    };
+    try {
+      const taskAggiornato = await updateTask(taskId, { stato: nuovoStato });
+      setTasks(tasks.map((t) => (t.id === taskId ? taskAggiornato : t)));
 
-    taskAggiornato.interventI = [...taskAggiornato.interventI, interventoCambioStato];
+      if (selectedTask?.id === taskId) {
+        setSelectedTask(taskAggiornato);
+      }
 
-    // Aggiorna la lista dei task
-    setTasks(tasks.map(t => t.id === taskId ? taskAggiornato : t));
-
-    // Se il dettaglio è aperto, aggiorna il task selezionato
-    if (selectedTask?.id === taskId) {
-      setSelectedTask(taskAggiornato);
+      alert(`Stato del task cambiato in: ${nuovoStato}`);
+    } catch (error) {
+      console.error("ðŸš¨ Errore cambio stato:", error);
+      alert(
+        `Errore nel cambio stato: ${
+          error instanceof Error ? error.message : "Errore sconosciuto"
+        }`
+      );
+    } finally {
+      setIsLoading(false);
     }
-
-    alert(`Stato del task cambiato in: ${nuovoStato}`);
   };
 
-  // ✅ FUNZIONE PER SALVARE NUOVO INTERVENTO
-  const saveIntervention = () => {
+  // âœ… SALVA INTERVENTO
+  const saveIntervention = async () => {
     if (!newIntervention.descrizione.trim()) {
-      alert('La descrizione dell\'intervento è obbligatoria');
+      alert("La descrizione dell'intervento è obbligatoria");
       return;
     }
 
     if (!selectedTask) {
-      alert('Nessun task selezionato');
+      alert("Nessun task selezionato");
       return;
     }
 
-    // Crea il nuovo intervento
-    const nuovoIntervento: TaskIntervento = {
-      ...newIntervention,
-      id: `int-${Date.now()}`,
-      taskId: selectedTask.id,
-      dataIntervento: new Date().toISOString(),
-    };
+    setIsLoading(true);
 
-    // Aggiorna il task con il nuovo intervento
-    const taskAggiornato = {
-      ...selectedTask,
-      interventI: [...selectedTask.interventI, nuovoIntervento],
-      dataUltimaModifica: new Date().toISOString(),
-    };
+    try {
+      const interventoData = {
+        operatoreId: newIntervention.operatoreId || "current-user",
+        nomeOperatore: newIntervention.nomeOperatore || "Sistema",
+        cognomeOperatore: newIntervention.cognomeOperatore || "Admin",
+        tipoIntervento: newIntervention.tipoIntervento,
+        descrizione: newIntervention.descrizione,
+        durata: newIntervention.durata,
+        esitoIntervento: newIntervention.esitoIntervento,
+        prossimaAzione: newIntervention.prossimaAzione,
+        dataProximoContatto: newIntervention.dataProximoContatto,
+      };
 
-    // Aggiorna la lista dei task
-    setTasks(tasks.map(task => 
-      task.id === selectedTask.id ? taskAggiornato : task
-    ));
+      const nuovoIntervento = await addTaskIntervention(
+        selectedTask.id,
+        interventoData
+      );
 
-    // Aggiorna il task selezionato
-    setSelectedTask(taskAggiornato);
+      const taskAggiornato = {
+        ...selectedTask,
+        interventI: [...(selectedTask.interventI || []), nuovoIntervento], // Controllo sicurezza
+        dataUltimaModifica: new Date().toISOString(),
+      };
 
-    // Reset form
-    setNewIntervention(defaultNewIntervention);
-    setShowAddInterventionModal(false);
+      setTasks(
+        tasks.map((task) =>
+          task.id === selectedTask.id ? taskAggiornato : task
+        )
+      );
+      setSelectedTask(taskAggiornato);
 
-    alert('Intervento aggiunto con successo!');
-  };
+      setNewIntervention(defaultNewIntervention);
+      setShowAddInterventionModal(false);
 
-  const addTaskIntervention = (taskId: string, intervention: Omit<TaskIntervento, 'id' | 'taskId'>) => {
-    const nuovoIntervento: TaskIntervento = {
-      ...intervention,
-      id: `int-${Date.now()}`,
-      taskId,
-    };
-
-    setTasks(tasks.map(task => 
-      task.id === taskId 
-        ? { ...task, interventI: [...task.interventI, nuovoIntervento] }
-        : task
-    ));
+      alert("Intervento aggiunto con successo!");
+    } catch (error) {
+      console.error("🚨 Errore salvataggio intervento:", error);
+      alert(
+        `Errore nell'aggiunta intervento: ${
+          error instanceof Error ? error.message : "Errore sconosciuto"
+        }`
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className={`d-flex ${menuState === 'closed' ? 'menu-closed' : ''} task-management-page`} id="wrapper">
+    <div
+      className={`d-flex ${
+        menuState === "closed" ? "menu-closed" : ""
+      } task-management-page`}
+      id="wrapper"
+    >
       <Sidebar menuState={menuState} toggleMenu={toggleMenu} />
 
       <div id="page-content-wrapper">
         <Topbar toggleMenu={toggleMenu} />
 
         <div className="container-fluid">
-          <div><p /><p /></div>
+          <div>
+            <p />
+            <p />
+          </div>
 
-          {/* ✅ HEADER CON BREADCRUMB */}
+          {/* âœ… ALERT PER STATO LOADING/ERRORI */}
+          {(isLoadingAgenti || errorAgenti || error) && (
+            <div
+              className={`alert ${
+                errorAgenti || error ? "alert-warning" : "alert-info"
+              } mb-4`}
+              role="alert"
+            >
+              <i
+                className={`fa-solid ${
+                  isLoadingAgenti || isLoading
+                    ? "fa-spinner fa-spin"
+                    : "fa-exclamation-triangle"
+                } me-2`}
+              ></i>
+              {isLoadingAgenti && (
+                <strong>Caricamento agenti in corso...</strong>
+              )}
+              {isLoading && <strong>Caricamento tasks in corso...</strong>}
+              {errorAgenti && (
+                <>
+                  <strong>Problema con gli agenti:</strong> {errorAgenti}
+                  <button
+                    className="btn btn-link p-0 ms-2"
+                    onClick={fetchAgenti}
+                  >
+                    Riprova caricamento â†’
+                  </button>
+                </>
+              )}
+              {error && !errorAgenti && (
+                <>
+                  <strong>Problema con i tasks:</strong> {error}
+                  <button
+                    className="btn btn-link p-0 ms-2"
+                    onClick={() =>
+                      fetchTasks({ page: 1, pageSize: itemsPerPage })
+                    }
+                  >
+                    Riprova caricamento â†’
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* âœ… HEADER CON BREADCRUMB */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div>
               <nav aria-label="breadcrumb">
@@ -822,10 +1119,9 @@ const TaskManagement: React.FC = () => {
                   <li className="breadcrumb-item">
                     <button
                       className="btn btn-link p-0 text-decoration-none"
-                      onClick={() => navigate('/dashboard')}
+                      onClick={() => navigate("/dashboard")}
                     >
-                      <i className="fa-solid fa-home me-1"></i>
-                      Dashboard
+                      <i className="fa-solid fa-home me-1"></i>Dashboard
                     </button>
                   </li>
                   <li className="breadcrumb-item active" aria-current="page">
@@ -834,8 +1130,8 @@ const TaskManagement: React.FC = () => {
                 </ol>
               </nav>
               <h2 className="task-management-title">
-                <i className="fa-solid fa-tasks me-2"></i>
-                Gestione Task - Centro Assistenza
+                <i className="fa-solid fa-tasks me-2"></i>Gestione Task - Centro
+                Assistenza
               </h2>
             </div>
             <div className="d-flex gap-2">
@@ -844,56 +1140,74 @@ const TaskManagement: React.FC = () => {
                 onClick={() => {
                   setNewTask(defaultNewTask);
                   setShowNewTaskForm(true);
-                  
-                  // ✅ SCROLL AUTOMATICO E FOCUS CON EVIDENZIAZIONE
                   setTimeout(() => {
-                    const formElement = document.getElementById('form-nuovo-task') as HTMLElement;
-                    const firstInput = document.getElementById('titolo-task') as HTMLInputElement;
-                    
+                    const formElement = document.getElementById(
+                      "form-nuovo-task"
+                    ) as HTMLElement;
+                    const firstInput = document.getElementById(
+                      "titolo-task"
+                    ) as HTMLInputElement;
                     if (formElement) {
-                      // Scroll smooth al form
                       formElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start',
+                        behavior: "smooth",
+                        block: "start",
                       });
-
-                      // Evidenziazione temporanea con alone giallo
-                      formElement.classList.add('border-warning');
-                      formElement.style.boxShadow = '0 0 20px rgba(255, 193, 7, 0.5)';
-                      formElement.style.borderWidth = '2px';
-
-                      // Focus sul primo campo dopo lo scroll
+                      formElement.classList.add("border-warning");
+                      formElement.style.boxShadow =
+                        "0 0 20px rgba(255, 193, 7, 0.5)";
+                      formElement.style.borderWidth = "2px";
                       setTimeout(() => {
-                        if (firstInput) {
-                          firstInput.focus();
-                        }
+                        if (firstInput) firstInput.focus();
                       }, 500);
-
-                      // Rimuove l'evidenziazione dopo 3 secondi
                       setTimeout(() => {
-                        formElement.classList.remove('border-warning');
-                        formElement.style.boxShadow = '';
-                        formElement.style.borderWidth = '';
+                        formElement.classList.remove("border-warning");
+                        formElement.style.boxShadow = "";
+                        formElement.style.borderWidth = "";
                       }, 3000);
                     }
                   }, 100);
                 }}
+                disabled={isLoadingAgenti}
+                title={
+                  isLoadingAgenti
+                    ? "Caricamento agenti in corso..."
+                    : agenti.length === 0
+                    ? "âš ï¸ Nessun agente disponibile - controlla la connessione API"
+                    : "Crea un nuovo task"
+                }
               >
-                <i className="fa-solid fa-plus me-1"></i>
+                <i
+                  className={`fa-solid ${
+                    isLoadingAgenti ? "fa-spinner fa-spin" : "fa-plus"
+                  } me-1`}
+                ></i>
                 Nuovo Task
               </button>
               <button className="btn btn-outline-primary-dark">
-                <i className="fa-solid fa-download me-1"></i>
-                Esporta
+                <i className="fa-solid fa-download me-1"></i>Esporta
               </button>
-              <button className="btn btn-primary-dark">
-                <i className="fa-solid fa-refresh me-1"></i>
+              <button
+                className="btn btn-primary-dark"
+                onClick={() => {
+                  fetchAgenti();
+                  fetchTasks({ page: currentPage, pageSize: itemsPerPage });
+                }}
+                disabled={isLoadingAgenti || isLoading}
+                title="Aggiorna dati"
+              >
+                <i
+                  className={`fa-solid ${
+                    isLoadingAgenti || isLoading
+                      ? "fa-spinner fa-spin"
+                      : "fa-refresh"
+                  } me-1`}
+                ></i>
                 Aggiorna
               </button>
             </div>
           </div>
 
-          {/* ✅ STATISTICHE E GRAFICO */}
+          {/* âœ… STATISTICHE E GRAFICO */}
           <div className="row mb-4">
             <div className="col-xl-8 mb-3">
               <div className="card h-100">
@@ -935,12 +1249,27 @@ const TaskManagement: React.FC = () => {
                         </div>
                         <div className="d-grid gap-2">
                           {chartData.map((item, index) => (
-                            <div key={index} className="d-flex justify-content-between align-items-center p-2 border rounded">
-                              <span style={{ color: item.fill }} className="fw-bold">
-                                <i className="fa-solid fa-circle me-2" style={{ fontSize: '0.6rem' }}></i>
+                            <div
+                              key={index}
+                              className="d-flex justify-content-between align-items-center p-2 border rounded"
+                            >
+                              <span
+                                style={{ color: item.fill }}
+                                className="fw-bold"
+                              >
+                                <i
+                                  className="fa-solid fa-circle me-2"
+                                  style={{ fontSize: "0.6rem" }}
+                                ></i>
                                 {item.name}
                               </span>
-                              <span className="badge" style={{ backgroundColor: item.fill, color: 'white' }}>
+                              <span
+                                className="badge"
+                                style={{
+                                  backgroundColor: item.fill,
+                                  color: "white",
+                                }}
+                              >
                                 {item.value}
                               </span>
                             </div>
@@ -991,7 +1320,7 @@ const TaskManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* ✅ FILTRI E RICERCA */}
+          {/* âœ… FILTRI E RICERCA */}
           <div className="row mb-4">
             <div className="col-12">
               <div className="card">
@@ -1003,38 +1332,38 @@ const TaskManagement: React.FC = () => {
                   <div className="row mb-3">
                     <div className="col-md-6">
                       <ul className="nav nav-pills">
-                        <li className="nav-item">
-                          <button
-                            className={`nav-link ${activeTab === 'tutti' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('tutti'); setCurrentPage(1); }}
-                          >
-                            Tutti ({tasks.length})
-                          </button>
-                        </li>
-                        <li className="nav-item">
-                          <button
-                            className={`nav-link ${activeTab === 'aperti' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('aperti'); setCurrentPage(1); }}
-                          >
-                            Aperti ({stats.aperti})
-                          </button>
-                        </li>
-                        <li className="nav-item">
-                          <button
-                            className={`nav-link ${activeTab === 'completati' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('completati'); setCurrentPage(1); }}
-                          >
-                            Completati ({stats.completati})
-                          </button>
-                        </li>
-                        <li className="nav-item">
-                          <button
-                            className={`nav-link ${activeTab === 'scaduti' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('scaduti'); setCurrentPage(1); }}
-                          >
-                            Scaduti ({stats.scaduti})
-                          </button>
-                        </li>
+                        {["tutti", "aperti", "completati", "scaduti"].map(
+                          (tab) => (
+                            <li key={tab} className="nav-item">
+                              <button
+                                className={`nav-link ${
+                                  activeTab === tab ? "active" : ""
+                                }`}
+                                onClick={() => {
+                                  setActiveTab(
+                                    tab as
+                                      | "tutti"
+                                      | "aperti"
+                                      | "completati"
+                                      | "scaduti"
+                                  );
+                                  setCurrentPage(1);
+                                  handleFilterChange();
+                                }}
+                              >
+                                {tab.charAt(0).toUpperCase() + tab.slice(1)} (
+                                {tab === "tutti"
+                                  ? stats.totaleTask
+                                  : tab === "aperti"
+                                  ? stats.aperti
+                                  : tab === "completati"
+                                  ? stats.completati
+                                  : stats.scaduti}
+                                )
+                              </button>
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
                     <div className="col-md-6">
@@ -1043,7 +1372,21 @@ const TaskManagement: React.FC = () => {
                         className="form-control"
                         placeholder="Cerca per numero task, titolo, cliente..."
                         value={searchTerm}
-                        onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          setCurrentPage(1);
+
+                          // Cancella il timeout precedente se esiste
+                          if (searchTimeoutRef.current) {
+                            clearTimeout(searchTimeoutRef.current);
+                          }
+
+                          // Imposta nuovo timeout per il debounce
+                          searchTimeoutRef.current = setTimeout(
+                            handleFilterChange,
+                            500
+                          );
+                        }}
                       />
                     </div>
                   </div>
@@ -1053,7 +1396,11 @@ const TaskManagement: React.FC = () => {
                       <select
                         className="form-select form-select-sm"
                         value={selectedPriority}
-                        onChange={(e) => { setSelectedPriority(e.target.value); setCurrentPage(1); }}
+                        onChange={(e) => {
+                          setSelectedPriority(e.target.value);
+                          setCurrentPage(1);
+                          handleFilterChange();
+                        }}
                       >
                         <option value="tutte">Tutte le priorità</option>
                         <option value="Urgente">Urgente</option>
@@ -1066,10 +1413,19 @@ const TaskManagement: React.FC = () => {
                       <select
                         className="form-select form-select-sm"
                         value={selectedAgent}
-                        onChange={(e) => { setSelectedAgent(e.target.value); setCurrentPage(1); }}
+                        onChange={(e) => {
+                          setSelectedAgent(e.target.value);
+                          setCurrentPage(1);
+                          handleFilterChange();
+                        }}
+                        disabled={isLoadingAgenti}
                       >
-                        <option value="tutti">Tutti gli agenti</option>
-                        {agenti.map(agente => (
+                        <option value="tutti">
+                          {isLoadingAgenti
+                            ? "Caricamento..."
+                            : "Tutti gli agenti"}
+                        </option>
+                        {agenti.map((agente) => (
                           <option key={agente.id} value={agente.id}>
                             {agente.nome} {agente.cognome}
                           </option>
@@ -1080,7 +1436,11 @@ const TaskManagement: React.FC = () => {
                       <select
                         className="form-select form-select-sm"
                         value={selectedCategory}
-                        onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
+                        onChange={(e) => {
+                          setSelectedCategory(e.target.value);
+                          setCurrentPage(1);
+                          handleFilterChange();
+                        }}
                       >
                         <option value="tutte">Tutte le categorie</option>
                         <option value="Vendita">Vendita</option>
@@ -1095,7 +1455,11 @@ const TaskManagement: React.FC = () => {
                       <select
                         className="form-select form-select-sm"
                         value={selectedStatus}
-                        onChange={(e) => { setSelectedStatus(e.target.value); setCurrentPage(1); }}
+                        onChange={(e) => {
+                          setSelectedStatus(e.target.value);
+                          setCurrentPage(1);
+                          handleFilterChange();
+                        }}
                       >
                         <option value="tutti">Tutti gli stati</option>
                         <option value="Aperto">Aperto</option>
@@ -1112,12 +1476,15 @@ const TaskManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* ✅ LISTA TASK */}
+          {/* âœ… LISTA TASK */}
           <div className="row mb-4">
             <div className="col-12">
               <div className="card">
                 <div className="custom-card-header">
-                  <span>Task ({filteredTasks.length} risultati)</span>
+                  <span>
+                    Task ({totalCount} risultati - Pagina {currentPage} di{" "}
+                    {serverTotalPages})
+                  </span>
                   <div className="menu-right">
                     <div className="menu-icon">
                       <i className="fa-solid fa-list"></i>
@@ -1125,7 +1492,14 @@ const TaskManagement: React.FC = () => {
                   </div>
                 </div>
                 <div className="card-body">
-                  {paginatedTasks.length > 0 ? (
+                  {isLoading && (
+                    <div className="text-center py-4">
+                      <i className="fa-solid fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                      <h5 className="text-muted">Caricamento tasks...</h5>
+                    </div>
+                  )}
+
+                  {!isLoading && tasks.length > 0 ? (
                     <>
                       <div className="table-responsive">
                         <table className="table table-hover">
@@ -1133,7 +1507,7 @@ const TaskManagement: React.FC = () => {
                             <tr>
                               <th>Task</th>
                               <th>Cliente</th>
-                              <th>Priorità</th>
+                              <th>PrioritÃ </th>
                               <th>Stato</th>
                               <th>Categoria</th>
                               <th>Assegnato a</th>
@@ -1143,14 +1517,22 @@ const TaskManagement: React.FC = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {paginatedTasks.map(task => (
-                              <tr key={task.id} className={isTaskOverdue(task) ? 'table-danger' : ''}>
+                            {tasks.map((task) => (
+                              <tr
+                                key={task.id}
+                                className={
+                                  isTaskOverdue(task) ? "table-danger" : ""
+                                }
+                              >
                                 <td>
                                   <div>
                                     <div className="fw-bold text-primary">
                                       {task.numeroTask}
                                     </div>
-                                    <div className="small text-truncate" style={{ maxWidth: '200px' }}>
+                                    <div
+                                      className="small text-truncate"
+                                      style={{ maxWidth: "200px" }}
+                                    >
                                       {task.titolo}
                                     </div>
                                     <div className="small text-muted">
@@ -1177,17 +1559,27 @@ const TaskManagement: React.FC = () => {
                                   </div>
                                 </td>
                                 <td>
-                                  <span className={getPriorityBadgeClass(task.priorita)}>
+                                  <span
+                                    className={getPriorityBadgeClass(
+                                      task.priorita
+                                    )}
+                                  >
                                     {task.priorita}
                                   </span>
                                 </td>
                                 <td>
-                                  <span className={getStatusBadgeClass(task.stato)}>
+                                  <span
+                                    className={getStatusBadgeClass(task.stato)}
+                                  >
                                     {task.stato}
                                   </span>
                                 </td>
                                 <td>
-                                  <span className={getCategoryBadgeClass(task.categoria)}>
+                                  <span
+                                    className={getCategoryBadgeClass(
+                                      task.categoria
+                                    )}
+                                  >
                                     {task.categoria}
                                   </span>
                                 </td>
@@ -1195,19 +1587,28 @@ const TaskManagement: React.FC = () => {
                                   {task.agenteAssegnato ? (
                                     <div>
                                       <div className="fw-bold">
-                                        {task.agenteAssegnato.nome} {task.agenteAssegnato.cognome}
+                                        {task.agenteAssegnato.nome}{" "}
+                                        {task.agenteAssegnato.cognome}
                                       </div>
                                       <div className="small text-muted">
                                         {task.agenteAssegnato.reparto}
                                       </div>
                                     </div>
                                   ) : (
-                                    <span className="text-muted">Non assegnato</span>
+                                    <span className="text-muted">
+                                      Non assegnato
+                                    </span>
                                   )}
                                 </td>
                                 <td>
                                   {task.dataScadenza ? (
-                                    <div className={isTaskOverdue(task) ? 'text-danger fw-bold' : ''}>
+                                    <div
+                                      className={
+                                        isTaskOverdue(task)
+                                          ? "text-danger fw-bold"
+                                          : ""
+                                      }
+                                    >
                                       {formatDate(task.dataScadenza)}
                                       {isTaskOverdue(task) && (
                                         <div className="small">
@@ -1222,8 +1623,8 @@ const TaskManagement: React.FC = () => {
                                 </td>
                                 <td>
                                   {task.valorePotenziale ? (
-                                    <span className="fw-bold text-success">
-                                      €{task.valorePotenziale.toLocaleString()}
+                                    <span className="fw-bold text-success">                                      
+                                      {task.valorePotenziale.toLocaleString()}
                                     </span>
                                   ) : (
                                     <span className="text-muted">-</span>
@@ -1247,6 +1648,16 @@ const TaskManagement: React.FC = () => {
                                     </button>
                                     <button
                                       className="btn btn-outline-info btn-sm"
+                                      onClick={() => {
+                                        setSelectedTask(task);
+                                        setShowAddInterventionModal(true);
+                                        setNewIntervention({
+                                          ...defaultNewIntervention,
+                                          operatoreId: "current-user",
+                                          nomeOperatore: "Sistema",
+                                          cognomeOperatore: "Admin",
+                                        });
+                                      }}
                                       title="Aggiungi intervento"
                                     >
                                       <i className="fa-solid fa-plus"></i>
@@ -1259,37 +1670,68 @@ const TaskManagement: React.FC = () => {
                         </table>
                       </div>
 
-                      {/* ✅ PAGINAZIONE */}
-                      {totalPages > 1 && (
+                      {/* âœ… PAGINAZIONE SERVER */}
+                      {serverTotalPages > 1 && (
                         <nav className="mt-3">
                           <ul className="pagination justify-content-center">
-                            <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                            <li
+                              className={`page-item ${
+                                currentPage === 1 ? "disabled" : ""
+                              }`}
+                            >
                               <button
                                 className="page-link"
-                                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                                onClick={() =>
+                                  handlePageChange(Math.max(1, currentPage - 1))
+                                }
                                 disabled={currentPage === 1}
                               >
                                 <i className="fa-solid fa-chevron-left"></i>
                               </button>
                             </li>
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                              const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
-                              return (
-                                <li key={pageNum} className={`page-item ${currentPage === pageNum ? 'active' : ''}`}>
-                                  <button
-                                    className="page-link"
-                                    onClick={() => setCurrentPage(pageNum)}
+                            {Array.from(
+                              { length: Math.min(5, serverTotalPages) },
+                              (_, i) => {
+                                const pageNum =
+                                  Math.max(
+                                    1,
+                                    Math.min(
+                                      serverTotalPages - 4,
+                                      currentPage - 2
+                                    )
+                                  ) + i;
+                                return (
+                                  <li
+                                    key={pageNum}
+                                    className={`page-item ${
+                                      currentPage === pageNum ? "active" : ""
+                                    }`}
                                   >
-                                    {pageNum}
-                                  </button>
-                                </li>
-                              );
-                            })}
-                            <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                                    <button
+                                      className="page-link"
+                                      onClick={() => handlePageChange(pageNum)}
+                                    >
+                                      {pageNum}
+                                    </button>
+                                  </li>
+                                );
+                              }
+                            )}
+                            <li
+                              className={`page-item ${
+                                currentPage === serverTotalPages
+                                  ? "disabled"
+                                  : ""
+                              }`}
+                            >
                               <button
                                 className="page-link"
-                                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                                disabled={currentPage === totalPages}
+                                onClick={() =>
+                                  handlePageChange(
+                                    Math.min(serverTotalPages, currentPage + 1)
+                                  )
+                                }
+                                disabled={currentPage === serverTotalPages}
                               >
                                 <i className="fa-solid fa-chevron-right"></i>
                               </button>
@@ -1298,7 +1740,7 @@ const TaskManagement: React.FC = () => {
                         </nav>
                       )}
                     </>
-                  ) : (
+                  ) : !isLoading ? (
                     <div className="text-center py-4">
                       <i className="fa-solid fa-search fa-3x text-muted mb-3"></i>
                       <h5 className="text-muted">Nessun task trovato</h5>
@@ -1306,13 +1748,13 @@ const TaskManagement: React.FC = () => {
                         Nessun task corrisponde ai filtri selezionati.
                       </p>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ✅ FORM NUOVO TASK */}
+          {/* âœ… FORM NUOVO TASK */}
           {showNewTaskForm && (
             <div className="row mb-4">
               <div className="col-12">
@@ -1330,16 +1772,23 @@ const TaskManagement: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={newTask.titolo}
-                          onChange={(e) => setNewTask({...newTask, titolo: e.target.value})}
+                          onChange={(e) =>
+                            setNewTask({ ...newTask, titolo: e.target.value })
+                          }
                           placeholder="Inserisci il titolo del task..."
                         />
                       </div>
                       <div className="col-md-3">
-                        <label className="form-label">Priorità</label>
+                        <label className="form-label">PrioritÃ </label>
                         <select
                           className="form-select"
                           value={newTask.priorita}
-                          onChange={(e) => setNewTask({...newTask, priorita: e.target.value as any})}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              priorita: e.target.value as "Bassa" | "Media" | "Alta" | "Urgente",
+                            })
+                          }
                         >
                           <option value="Bassa">Bassa</option>
                           <option value="Media">Media</option>
@@ -1352,7 +1801,18 @@ const TaskManagement: React.FC = () => {
                         <select
                           className="form-select"
                           value={newTask.categoria}
-                          onChange={(e) => setNewTask({...newTask, categoria: e.target.value as any})}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              categoria: e.target.value as
+                                | "Vendita"
+                                | "Supporto"
+                                | "Tecnico"
+                                | "Amministrativo"
+                                | "Reclamo"
+                                | "Informazioni",
+                            })
+                          }
                         >
                           <option value="Vendita">Vendita</option>
                           <option value="Supporto">Supporto</option>
@@ -1368,20 +1828,34 @@ const TaskManagement: React.FC = () => {
                           className="form-control"
                           rows={3}
                           value={newTask.descrizione}
-                          onChange={(e) => setNewTask({...newTask, descrizione: e.target.value})}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              descrizione: e.target.value,
+                            })
+                          }
                         ></textarea>
                       </div>
-                      
-                      <div className="col-12"><hr /></div>
-                      <div className="col-12"><h6>Dati Cliente</h6></div>
-                      
+
+                      <div className="col-12">
+                        <hr />
+                      </div>
+                      <div className="col-12">
+                        <h6>Dati Cliente</h6>
+                      </div>
+
                       <div className="col-md-4">
                         <label className="form-label">Nome *</label>
                         <input
                           type="text"
                           className="form-control"
                           value={newTask.clienteNome}
-                          onChange={(e) => setNewTask({...newTask, clienteNome: e.target.value})}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              clienteNome: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <div className="col-md-4">
@@ -1390,7 +1864,12 @@ const TaskManagement: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={newTask.clienteCognome}
-                          onChange={(e) => setNewTask({...newTask, clienteCognome: e.target.value})}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              clienteCognome: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <div className="col-md-4">
@@ -1399,7 +1878,12 @@ const TaskManagement: React.FC = () => {
                           type="email"
                           className="form-control"
                           value={newTask.clienteEmail}
-                          onChange={(e) => setNewTask({...newTask, clienteEmail: e.target.value})}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              clienteEmail: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <div className="col-md-4">
@@ -1408,7 +1892,12 @@ const TaskManagement: React.FC = () => {
                           type="tel"
                           className="form-control"
                           value={newTask.clienteTelefono}
-                          onChange={(e) => setNewTask({...newTask, clienteTelefono: e.target.value})}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              clienteTelefono: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <div className="col-md-4">
@@ -1417,35 +1906,87 @@ const TaskManagement: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={newTask.clienteAzienda}
-                          onChange={(e) => setNewTask({...newTask, clienteAzienda: e.target.value})}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              clienteAzienda: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <div className="col-md-4">
-                        <label className="form-label">Tipo Attività</label>
+                        <label className="form-label">Tipo AttivitÃ </label>
                         <input
                           type="text"
                           className="form-control"
                           value={newTask.clienteTipoAttivita}
-                          onChange={(e) => setNewTask({...newTask, clienteTipoAttivita: e.target.value})}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              clienteTipoAttivita: e.target.value,
+                            })
+                          }
                         />
                       </div>
-                      
-                      <div className="col-12"><hr /></div>
-                      
+
+                      <div className="col-12">
+                        <hr />
+                      </div>
+
                       <div className="col-md-4">
                         <label className="form-label">Assegna a</label>
                         <select
                           className="form-select"
                           value={newTask.agenteAssegnatoId}
-                          onChange={(e) => setNewTask({...newTask, agenteAssegnatoId: e.target.value})}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              agenteAssegnatoId: e.target.value,
+                            })
+                          }
+                          disabled={isLoadingAgenti}
                         >
-                          <option value="">Non assegnato</option>
-                          {agenti.map(agente => (
+                          <option value="">
+                            {isLoadingAgenti
+                              ? "Caricamento agenti..."
+                              : agenti.length === 0
+                              ? "âš ï¸ Nessun agente disponibile"
+                              : "Non assegnato"}
+                          </option>
+                          {agenti.map((agente) => (
                             <option key={agente.id} value={agente.id}>
-                              {agente.nome} {agente.cognome} - {agente.reparto}
+                              {agente.nome} {agente.cognome} (
+                              {agente.codiceAgente})
+                              {agente.email && ` - ${agente.email}`}
                             </option>
                           ))}
                         </select>
+                        {isLoadingAgenti && (
+                          <small className="text-info">
+                            <i className="fa-solid fa-spinner fa-spin me-1"></i>
+                            Caricamento agenti in corso...
+                          </small>
+                        )}
+                        {errorAgenti && (
+                          <small className="text-warning">
+                            <i className="fa-solid fa-exclamation-triangle me-1"></i>
+                            {errorAgenti}
+                          </small>
+                        )}
+                        {agenti.length === 0 &&
+                          !isLoadingAgenti &&
+                          !errorAgenti && (
+                            <small className="text-warning">
+                              <i className="fa-solid fa-exclamation-triangle me-1"></i>
+                              Nessun agente attivo nel sistema.
+                              <button
+                                className="btn btn-link p-0 text-warning"
+                                onClick={() => navigate("/agenti")}
+                              >
+                                Vai alla gestione agenti â†’
+                              </button>
+                            </small>
+                          )}
                       </div>
                       <div className="col-md-4">
                         <label className="form-label">Data Scadenza</label>
@@ -1453,16 +1994,30 @@ const TaskManagement: React.FC = () => {
                           type="datetime-local"
                           className="form-control"
                           value={newTask.dataScadenza}
-                          onChange={(e) => setNewTask({...newTask, dataScadenza: e.target.value})}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              dataScadenza: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <div className="col-md-4">
-                        <label className="form-label">Valore Potenziale (€)</label>
+                        <label className="form-label">
+                          Valore Potenziale
+                        </label>
                         <input
                           type="number"
                           className="form-control"
-                          value={newTask.valorePotenziale || ''}
-                          onChange={(e) => setNewTask({...newTask, valorePotenziale: e.target.value ? parseFloat(e.target.value) : undefined})}
+                          value={newTask.valorePotenziale || ""}
+                          onChange={(e) =>
+                            setNewTask({
+                              ...newTask,
+                              valorePotenziale: e.target.value
+                                ? parseFloat(e.target.value)
+                                : undefined,
+                            })
+                          }
                         />
                       </div>
                       <div className="col-12">
@@ -1471,18 +2026,25 @@ const TaskManagement: React.FC = () => {
                           className="form-control"
                           rows={2}
                           value={newTask.note}
-                          onChange={(e) => setNewTask({...newTask, note: e.target.value})}
+                          onChange={(e) =>
+                            setNewTask({ ...newTask, note: e.target.value })
+                          }
                         ></textarea>
                       </div>
                     </div>
-                    
+
                     <div className="mt-3">
                       <button
                         className="btn btn-success me-2"
                         onClick={saveNewTask}
+                        disabled={isLoading}
                       >
-                        <i className="fa-solid fa-save me-1"></i>
-                        Salva Task
+                        <i
+                          className={`fa-solid ${
+                            isLoading ? "fa-spinner fa-spin" : "fa-save"
+                          } me-1`}
+                        ></i>
+                        {isLoading ? "Salvando..." : "Salva Task"}
                       </button>
                       <button
                         className="btn btn-secondary"
@@ -1491,8 +2053,7 @@ const TaskManagement: React.FC = () => {
                           setNewTask(defaultNewTask);
                         }}
                       >
-                        <i className="fa-solid fa-times me-1"></i>
-                        Annulla
+                        <i className="fa-solid fa-times me-1"></i>Annulla
                       </button>
                     </div>
                   </div>
@@ -1501,9 +2062,12 @@ const TaskManagement: React.FC = () => {
             </div>
           )}
 
-          {/* ✅ DETTAGLIO TASK MODAL */}
+          {/* âœ… DETTAGLIO TASK MODAL */}
           {showTaskDetail && selectedTask && (
-            <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div
+              className="modal show d-block"
+              style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+            >
               <div className="modal-dialog modal-xl">
                 <div className="modal-content">
                   <div className="modal-header">
@@ -1524,32 +2088,78 @@ const TaskManagement: React.FC = () => {
                         <table className="table table-sm">
                           <tbody>
                             <tr>
-                              <td><strong>Stato:</strong></td>
-                              <td><span className={getStatusBadgeClass(selectedTask.stato)}>{selectedTask.stato}</span></td>
+                              <td>
+                                <strong>Stato:</strong>
+                              </td>
+                              <td>
+                                <span
+                                  className={getStatusBadgeClass(
+                                    selectedTask.stato
+                                  )}
+                                >
+                                  {selectedTask.stato}
+                                </span>
+                              </td>
                             </tr>
                             <tr>
-                              <td><strong>Priorità:</strong></td>
-                              <td><span className={getPriorityBadgeClass(selectedTask.priorita)}>{selectedTask.priorita}</span></td>
+                              <td>
+                                <strong>PrioritÃ :</strong>
+                              </td>
+                              <td>
+                                <span
+                                  className={getPriorityBadgeClass(
+                                    selectedTask.priorita
+                                  )}
+                                >
+                                  {selectedTask.priorita}
+                                </span>
+                              </td>
                             </tr>
                             <tr>
-                              <td><strong>Categoria:</strong></td>
-                              <td><span className={getCategoryBadgeClass(selectedTask.categoria)}>{selectedTask.categoria}</span></td>
+                              <td>
+                                <strong>Categoria:</strong>
+                              </td>
+                              <td>
+                                <span
+                                  className={getCategoryBadgeClass(
+                                    selectedTask.categoria
+                                  )}
+                                >
+                                  {selectedTask.categoria}
+                                </span>
+                              </td>
                             </tr>
                             <tr>
-                              <td><strong>Origine:</strong></td>
+                              <td>
+                                <strong>Origine:</strong>
+                              </td>
                               <td>{selectedTask.origine}</td>
                             </tr>
                             <tr>
-                              <td><strong>Creato:</strong></td>
+                              <td>
+                                <strong>Creato:</strong>
+                              </td>
                               <td>{formatDate(selectedTask.dataCreazione)}</td>
                             </tr>
                             <tr>
-                              <td><strong>Scadenza:</strong></td>
-                              <td>{selectedTask.dataScadenza ? formatDate(selectedTask.dataScadenza) : 'Nessuna'}</td>
+                              <td>
+                                <strong>Scadenza:</strong>
+                              </td>
+                              <td>
+                                {selectedTask.dataScadenza
+                                  ? formatDate(selectedTask.dataScadenza)
+                                  : "Nessuna"}
+                              </td>
                             </tr>
                             <tr>
-                              <td><strong>Valore:</strong></td>
-                              <td>{selectedTask.valorePotenziale ? `€${selectedTask.valorePotenziale.toLocaleString()}` : '-'}</td>
+                              <td>
+                                <strong>Valore:</strong>
+                              </td>
+                              <td>
+                                {selectedTask.valorePotenziale
+                                  ? `${selectedTask.valorePotenziale.toLocaleString()}`
+                                  : "-"}
+                              </td>
                             </tr>
                           </tbody>
                         </table>
@@ -1559,38 +2169,80 @@ const TaskManagement: React.FC = () => {
                         <table className="table table-sm">
                           <tbody>
                             <tr>
-                              <td><strong>Nome:</strong></td>
-                              <td>{selectedTask.cliente.nome} {selectedTask.cliente.cognome}</td>
+                              <td>
+                                <strong>Nome:</strong>
+                              </td>
+                              <td>
+                                {selectedTask.cliente.nome}{" "}
+                                {selectedTask.cliente.cognome}
+                              </td>
                             </tr>
                             <tr>
-                              <td><strong>Email:</strong></td>
-                              <td><a href={`mailto:${selectedTask.cliente.email}`}>{selectedTask.cliente.email}</a></td>
+                              <td>
+                                <strong>Email:</strong>
+                              </td>
+                              <td>
+                                <a
+                                  href={`mailto:${selectedTask.cliente.email}`}
+                                >
+                                  {selectedTask.cliente.email}
+                                </a>
+                              </td>
                             </tr>
                             <tr>
-                              <td><strong>Telefono:</strong></td>
-                              <td>{selectedTask.cliente.telefono ? <a href={`tel:${selectedTask.cliente.telefono}`}>{selectedTask.cliente.telefono}</a> : '-'}</td>
+                              <td>
+                                <strong>Telefono:</strong>
+                              </td>
+                              <td>
+                                {selectedTask.cliente.telefono ? (
+                                  <a
+                                    href={`tel:${selectedTask.cliente.telefono}`}
+                                  >
+                                    {selectedTask.cliente.telefono}
+                                  </a>
+                                ) : (
+                                  "-"
+                                )}
+                              </td>
                             </tr>
                             <tr>
-                              <td><strong>Azienda:</strong></td>
-                              <td>{selectedTask.cliente.azienda || '-'}</td>
+                              <td>
+                                <strong>Azienda:</strong>
+                              </td>
+                              <td>{selectedTask.cliente.azienda || "-"}</td>
                             </tr>
                             <tr>
-                              <td><strong>Attività:</strong></td>
-                              <td>{selectedTask.cliente.tipoAttivita || '-'}</td>
+                              <td>
+                                <strong>AttivitÃ :</strong>
+                              </td>
+                              <td>
+                                {selectedTask.cliente.tipoAttivita || "-"}
+                              </td>
                             </tr>
                             <tr>
-                              <td><strong>Città:</strong></td>
-                              <td>{selectedTask.cliente.citta} ({selectedTask.cliente.provincia})</td>
+                              <td>
+                                <strong>CittÃ :</strong>
+                              </td>
+                              <td>
+                                {selectedTask.cliente.citta} (
+                                {selectedTask.cliente.provincia})
+                              </td>
                             </tr>
                             <tr>
-                              <td><strong>Assegnato a:</strong></td>
-                              <td>{selectedTask.agenteAssegnato ? `${selectedTask.agenteAssegnato.nome} ${selectedTask.agenteAssegnato.cognome}` : 'Non assegnato'}</td>
+                              <td>
+                                <strong>Assegnato a:</strong>
+                              </td>
+                              <td>
+                                {selectedTask.agenteAssegnato
+                                  ? `${selectedTask.agenteAssegnato.nome} ${selectedTask.agenteAssegnato.cognome}`
+                                  : "Non assegnato"}
+                              </td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
                     </div>
-                    
+
                     <div className="row mt-3">
                       <div className="col-12">
                         <h6>Descrizione</h6>
@@ -1606,38 +2258,72 @@ const TaskManagement: React.FC = () => {
 
                     <div className="row mt-3">
                       <div className="col-12">
-                        <h6>Cronologia Interventi ({selectedTask.interventI.length})</h6>
-                        {selectedTask.interventI.length > 0 ? (
+                        <h6>
+                          Cronologia Interventi (
+                          {selectedTask.interventI?.length || 0})
+                        </h6>
+                        {selectedTask.interventI &&
+                        selectedTask.interventI.length > 0 ? (
                           <div className="timeline">
-                            {selectedTask.interventI.map((intervento, index) => (
-                              <div key={intervento.id} className="timeline-item mb-3">
+                            {selectedTask.interventI.map((intervento) => (
+                              <div
+                                key={intervento.id}
+                                className="timeline-item mb-3"
+                              >
                                 <div className="card">
                                   <div className="card-body">
                                     <div className="d-flex justify-content-between align-items-start">
                                       <div>
-                                        <strong>{intervento.nomeOperatore} {intervento.cognomeOperatore}</strong>
-                                        <span className="badge bg-info ms-2">{intervento.tipoIntervento}</span>
+                                        <strong>
+                                          {intervento.nomeOperatore}{" "}
+                                          {intervento.cognomeOperatore}
+                                        </strong>
+                                        <span className="badge bg-info ms-2">
+                                          {intervento.tipoIntervento}
+                                        </span>
                                         {intervento.esitoIntervento && (
-                                          <span className={`badge ms-1 ${
-                                            intervento.esitoIntervento === 'Positivo' ? 'bg-success' :
-                                            intervento.esitoIntervento === 'Negativo' ? 'bg-danger' :
-                                            intervento.esitoIntervento === 'Da Ricontattare' ? 'bg-warning' : 'bg-secondary'
-                                          }`}>
+                                          <span
+                                            className={`badge ms-1 ${
+                                              intervento.esitoIntervento ===
+                                              "Positivo"
+                                                ? "bg-success"
+                                                : intervento.esitoIntervento ===
+                                                  "Negativo"
+                                                ? "bg-danger"
+                                                : intervento.esitoIntervento ===
+                                                  "Da Ricontattare"
+                                                ? "bg-warning"
+                                                : "bg-secondary"
+                                            }`}
+                                          >
                                             {intervento.esitoIntervento}
                                           </span>
                                         )}
                                       </div>
-                                      <small className="text-muted">{formatDate(intervento.dataIntervento)}</small>
+                                      <small className="text-muted">
+                                        {formatDate(intervento.dataIntervento)}
+                                      </small>
                                     </div>
-                                    <p className="mt-2 mb-1">{intervento.descrizione}</p>
+                                    <p className="mt-2 mb-1">
+                                      {intervento.descrizione}
+                                    </p>
                                     {intervento.durata && (
-                                      <small className="text-muted">Durata: {intervento.durata} minuti</small>
+                                      <small className="text-muted">
+                                        Durata: {intervento.durata} minuti
+                                      </small>
                                     )}
                                     {intervento.prossimaAzione && (
                                       <div className="mt-2">
-                                        <strong>Prossima azione:</strong> {intervento.prossimaAzione}
+                                        <strong>Prossima azione:</strong>{" "}
+                                        {intervento.prossimaAzione}
                                         {intervento.dataProximoContatto && (
-                                          <span className="text-primary"> - {formatDate(intervento.dataProximoContatto)}</span>
+                                          <span className="text-primary">
+                                            {" "}
+                                            -{" "}
+                                            {formatDate(
+                                              intervento.dataProximoContatto
+                                            )}
+                                          </span>
                                         )}
                                       </div>
                                     )}
@@ -1647,49 +2333,50 @@ const TaskManagement: React.FC = () => {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-muted">Nessun intervento registrato.</p>
+                          <p className="text-muted">
+                            Nessun intervento registrato.
+                          </p>
                         )}
                       </div>
                     </div>
                   </div>
                   <div className="modal-footer">
-                    <button 
-                      className="btn btn-success" 
+                    <button
+                      className="btn btn-success"
                       onClick={() => {
                         setShowAddInterventionModal(true);
                         setNewIntervention({
                           ...defaultNewIntervention,
-                          taskId: selectedTask.id,
-                          operatoreId: 'agent-1', // Operatore corrente - da sostituire con user attuale
-                          nomeOperatore: 'Marco',
-                          cognomeOperatore: 'Rossi',
+                          operatoreId: "current-user",
+                          nomeOperatore: "Sistema",
+                          cognomeOperatore: "Admin",
                         });
                       }}
                       title="Aggiungi intervento"
                     >
-                      <i className="fa-solid fa-plus me-1"></i>
-                      Aggiungi Intervento
+                      <i className="fa-solid fa-plus me-1"></i>Aggiungi
+                      Intervento
                     </button>
-                    <button 
+                    <button
                       className="btn btn-warning me-2"
-                      onClick={() => changeTaskStatus(selectedTask.id, 'In Corso')}
-                      disabled={selectedTask.stato === 'In Corso'}
+                      onClick={() =>
+                        changeTaskStatus(selectedTask.id, "In Corso")
+                      }
+                      disabled={selectedTask.stato === "In Corso" || isLoading}
                     >
-                      <i className="fa-solid fa-play me-1"></i>
-                      Prendi in Carico
+                      <i className="fa-solid fa-play me-1"></i>Prendi in Carico
                     </button>
-                    <button 
-                      className="btn btn-info" 
+                    <button
+                      className="btn btn-info"
                       onClick={() => {
                         setShowTaskDetail(false);
                         handleReassignTask(selectedTask);
                       }}
                     >
-                      <i className="fa-solid fa-user-check me-1"></i>
-                      Riassegna
+                      <i className="fa-solid fa-user-check me-1"></i>Riassegna
                     </button>
-                    <button 
-                      className="btn btn-secondary" 
+                    <button
+                      className="btn btn-secondary"
                       onClick={() => setShowTaskDetail(false)}
                     >
                       Chiudi
@@ -1700,15 +2387,18 @@ const TaskManagement: React.FC = () => {
             </div>
           )}
 
-          {/* ✅ MODAL RIASSEGNAZIONE TASK */}
+          {/* âœ… MODAL RIASSEGNAZIONE TASK */}
           {showReassignModal && taskToReassign && (
-            <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div
+              className="modal show d-block"
+              style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+            >
               <div className="modal-dialog">
                 <div className="modal-content">
                   <div className="modal-header">
                     <h5 className="modal-title">
-                      <i className="fa-solid fa-user-check me-2"></i>
-                      Riassegna Task
+                      <i className="fa-solid fa-user-check me-2"></i>Riassegna
+                      Task
                     </h5>
                     <button
                       type="button"
@@ -1716,18 +2406,22 @@ const TaskManagement: React.FC = () => {
                       onClick={() => {
                         setShowReassignModal(false);
                         setTaskToReassign(null);
-                        setNewAssigneeId('');
+                        setNewAssigneeId("");
                       }}
                     ></button>
                   </div>
                   <div className="modal-body">
-                    <p><strong>Task:</strong> {taskToReassign.numeroTask} - {taskToReassign.titolo}</p>
-                    <p><strong>Attualmente assegnato a:</strong> {
-                      taskToReassign.agenteAssegnato 
+                    <p>
+                      <strong>Task:</strong> {taskToReassign.numeroTask} -{" "}
+                      {taskToReassign.titolo}
+                    </p>
+                    <p>
+                      <strong>Attualmente assegnato a:</strong>{" "}
+                      {taskToReassign.agenteAssegnato
                         ? `${taskToReassign.agenteAssegnato.nome} ${taskToReassign.agenteAssegnato.cognome}`
-                        : 'Non assegnato'
-                    }</p>
-                    
+                        : "Non assegnato"}
+                    </p>
+
                     <div className="mb-3">
                       <label className="form-label">Nuovo assegnatario</label>
                       <select
@@ -1736,16 +2430,23 @@ const TaskManagement: React.FC = () => {
                         onChange={(e) => setNewAssigneeId(e.target.value)}
                       >
                         <option value="">Non assegnato</option>
-                        {agenti.filter(a => a.id !== taskToReassign.agenteAssegnato?.id).map(agente => (
-                          <option key={agente.id} value={agente.id}>
-                            {agente.nome} {agente.cognome} - {agente.reparto}
-                          </option>
-                        ))}
+                        {agenti
+                          .filter(
+                            (a) => a.id !== taskToReassign.agenteAssegnato?.id
+                          )
+                          .map((agente) => (
+                            <option key={agente.id} value={agente.id}>
+                              {agente.nome} {agente.cognome} (
+                              {agente.codiceAgente})
+                            </option>
+                          ))}
                       </select>
                     </div>
 
                     <div className="mb-3">
-                      <label className="form-label">Motivo riassegnazione</label>
+                      <label className="form-label">
+                        Motivo riassegnazione
+                      </label>
                       <textarea
                         className="form-control"
                         rows={3}
@@ -1756,21 +2457,25 @@ const TaskManagement: React.FC = () => {
                     </div>
                   </div>
                   <div className="modal-footer">
-                    <button 
-                      className="btn btn-primary" 
+                    <button
+                      className="btn btn-primary"
                       onClick={confirmReassignTask}
-                      disabled={!newAssigneeId}
+                      disabled={!newAssigneeId || isLoading}
                     >
-                      <i className="fa-solid fa-check me-1"></i>
+                      <i
+                        className={`fa-solid ${
+                          isLoading ? "fa-spinner fa-spin" : "fa-check"
+                        } me-1`}
+                      ></i>
                       Conferma Riassegnazione
                     </button>
-                    <button 
-                      className="btn btn-secondary" 
+                    <button
+                      className="btn btn-secondary"
                       onClick={() => {
                         setShowReassignModal(false);
                         setTaskToReassign(null);
-                        setNewAssigneeId('');
-                        setReassignReason('');
+                        setNewAssigneeId("");
+                        setReassignReason("");
                       }}
                     >
                       Annulla
@@ -1781,15 +2486,18 @@ const TaskManagement: React.FC = () => {
             </div>
           )}
 
-          {/* ✅ MODAL AGGIUNGI INTERVENTO */}
+          {/* âœ… MODAL AGGIUNGI INTERVENTO */}
           {showAddInterventionModal && (
-            <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div
+              className="modal show d-block"
+              style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+            >
               <div className="modal-dialog modal-lg">
                 <div className="modal-content">
                   <div className="modal-header">
                     <h5 className="modal-title">
-                      <i className="fa-solid fa-plus me-2"></i>
-                      Aggiungi Intervento
+                      <i className="fa-solid fa-plus me-2"></i>Aggiungi
+                      Intervento
                     </h5>
                     <button
                       type="button"
@@ -1807,10 +2515,18 @@ const TaskManagement: React.FC = () => {
                         <select
                           className="form-select"
                           value={newIntervention.tipoIntervento}
-                          onChange={(e) => setNewIntervention({
-                            ...newIntervention,
-                            tipoIntervento: e.target.value as any
-                          })}
+                          onChange={(e) =>
+                            setNewIntervention({
+                              ...newIntervention,
+                              tipoIntervento: e.target.value as
+                                | "Chiamata"
+                                | "Email"
+                                | "Note"
+                                | "Assegnazione"
+                                | "Cambio Stato"
+                                | "Altro",
+                            })
+                          }
                         >
                           <option value="Chiamata">Chiamata</option>
                           <option value="Email">Email</option>
@@ -1824,17 +2540,27 @@ const TaskManagement: React.FC = () => {
                         <label className="form-label">Esito</label>
                         <select
                           className="form-select"
-                          value={newIntervention.esitoIntervento || ''}
-                          onChange={(e) => setNewIntervention({
-                            ...newIntervention,
-                            esitoIntervento: e.target.value as any || undefined
-                          })}
+                          value={newIntervention.esitoIntervento || ""}
+                          onChange={(e) =>
+                            setNewIntervention({
+                              ...newIntervention,
+                              esitoIntervento:
+                                (e.target.value as
+                                  | "Positivo"
+                                  | "Negativo"
+                                  | "Neutrale"
+                                  | "Da Ricontattare"
+                                  | "") || undefined,
+                            })
+                          }
                         >
                           <option value="">Seleziona esito</option>
                           <option value="Positivo">Positivo</option>
                           <option value="Negativo">Negativo</option>
                           <option value="Neutrale">Neutrale</option>
-                          <option value="Da Ricontattare">Da Ricontattare</option>
+                          <option value="Da Ricontattare">
+                            Da Ricontattare
+                          </option>
                         </select>
                       </div>
                       <div className="col-md-6">
@@ -1842,36 +2568,48 @@ const TaskManagement: React.FC = () => {
                         <input
                           type="number"
                           className="form-control"
-                          value={newIntervention.durata || ''}
-                          onChange={(e) => setNewIntervention({
-                            ...newIntervention,
-                            durata: e.target.value ? parseInt(e.target.value) : undefined
-                          })}
+                          value={newIntervention.durata || ""}
+                          onChange={(e) =>
+                            setNewIntervention({
+                              ...newIntervention,
+                              durata: e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined,
+                            })
+                          }
                         />
                       </div>
                       <div className="col-md-6">
-                        <label className="form-label">Data Prossimo Contatto</label>
+                        <label className="form-label">
+                          Data Prossimo Contatto
+                        </label>
                         <input
                           type="datetime-local"
                           className="form-control"
-                          value={newIntervention.dataProximoContatto || ''}
-                          onChange={(e) => setNewIntervention({
-                            ...newIntervention,
-                            dataProximoContatto: e.target.value || undefined
-                          })}
+                          value={newIntervention.dataProximoContatto || ""}
+                          onChange={(e) =>
+                            setNewIntervention({
+                              ...newIntervention,
+                              dataProximoContatto: e.target.value || undefined,
+                            })
+                          }
                         />
                       </div>
                       <div className="col-12">
-                        <label className="form-label">Descrizione Intervento *</label>
+                        <label className="form-label">
+                          Descrizione Intervento *
+                        </label>
                         <textarea
                           className="form-control"
                           rows={4}
                           value={newIntervention.descrizione}
-                          onChange={(e) => setNewIntervention({
-                            ...newIntervention,
-                            descrizione: e.target.value
-                          })}
-                          placeholder="Descrivi cosa è stato fatto durante l'intervento..."
+                          onChange={(e) =>
+                            setNewIntervention({
+                              ...newIntervention,
+                              descrizione: e.target.value,
+                            })
+                          }
+                          placeholder="Descrivi cosa Ã¨ stato fatto durante l'intervento..."
                         ></textarea>
                       </div>
                       <div className="col-12">
@@ -1879,27 +2617,35 @@ const TaskManagement: React.FC = () => {
                         <input
                           type="text"
                           className="form-control"
-                          value={newIntervention.prossimaAzione || ''}
-                          onChange={(e) => setNewIntervention({
-                            ...newIntervention,
-                            prossimaAzione: e.target.value || undefined
-                          })}
+                          value={newIntervention.prossimaAzione || ""}
+                          onChange={(e) =>
+                            setNewIntervention({
+                              ...newIntervention,
+                              prossimaAzione: e.target.value || undefined,
+                            })
+                          }
                           placeholder="Cosa va fatto successivamente..."
                         />
                       </div>
                     </div>
                   </div>
                   <div className="modal-footer">
-                    <button 
-                      className="btn btn-success" 
+                    <button
+                      className="btn btn-success"
                       onClick={saveIntervention}
-                      disabled={!newIntervention.descrizione.trim()}
+                      disabled={
+                        !newIntervention.descrizione.trim() || isLoading
+                      }
                     >
-                      <i className="fa-solid fa-save me-1"></i>
+                      <i
+                        className={`fa-solid ${
+                          isLoading ? "fa-spinner fa-spin" : "fa-save"
+                        } me-1`}
+                      ></i>
                       Salva Intervento
                     </button>
-                    <button 
-                      className="btn btn-secondary" 
+                    <button
+                      className="btn btn-secondary"
                       onClick={() => {
                         setShowAddInterventionModal(false);
                         setNewIntervention(defaultNewIntervention);
@@ -1913,7 +2659,10 @@ const TaskManagement: React.FC = () => {
             </div>
           )}
 
-          <div><p /><p /></div>
+          <div>
+            <p />
+            <p />
+          </div>
         </div>
       </div>
     </div>
