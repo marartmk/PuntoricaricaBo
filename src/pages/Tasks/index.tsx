@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import "../../pages/Dashboard/dashboard.css";
 import "./tasks-custom.css";
@@ -6,7 +12,7 @@ import Sidebar from "../../components/sidebar";
 import Topbar from "../../components/topbar";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-// âœ… INTERFACCE PER TASK MANAGEMENT
+// INTERFACCE PER TASK MANAGEMENT
 interface Cliente {
   id: string;
   nome: string;
@@ -121,7 +127,7 @@ interface NuovoTaskForm {
   clienteTipoAttivita: string;
 }
 
-// âœ… INTERFACCE API BACKEND
+// INTERFACCE API BACKEND
 interface AgenteDto {
   id: string;
   codiceAgente: string;
@@ -153,29 +159,34 @@ interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+interface NewInterventionForm extends Omit<TaskIntervento, "id" | "taskId"> {
+  nuovoStato?: Task["stato"];
+}
+
 const TaskManagement: React.FC = () => {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const [menuState, setMenuState] = useState<"open" | "closed">("open");
+  const [_allTasks, setAllTasks] = useState<Task[]>([]);
 
-  // âœ… CONFIGURAZIONE API
+  // CONFIGURAZIONE API
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // âœ… STATI PRINCIPALI
+  // STATI PRINCIPALI
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
 
-  // âœ… STATI AGENTI
+  // STATI AGENTI
   const [agenti, setAgenti] = useState<AgenteDto[]>([]);
   const [isLoadingAgenti, setIsLoadingAgenti] = useState<boolean>(false);
   const [errorAgenti, setErrorAgenti] = useState<string>("");
 
-  // âœ… STATI PAGINAZIONE SERVER
+  // STATI PAGINAZIONE SERVER
   const [totalCount, setTotalCount] = useState<number>(0);
   const [serverTotalPages, setServerTotalPages] = useState<number>(0);
 
-  // âœ… STATI FILTRI E VISUALIZZAZIONE
+  // STATI FILTRI E VISUALIZZAZIONE
   const [activeTab, setActiveTab] = useState<
     "aperti" | "tutti" | "completati" | "scaduti"
   >("aperti");
@@ -185,7 +196,7 @@ const TaskManagement: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("tutte");
   const [selectedStatus, setSelectedStatus] = useState<string>("tutti");
 
-  // âœ… STATI FORM E MODALI
+  // STATI FORM E MODALI
   const [showNewTaskForm, setShowNewTaskForm] = useState<boolean>(false);
   const [showTaskDetail, setShowTaskDetail] = useState<boolean>(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -194,12 +205,12 @@ const TaskManagement: React.FC = () => {
   const [showAddInterventionModal, setShowAddInterventionModal] =
     useState<boolean>(false);
 
-  // âœ… STATI PER RIASSEGNAZIONE
+  // STATI PER RIASSEGNAZIONE
   const [newAssigneeId, setNewAssigneeId] = useState<string>("");
   const [reassignReason, setReassignReason] = useState<string>("");
 
-  // âœ… STATI PER NUOVO INTERVENTO
-  const defaultNewIntervention: Omit<TaskIntervento, "id" | "taskId"> = {
+  // STATI PER NUOVO INTERVENTO
+  const defaultNewIntervention: NewInterventionForm = {
     operatoreId: "",
     nomeOperatore: "",
     cognomeOperatore: "",
@@ -210,17 +221,24 @@ const TaskManagement: React.FC = () => {
     esitoIntervento: undefined,
     prossimaAzione: undefined,
     dataProximoContatto: undefined,
+    nuovoStato: undefined,
   };
 
-  const [newIntervention, setNewIntervention] = useState<
-    Omit<TaskIntervento, "id" | "taskId">
-  >(defaultNewIntervention);
+  // GESTIONE RUOLO UTENTE
+  const userRole = (localStorage.getItem("userLevel") || "")
+    .trim()
+    .toLowerCase();
+  const isAdmin = userRole === "admin";
 
-  // âœ… PAGINAZIONE
+  const [newIntervention, setNewIntervention] = useState<NewInterventionForm>(
+    defaultNewIntervention
+  );
+
+  // PAGINAZIONE
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
 
-  // âœ… FORM NUOVO TASK
+  // FORM NUOVO TASK
   const defaultNewTask: NuovoTaskForm = {
     titolo: "",
     descrizione: "",
@@ -242,7 +260,7 @@ const TaskManagement: React.FC = () => {
 
   const [newTask, setNewTask] = useState<NuovoTaskForm>(defaultNewTask);
 
-  // âœ… HELPER PER TOKEN AUTH
+  // HELPER PER TOKEN AUTH
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -256,7 +274,7 @@ const TaskManagement: React.FC = () => {
     };
   };
 
-  // âœ… DATI FAKE PER FALLBACK
+  // DATI FAKE PER FALLBACK
   const generateTasksFake = (): Task[] => [
     {
       id: "task-1",
@@ -291,7 +309,7 @@ const TaskManagement: React.FC = () => {
       origine: "Email",
       categoria: "Vendita",
       valorePotenziale: 2500,
-      interventI: [], // IMPORTANTE: sempre array vuoto, mai undefined
+      interventI: [],
       tags: ["pos", "vendita", "assicurazioni"],
     },
     {
@@ -326,21 +344,141 @@ const TaskManagement: React.FC = () => {
       dataScadenza: "2025-08-22T18:00:00Z",
       origine: "Telefono",
       categoria: "Tecnico",
-      interventI: [], // IMPORTANTE: sempre array vuoto, mai undefined
+      interventI: [],
       tags: ["supporto", "hardware", "lettore"],
     },
   ];
 
-  // âœ… FUNZIONE API PER RECUPERARE AGENTI
+  // FUNZIONE PER OTTENERE GLI STATI VALIDI
+  const getValidStates = (currentState: Task["stato"]): Task["stato"][] => {
+    switch (currentState) {
+      case "Aperto":
+        return ["In Corso", "In Attesa", "Sospeso"];
+      case "In Corso":
+        return ["In Attesa", "Completato", "Sospeso"];
+      case "In Attesa":
+        return ["In Corso", "Completato", "Sospeso"];
+      case "Completato":
+        return ["Chiuso"];
+      case "Sospeso":
+        return ["Aperto", "In Corso"];
+      case "Chiuso":
+        return [];
+      default:
+        return [];
+    }
+  };
+
+  // FUNZIONI OTTIMIZZATE PER PERFORMANCE
+  const handleNewTaskFieldChange = useCallback(
+    (field: keyof NuovoTaskForm) =>
+      (
+        e: React.ChangeEvent<
+          HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+        >
+      ) => {
+        const value =
+          e.target.type === "number"
+            ? e.target.value
+              ? parseFloat(e.target.value)
+              : undefined
+            : e.target.value;
+
+        setNewTask((prev) => ({ ...prev, [field]: value }));
+      },
+    []
+  );
+
+  const handleNewInterventionFieldChange = useCallback(
+    (field: keyof NewInterventionForm) =>
+      (
+        e: React.ChangeEvent<
+          HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+        >
+      ) => {
+        const value =
+          e.target.type === "number"
+            ? e.target.value
+              ? parseInt(e.target.value)
+              : undefined
+            : e.target.value || undefined;
+
+        setNewIntervention((prev) => ({
+          ...prev,
+          [field]: value,
+          ...(field === "nuovoStato" && value
+            ? { tipoIntervento: "Cambio Stato" }
+            : {}),
+        }));
+      },
+    []
+  );
+
+  // FUNZIONE PER CARICARE TUTTI I TASK
+  const fetchAllTasks = async () => {
+    try {
+      const headers = getAuthHeaders();
+      const url = `${API_URL}/api/Tasks?pageSize=1000`;
+      console.log("🔍 Caricamento tutti i task per statistiche:", url);
+
+      const response = await fetch(url, { method: "GET", headers });
+
+      if (!response.ok) {
+        throw new Error(
+          `Errore nel caricamento tutti i tasks: ${response.status}`
+        );
+      }
+
+      const data: ApiResponseDto<PaginatedResponse<Task>> =
+        await response.json();
+
+      if (data.success && data.data && data.data.items) {
+        console.log(
+          "🔍 DEBUG fetchAllTasks - Dati ricevuti:",
+          data.data.items.length
+        );
+        console.log("🔍 DEBUG fetchAllTasks - Primo task:", data.data.items[0]);
+        console.log(
+          "🔍 DEBUG fetchAllTasks - Primo task interventI:",
+          data.data.items[0]?.interventI
+        );
+        console.log(
+          "🔍 DEBUG fetchAllTasks - Primo task interventi:",
+          (data.data.items[0] as any)?.interventi
+        );
+
+        const tasksWithInterventi = data.data.items.map((task) => ({
+          ...task,
+          interventI:
+            task.interventI ||
+            (task as any).interventi ||
+            (task as any).Interventi ||
+            [],
+        }));
+
+        setAllTasks(tasksWithInterventi);
+        console.log(
+          "📊 Tutti i task caricati per statistiche:",
+          tasksWithInterventi.length
+        );
+      }
+    } catch (error) {
+      console.error("🚨 Errore caricamento tutti i task:", error);
+      const tasksFakeLocal = generateTasksFake();
+      setAllTasks(tasksFakeLocal);
+    }
+  };
+
+  // FUNZIONE API PER RECUPERARE AGENTI
   const fetchAgenti = async () => {
     setIsLoadingAgenti(true);
     setErrorAgenti("");
-    console.log("ðŸ“¡ Iniziando caricamento agenti...");
+    console.log("🔡 Iniziando caricamento agenti...");
 
     try {
       const headers = getAuthHeaders();
       const url = `${API_URL}/api/Agenti?pageSize=1000`;
-      console.log("ðŸŒ URL chiamata agenti:", url);
+      console.log("🔗 URL chiamata agenti:", url);
 
       const response = await fetch(url, { method: "GET", headers });
 
@@ -358,19 +496,18 @@ const TaskManagement: React.FC = () => {
 
       const data: ApiResponseDto<PaginatedResponse<AgenteDto>> =
         await response.json();
-      console.log("ðŸ“Š Dati ricevuti agenti:", data);
+      console.log("📝 Dati ricevuti agenti:", data);
 
       if (data.success && data.data && data.data.items) {
-        console.log("âœ… Agenti caricati:", data.data.items.length);
+        console.log("✅ Agenti caricati:", data.data.items.length);
         const agentiAttivi = data.data.items.filter((agente) => agente.attivo);
         setAgenti(agentiAttivi);
       } else {
         throw new Error(data.message || "Errore nel recupero agenti");
       }
     } catch (error) {
-      console.error("ðŸš¨ Errore caricamento agenti:", error);
+      console.error("🚨 Errore caricamento agenti:", error);
 
-      // FALLBACK: Usa dati fake
       const agentiFake: AgenteDto[] = [
         {
           id: "fake-1",
@@ -405,7 +542,7 @@ const TaskManagement: React.FC = () => {
     }
   };
 
-  // âœ… FUNZIONE API PER RECUPERARE TASKS
+  // FUNZIONE API PER RECUPERARE TASKS
   const fetchTasks = async (filters?: {
     page?: number;
     pageSize?: number;
@@ -418,7 +555,7 @@ const TaskManagement: React.FC = () => {
   }) => {
     setIsLoading(true);
     setError("");
-    console.log("ðŸ“¡ Iniziando caricamento tasks...");
+    console.log("🔡 Iniziando caricamento tasks...");
 
     try {
       const headers = getAuthHeaders();
@@ -439,7 +576,7 @@ const TaskManagement: React.FC = () => {
       if (filters?.scaduti) params.append("scaduti", "true");
 
       const url = `${API_URL}/api/Tasks?${params.toString()}`;
-      console.log("ðŸŒ URL chiamata tasks:", url);
+      console.log("🔗 URL chiamata tasks:", url);
 
       const response = await fetch(url, { method: "GET", headers });
 
@@ -457,17 +594,61 @@ const TaskManagement: React.FC = () => {
 
       const data: ApiResponseDto<PaginatedResponse<Task>> =
         await response.json();
-      console.log("ðŸ“Š Dati ricevuti tasks:", data);
+      console.log("📝 Dati ricevuti tasks:", data);
 
       if (data.success && data.data && data.data.items) {
         console.log("✅ Tasks caricati:", data.data.items.length);
+        console.log(
+          "🔍 DEBUG fetchTasks - Primo task dal server:",
+          data.data.items[0]
+        );
+        console.log(
+          "🔍 DEBUG fetchTasks - Primo task interventI:",
+          data.data.items[0]?.interventI
+        );
+        console.log(
+          "🔍 DEBUG fetchTasks - Primo task interventi:",
+          (data.data.items[0] as any)?.interventi
+        );
+        console.log(
+          "🔍 DEBUG fetchTasks - Primo task Interventi:",
+          (data.data.items[0] as any)?.Interventi
+        );
 
-        const tasksWithInterventi = data.data.items.map((task) => ({
-          ...task,
-          interventI: task.interventI || [],
-        }));
+        const tasksWithInterventi = data.data.items.map((task) => {
+          console.log(
+            `🔍 DEBUG task ${task.id} - interventI originali:`,
+            task.interventI
+          );
+          console.log(
+            `🔍 DEBUG task ${task.id} - interventi:`,
+            (task as any).interventi
+          );
+          console.log(
+            `🔍 DEBUG task ${task.id} - Interventi:`,
+            (task as any).Interventi
+          );
 
-        setTasks(tasksWithInterventi); // ← QUESTA è la riga corretta!
+          return {
+            ...task,
+            interventI:
+              task.interventI ||
+              (task as any).interventi ||
+              (task as any).Interventi ||
+              [],
+          };
+        });
+
+        console.log(
+          "🔍 DEBUG fetchTasks - Tasks dopo mappatura:",
+          tasksWithInterventi
+        );
+        console.log(
+          "🔍 DEBUG fetchTasks - Primo task dopo mappatura interventi:",
+          tasksWithInterventi[0]?.interventI?.length || 0
+        );
+
+        setTasks(tasksWithInterventi);
         setTotalCount(data.data.totalCount);
         setServerTotalPages(data.data.totalPages);
         return data.data;
@@ -475,10 +656,9 @@ const TaskManagement: React.FC = () => {
         throw new Error(data.message || "Errore nel recupero tasks");
       }
     } catch (error) {
-      console.error("ðŸš¨ Errore caricamento tasks:", error);
+      console.error("🚨 Errore caricamento tasks:", error);
 
-      // FALLBACK: Usa dati fake
-      console.warn("ðŸ”„ Usando dati fake per tasks...");
+      console.warn("⚠️ Usando dati fake per tasks...");
       const tasksFakeLocal = generateTasksFake();
       setTasks(tasksFakeLocal);
       setTotalCount(tasksFakeLocal.length);
@@ -502,7 +682,7 @@ const TaskManagement: React.FC = () => {
     }
   };
 
-  // âœ… FUNZIONE API PER CREARE NUOVO TASK
+  // FUNZIONE API PER CREARE NUOVO TASK
   const createTask = async (taskData: {
     titolo: string;
     descrizione: string;
@@ -544,18 +724,18 @@ const TaskManagement: React.FC = () => {
       const data: ApiResponseDto<Task> = await response.json();
 
       if (data.success && data.data) {
-        console.log("âœ… Task creato:", data.data);
+        console.log("✅ Task creato:", data.data);
         return data.data;
       } else {
         throw new Error(data.message || "Errore nella creazione task");
       }
     } catch (error) {
-      console.error("ðŸš¨ Errore creazione task:", error);
+      console.error("🚨 Errore creazione task:", error);
       throw error;
     }
   };
 
-  // âœ… FUNZIONE API PER AGGIORNARE TASK
+  // FUNZIONE API PER AGGIORNARE TASK
   const updateTask = async (taskId: string, taskData: Partial<Task>) => {
     try {
       const headers = getAuthHeaders();
@@ -577,18 +757,18 @@ const TaskManagement: React.FC = () => {
       const data: ApiResponseDto<Task> = await response.json();
 
       if (data.success && data.data) {
-        console.log("âœ… Task aggiornato:", data.data);
+        console.log("✅ Task aggiornato:", data.data);
         return data.data;
       } else {
         throw new Error(data.message || "Errore nell'aggiornamento task");
       }
     } catch (error) {
-      console.error("ðŸš¨ Errore aggiornamento task:", error);
+      console.error("🚨 Errore aggiornamento task:", error);
       throw error;
     }
   };
 
-  // âœ… FUNZIONE API PER AGGIUNGERE INTERVENTO
+  // FUNZIONE API PER AGGIUNGERE INTERVENTO
   const addTaskIntervention = async (
     taskId: string,
     interventoData: {
@@ -623,33 +803,290 @@ const TaskManagement: React.FC = () => {
       const data: ApiResponseDto<TaskIntervento> = await response.json();
 
       if (data.success && data.data) {
-        console.log("âœ… Intervento aggiunto:", data.data);
+        console.log("✅ Intervento aggiunto:", data.data);
         return data.data;
       } else {
         throw new Error(data.message || "Errore nell'aggiunta intervento");
       }
     } catch (error) {
-      console.error("ðŸš¨ Errore aggiunta intervento:", error);
+      console.error("🚨 Errore aggiunta intervento:", error);
       throw error;
     }
   };
 
-  // âœ… GESTIONE FILTRI COLLEGATA ALLE API
-  const handleFilterChange = () => {
-    setCurrentPage(1);
-    fetchTasks({
+  // FUNZIONE PER RICARICARE UN SINGOLO TASK
+  const fetchSingleTask = async (taskId: string): Promise<Task | null> => {
+    try {
+      const headers = getAuthHeaders();
+      const url = `${API_URL}/api/Tasks/${taskId}`;
+      console.log("🔄 DEBUG fetchSingleTask - URL:", url);
+
+      const response = await fetch(url, { method: "GET", headers });
+
+      if (!response.ok) {
+        throw new Error(`Errore nel caricamento task: ${response.status}`);
+      }
+
+      const data: ApiResponseDto<Task> = await response.json();
+      console.log("🔄 DEBUG fetchSingleTask - Dati ricevuti:", data);
+
+      if (data.success && data.data) {
+        console.log("🔄 DEBUG fetchSingleTask - Task data:", data.data);
+        console.log(
+          "🔄 DEBUG fetchSingleTask - interventI:",
+          data.data.interventI
+        );
+        console.log(
+          "🔄 DEBUG fetchSingleTask - interventi:",
+          (data.data as any).interventi
+        );
+        console.log(
+          "🔄 DEBUG fetchSingleTask - Interventi:",
+          (data.data as any).Interventi
+        );
+
+        const taskWithInterventi = {
+          ...data.data,
+          interventI:
+            data.data.interventI ||
+            (data.data as any).interventi ||
+            (data.data as any).Interventi ||
+            [],
+        };
+
+        console.log(
+          "🔄 DEBUG fetchSingleTask - Task finale:",
+          taskWithInterventi
+        );
+        console.log(
+          "🔄 DEBUG fetchSingleTask - Interventi finali:",
+          taskWithInterventi.interventI?.length || 0
+        );
+
+        return taskWithInterventi;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("🚨 DEBUG fetchSingleTask - Errore:", error);
+      return null;
+    }
+  };
+
+  // FUNZIONE SALVA INTERVENTO CON CAMBIO STATO
+  const saveIntervention = async () => {
+    if (!newIntervention.descrizione.trim()) {
+      alert("La descrizione dell'intervento è obbligatoria");
+      return;
+    }
+
+    if (!selectedTask) {
+      alert("Nessun task selezionato");
+      return;
+    }
+
+    console.log(
+      "📊 DEBUG: Interventi attuali nel selectedTask:",
+      selectedTask.interventI?.length || 0
+    );
+
+    // Validazione cambio stato
+    if (newIntervention.nuovoStato) {
+      const validStates = getValidStates(selectedTask.stato);
+      if (!validStates.includes(newIntervention.nuovoStato)) {
+        alert(
+          `Cambio stato non valido. Da "${
+            selectedTask.stato
+          }" puoi passare solo a: ${validStates.join(", ")}`
+        );
+        return;
+      }
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Prepara la descrizione dell'intervento includendo il cambio stato se presente
+      let descrizioneCompleta = newIntervention.descrizione;
+      if (
+        newIntervention.nuovoStato &&
+        newIntervention.nuovoStato !== selectedTask.stato
+      ) {
+        descrizioneCompleta = `${descrizioneCompleta}\n\n📋 CAMBIO STATO: Da "${selectedTask.stato}" a "${newIntervention.nuovoStato}"`;
+      }
+
+      const interventoData = {
+        operatoreId: newIntervention.operatoreId || "current-user",
+        nomeOperatore: newIntervention.nomeOperatore || "Sistema",
+        cognomeOperatore: newIntervention.cognomeOperatore || "Admin",
+        tipoIntervento: newIntervention.nuovoStato
+          ? "Cambio Stato"
+          : newIntervention.tipoIntervento,
+        descrizione: descrizioneCompleta,
+        durata: newIntervention.durata,
+        esitoIntervento: newIntervention.esitoIntervento,
+        prossimaAzione: newIntervention.prossimaAzione,
+        dataProximoContatto: newIntervention.dataProximoContatto,
+      };
+
+      console.log("📝 DEBUG: Salvando intervento:", interventoData);
+
+      // 1. Aggiungi l'intervento
+      const nuovoIntervento = await addTaskIntervention(
+        selectedTask.id,
+        interventoData
+      );
+      console.log("✅ DEBUG: Intervento salvato dal server:", nuovoIntervento);
+
+      // 2. Se è stato specificato un nuovo stato, aggiorna il task
+      if (
+        newIntervention.nuovoStato &&
+        newIntervention.nuovoStato !== selectedTask.stato
+      ) {
+        const taskUpdateData = {
+          id: selectedTask.id,
+          titolo: selectedTask.titolo,
+          descrizione: selectedTask.descrizione,
+          stato: newIntervention.nuovoStato,
+          priorita: selectedTask.priorita,
+          categoria: selectedTask.categoria,
+          idAgenteAssegnato: selectedTask.agenteAssegnato?.id,
+          dataScadenza: selectedTask.dataScadenza,
+          valorePotenziale: selectedTask.valorePotenziale,
+          note: selectedTask.note,
+          cliente: {
+            id: selectedTask.cliente.id,
+            nome: selectedTask.cliente.nome,
+            cognome: selectedTask.cliente.cognome,
+            email: selectedTask.cliente.email,
+            telefono: selectedTask.cliente.telefono,
+            citta: selectedTask.cliente.citta,
+            provincia: selectedTask.cliente.provincia,
+            azienda: selectedTask.cliente.azienda,
+            tipoAttivita: selectedTask.cliente.tipoAttivita,
+            indirizzo: selectedTask.cliente.indirizzo,
+            cap: selectedTask.cliente.cap,
+          },
+          tags: selectedTask.tags || [],
+        };
+
+        console.log(
+          "🔄 DEBUG: Aggiornando stato task:",
+          newIntervention.nuovoStato
+        );
+        await updateTask(selectedTask.id, taskUpdateData);
+      }
+
+      // 3. AGGIORNAMENTO MANUALE DEL TASK
+      console.log("🔄 DEBUG: Aggiornamento manuale del task...");
+
+      const taskAggiornato = {
+        ...selectedTask,
+        interventI: [...(selectedTask.interventI || []), nuovoIntervento],
+        dataUltimaModifica: new Date().toISOString(),
+        stato: newIntervention.nuovoStato || selectedTask.stato,
+      };
+
+      console.log(
+        "📊 DEBUG: Task aggiornato - nuovi interventi:",
+        taskAggiornato.interventI?.length || 0
+      );
+
+      // 4. Aggiorna gli stati locali
+      setTasks(
+        tasks.map((task) =>
+          task.id === selectedTask.id ? taskAggiornato : task
+        )
+      );
+      setSelectedTask(taskAggiornato);
+
+      // 5. Reset form e chiudi modal
+      setNewIntervention(defaultNewIntervention);
+      setShowAddInterventionModal(false);
+
+      // 6. Ricarica la lista dei task per aggiornare le statistiche (in background)
+      fetchTasks({ page: currentPage, pageSize: itemsPerPage }).catch(
+        console.warn
+      );
+      fetchAllTasks().catch(console.warn);
+
+      // 7. Messaggio di successo
+      const messaggioSuccesso =
+        newIntervention.nuovoStato &&
+        newIntervention.nuovoStato !== selectedTask.stato
+          ? `✅ Intervento registrato e stato cambiato da "${selectedTask.stato}" a "${newIntervention.nuovoStato}"`
+          : "✅ Intervento registrato con successo!";
+
+      alert(messaggioSuccesso);
+
+      console.log("🎉 DEBUG: Operazione completata con successo!");
+    } catch (error) {
+      console.error("🚨 DEBUG: Errore salvataggio intervento:", error);
+      alert(
+        `❌ Errore nell'aggiunta intervento: ${
+          error instanceof Error ? error.message : "Errore sconosciuto"
+        }`
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Helper per mappare i tab ai filtri
+  const getFiltersForTab = (
+    tab: string,
+    searchTerm: string,
+    selectedPriority: string,
+    selectedCategory: string,
+    selectedAgent: string
+  ) => {
+    let stato: string | undefined;
+    let scaduti: boolean | undefined;
+
+    switch (tab) {
+      case "tutti":
+        stato = undefined;
+        break;
+      case "aperti":
+        stato = "Aperto";
+        break;
+      case "completati":
+        stato = "Completato";
+        break;
+      case "scaduti":
+        stato = undefined;
+        scaduti = true;
+        break;
+      default:
+        stato = undefined;
+    }
+
+    return {
       page: 1,
-      pageSize: itemsPerPage,
+      pageSize: 10,
       search: searchTerm || undefined,
-      stato: activeTab === "tutti" ? undefined : activeTab,
+      stato,
       priorita: selectedPriority === "tutte" ? undefined : selectedPriority,
       categoria: selectedCategory === "tutte" ? undefined : selectedCategory,
       agenteId: selectedAgent === "tutti" ? undefined : selectedAgent,
-      scaduti: activeTab === "scaduti" ? true : undefined,
-    });
+      scaduti,
+    };
   };
 
-  // âœ… GESTIONE PAGINAZIONE COLLEGATA ALLE API
+  // GESTIONE FILTRI COLLEGATA ALLE API
+  const handleFilterChange = () => {
+    setCurrentPage(1);
+    const filters = getFiltersForTab(
+      activeTab,
+      searchTerm,
+      selectedPriority,
+      selectedCategory,
+      selectedAgent
+    );
+    fetchTasks(filters);
+  };
+
+  // GESTIONE PAGINAZIONE COLLEGATA ALLE API
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
     fetchTasks({
@@ -664,7 +1101,7 @@ const TaskManagement: React.FC = () => {
     });
   };
 
-  // âœ… CARICAMENTO INIZIALE
+  // CARICAMENTO INIZIALE
   useEffect(() => {
     const savedMenuState = localStorage.getItem("menuState");
     if (savedMenuState === "closed") {
@@ -685,24 +1122,25 @@ const TaskManagement: React.FC = () => {
     const loadInitialData = async () => {
       try {
         await fetchAgenti();
+        await fetchAllTasks();
         await fetchTasks({ page: 1, pageSize: itemsPerPage });
-        console.log("âœ… Dati iniziali caricati");
+        console.log("✅ Dati iniziali caricati");
       } catch (error) {
-        console.error("ðŸš¨ Errore caricamento dati iniziali:", error);
+        console.error("🚨 Errore caricamento dati iniziali:", error);
       }
     };
 
     loadInitialData();
   }, [API_URL]);
 
-  // âœ… FUNZIONE TOGGLE MENU
+  // FUNZIONE TOGGLE MENU
   const toggleMenu = () => {
     const newState = menuState === "open" ? "closed" : "open";
     setMenuState(newState);
     localStorage.setItem("menuState", newState);
   };
 
-  // âœ… STATISTICHE TASKS
+  // STATISTICHE TASKS
   const stats = useMemo((): TaskStats => {
     const oggi = new Date();
     const scaduti = tasks.filter((task) => {
@@ -750,8 +1188,10 @@ const TaskManagement: React.FC = () => {
     };
   }, [tasks, totalCount]);
 
-  // âœ… DATI PER GRAFICO STATI
+  // DATI PER GRAFICO STATI
   const chartData = useMemo(() => {
+    if (tasks.length === 0) return [];
+
     const statiCount = tasks.reduce((acc, task) => {
       acc[task.stato] = (acc[task.stato] || 0) + 1;
       return acc;
@@ -773,7 +1213,7 @@ const TaskManagement: React.FC = () => {
     }));
   }, [tasks]);
 
-  // âœ… BADGE FUNCTIONS
+  // BADGE FUNCTIONS
   const getPriorityBadgeClass = (priorita: string) => {
     switch (priorita) {
       case "Urgente":
@@ -827,7 +1267,7 @@ const TaskManagement: React.FC = () => {
     }
   };
 
-  // âœ… HELPER FUNCTIONS
+  // HELPER FUNCTIONS
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("it-IT", {
       day: "2-digit",
@@ -844,14 +1284,62 @@ const TaskManagement: React.FC = () => {
     return new Date(task.dataScadenza) < new Date();
   };
 
-  // âœ… AZIONI TASK
-  const handleTaskClick = (task: Task) => {
+  // AZIONI TASK
+  const handleTaskClick = async (task: Task) => {
+    console.log("🔍 DEBUG handleTaskClick - Task originale:", task);
+    console.log("🔍 DEBUG handleTaskClick - task.interventI:", task.interventI);
+    console.log(
+      "🔍 DEBUG handleTaskClick - task.interventi:",
+      (task as any).interventi
+    );
+    console.log(
+      "🔍 DEBUG handleTaskClick - task.Interventi:",
+      (task as any).Interventi
+    );
+    console.log(
+      "🔍 DEBUG handleTaskClick - Tutte le proprietà del task:",
+      Object.keys(task)
+    );
+
+    // Prima proviamo con i dati locali
     const taskWithInterventi = {
       ...task,
-      interventI: task.interventI || [],
+      interventI:
+        task.interventI ||
+        (task as any).interventi ||
+        (task as any).Interventi ||
+        [],
     };
+
+    console.log(
+      "🔍 DEBUG handleTaskClick - Task finale con interventi locali:",
+      taskWithInterventi
+    );
+    console.log(
+      "🔍 DEBUG handleTaskClick - Numero interventi locali:",
+      taskWithInterventi.interventI?.length || 0
+    );
+
     setSelectedTask(taskWithInterventi);
     setShowTaskDetail(true);
+
+    // Poi ricariciamo dal server per avere i dati più aggiornati
+    console.log("🔄 DEBUG handleTaskClick - Ricaricamento dal server...");
+    const freshTask = await fetchSingleTask(task.id);
+    if (freshTask) {
+      console.log(
+        "🔄 DEBUG handleTaskClick - Task fresco dal server:",
+        freshTask
+      );
+      console.log(
+        "🔄 DEBUG handleTaskClick - Interventi freschi:",
+        freshTask.interventI?.length || 0
+      );
+      setSelectedTask(freshTask);
+
+      // Aggiorniamo anche l'array tasks locale
+      setTasks(tasks.map((t) => (t.id === freshTask.id ? freshTask : t)));
+    }
   };
 
   const handleReassignTask = (task: Task) => {
@@ -859,10 +1347,10 @@ const TaskManagement: React.FC = () => {
     setShowReassignModal(true);
   };
 
-  // âœ… SALVA NUOVO TASK
+  // SALVA NUOVO TASK
   const saveNewTask = async () => {
     if (!newTask.titolo.trim()) {
-      alert("Il titolo del task Ã¨ obbligatorio");
+      alert("Il titolo del task è obbligatorio");
       return;
     }
 
@@ -901,10 +1389,9 @@ const TaskManagement: React.FC = () => {
       setShowNewTaskForm(false);
       alert("Task creato con successo!");
 
-      // Ricarica i tasks
       await fetchTasks({ page: 1, pageSize: itemsPerPage });
     } catch (error) {
-      console.error("ðŸš¨ Errore salvataggio task:", error);
+      console.error("🚨 Errore salvataggio task:", error);
       alert(
         `Errore nella creazione del task: ${
           error instanceof Error ? error.message : "Errore sconosciuto"
@@ -915,14 +1402,13 @@ const TaskManagement: React.FC = () => {
     }
   };
 
-  // âœ… RIASSEGNA TASK
+  // RIASSEGNA TASK
   const confirmReassignTask = async () => {
     if (!taskToReassign || !newAssigneeId) return;
 
     setIsLoading(true);
 
     try {
-      // Usa 'as any' per evitare il controllo TypeScript
       const taskAggiornato = await updateTask(taskToReassign.id, {
         idAgenteAssegnato: newAssigneeId,
       } as Partial<Task>);
@@ -955,96 +1441,20 @@ const TaskManagement: React.FC = () => {
     }
   };
 
-  // âœ… CAMBIA STATO TASK
-  const changeTaskStatus = async (
-    taskId: string,
-    nuovoStato: Task["stato"]
-  ) => {
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-
-    setIsLoading(true);
-
-    try {
-      const taskAggiornato = await updateTask(taskId, { stato: nuovoStato });
-      setTasks(tasks.map((t) => (t.id === taskId ? taskAggiornato : t)));
-
-      if (selectedTask?.id === taskId) {
-        setSelectedTask(taskAggiornato);
-      }
-
-      alert(`Stato del task cambiato in: ${nuovoStato}`);
-    } catch (error) {
-      console.error("ðŸš¨ Errore cambio stato:", error);
-      alert(
-        `Errore nel cambio stato: ${
-          error instanceof Error ? error.message : "Errore sconosciuto"
-        }`
-      );
-    } finally {
-      setIsLoading(false);
-    }
+  const handleEditTask = (task: Task) => {
+    // TODO: qui caricheremo il task nel form di modifica
+    setSelectedTask(task);
+    // eventuale apertura form/modal di modifica:
+    setShowNewTaskForm(true);
+    // (in seguito popoleremo newTask con i dati del task)
+    alert(`(Stub) Modifica task ${task.numeroTask}`);
   };
 
-  // âœ… SALVA INTERVENTO
-  const saveIntervention = async () => {
-    if (!newIntervention.descrizione.trim()) {
-      alert("La descrizione dell'intervento è obbligatoria");
-      return;
-    }
-
-    if (!selectedTask) {
-      alert("Nessun task selezionato");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const interventoData = {
-        operatoreId: newIntervention.operatoreId || "current-user",
-        nomeOperatore: newIntervention.nomeOperatore || "Sistema",
-        cognomeOperatore: newIntervention.cognomeOperatore || "Admin",
-        tipoIntervento: newIntervention.tipoIntervento,
-        descrizione: newIntervention.descrizione,
-        durata: newIntervention.durata,
-        esitoIntervento: newIntervention.esitoIntervento,
-        prossimaAzione: newIntervention.prossimaAzione,
-        dataProximoContatto: newIntervention.dataProximoContatto,
-      };
-
-      const nuovoIntervento = await addTaskIntervention(
-        selectedTask.id,
-        interventoData
-      );
-
-      const taskAggiornato = {
-        ...selectedTask,
-        interventI: [...(selectedTask.interventI || []), nuovoIntervento], // Controllo sicurezza
-        dataUltimaModifica: new Date().toISOString(),
-      };
-
-      setTasks(
-        tasks.map((task) =>
-          task.id === selectedTask.id ? taskAggiornato : task
-        )
-      );
-      setSelectedTask(taskAggiornato);
-
-      setNewIntervention(defaultNewIntervention);
-      setShowAddInterventionModal(false);
-
-      alert("Intervento aggiunto con successo!");
-    } catch (error) {
-      console.error("🚨 Errore salvataggio intervento:", error);
-      alert(
-        `Errore nell'aggiunta intervento: ${
-          error instanceof Error ? error.message : "Errore sconosciuto"
-        }`
-      );
-    } finally {
-      setIsLoading(false);
-    }
+  const handleDeleteTask = (task: Task) => {
+    // TODO: qui aggiungeremo conferma e chiamata API di cancellazione
+    const ok = window.confirm(`Vuoi cancellare il task ${task.numeroTask}?`);
+    if (!ok) return;
+    alert(`(Stub) Cancellazione task ${task.numeroTask}`);
   };
 
   return (
@@ -1065,7 +1475,7 @@ const TaskManagement: React.FC = () => {
             <p />
           </div>
 
-          {/* âœ… ALERT PER STATO LOADING/ERRORI */}
+          {/* ALERT PER STATO LOADING/ERRORI */}
           {(isLoadingAgenti || errorAgenti || error) && (
             <div
               className={`alert ${
@@ -1091,7 +1501,7 @@ const TaskManagement: React.FC = () => {
                     className="btn btn-link p-0 ms-2"
                     onClick={fetchAgenti}
                   >
-                    Riprova caricamento â†’
+                    Riprova caricamento ↻
                   </button>
                 </>
               )}
@@ -1104,14 +1514,14 @@ const TaskManagement: React.FC = () => {
                       fetchTasks({ page: 1, pageSize: itemsPerPage })
                     }
                   >
-                    Riprova caricamento â†’
+                    Riprova caricamento ↻
                   </button>
                 </>
               )}
             </div>
           )}
 
-          {/* âœ… HEADER CON BREADCRUMB */}
+          {/* HEADER CON BREADCRUMB */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div>
               <nav aria-label="breadcrumb">
@@ -1172,7 +1582,7 @@ const TaskManagement: React.FC = () => {
                   isLoadingAgenti
                     ? "Caricamento agenti in corso..."
                     : agenti.length === 0
-                    ? "âš ï¸ Nessun agente disponibile - controlla la connessione API"
+                    ? "⚠️ Nessun agente disponibile - controlla la connessione API"
                     : "Crea un nuovo task"
                 }
               >
@@ -1207,7 +1617,7 @@ const TaskManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* âœ… STATISTICHE E GRAFICO */}
+          {/* STATISTICHE E GRAFICO */}
           <div className="row mb-4">
             <div className="col-xl-8 mb-3">
               <div className="card h-100">
@@ -1320,7 +1730,7 @@ const TaskManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* âœ… FILTRI E RICERCA */}
+          {/* FILTRI E RICERCA */}
           <div className="row mb-4">
             <div className="col-12">
               <div className="card">
@@ -1340,15 +1750,22 @@ const TaskManagement: React.FC = () => {
                                   activeTab === tab ? "active" : ""
                                 }`}
                                 onClick={() => {
-                                  setActiveTab(
-                                    tab as
-                                      | "tutti"
-                                      | "aperti"
-                                      | "completati"
-                                      | "scaduti"
-                                  );
+                                  const newTab = tab as
+                                    | "tutti"
+                                    | "aperti"
+                                    | "completati"
+                                    | "scaduti";
+                                  setActiveTab(newTab);
                                   setCurrentPage(1);
-                                  handleFilterChange();
+
+                                  const filters = getFiltersForTab(
+                                    tab,
+                                    searchTerm,
+                                    selectedPriority,
+                                    selectedCategory,
+                                    selectedAgent
+                                  );
+                                  fetchTasks(filters);
                                 }}
                               >
                                 {tab.charAt(0).toUpperCase() + tab.slice(1)} (
@@ -1376,12 +1793,10 @@ const TaskManagement: React.FC = () => {
                           setSearchTerm(e.target.value);
                           setCurrentPage(1);
 
-                          // Cancella il timeout precedente se esiste
                           if (searchTimeoutRef.current) {
                             clearTimeout(searchTimeoutRef.current);
                           }
 
-                          // Imposta nuovo timeout per il debounce
                           searchTimeoutRef.current = setTimeout(
                             handleFilterChange,
                             500
@@ -1476,7 +1891,7 @@ const TaskManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* âœ… LISTA TASK */}
+          {/* LISTA TASK */}
           <div className="row mb-4">
             <div className="col-12">
               <div className="card">
@@ -1507,7 +1922,7 @@ const TaskManagement: React.FC = () => {
                             <tr>
                               <th>Task</th>
                               <th>Cliente</th>
-                              <th>PrioritÃ </th>
+                              <th>Priorità</th>
                               <th>Stato</th>
                               <th>Categoria</th>
                               <th>Assegnato a</th>
@@ -1623,7 +2038,7 @@ const TaskManagement: React.FC = () => {
                                 </td>
                                 <td>
                                   {task.valorePotenziale ? (
-                                    <span className="fw-bold text-success">                                      
+                                    <span className="fw-bold text-success">
                                       {task.valorePotenziale.toLocaleString()}
                                     </span>
                                   ) : (
@@ -1662,6 +2077,24 @@ const TaskManagement: React.FC = () => {
                                     >
                                       <i className="fa-solid fa-plus"></i>
                                     </button>
+                                    {isAdmin && (
+                                      <>
+                                        <button
+                                          className="btn btn-outline-warning btn-sm"
+                                          onClick={() => handleEditTask(task)}
+                                          title="Modifica task"
+                                        >
+                                          <i className="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                        <button
+                                          className="btn btn-outline-danger btn-sm"
+                                          onClick={() => handleDeleteTask(task)}
+                                          title="Cancella task"
+                                        >
+                                          <i className="fa-solid fa-trash"></i>
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
@@ -1670,7 +2103,7 @@ const TaskManagement: React.FC = () => {
                         </table>
                       </div>
 
-                      {/* âœ… PAGINAZIONE SERVER */}
+                      {/* PAGINAZIONE SERVER */}
                       {serverTotalPages > 1 && (
                         <nav className="mt-3">
                           <ul className="pagination justify-content-center">
@@ -1754,7 +2187,7 @@ const TaskManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* âœ… FORM NUOVO TASK */}
+          {/* FORM NUOVO TASK */}
           {showNewTaskForm && (
             <div className="row mb-4">
               <div className="col-12">
@@ -1772,23 +2205,16 @@ const TaskManagement: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={newTask.titolo}
-                          onChange={(e) =>
-                            setNewTask({ ...newTask, titolo: e.target.value })
-                          }
+                          onChange={handleNewTaskFieldChange("titolo")}
                           placeholder="Inserisci il titolo del task..."
                         />
                       </div>
                       <div className="col-md-3">
-                        <label className="form-label">PrioritÃ </label>
+                        <label className="form-label">Priorità</label>
                         <select
                           className="form-select"
                           value={newTask.priorita}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              priorita: e.target.value as "Bassa" | "Media" | "Alta" | "Urgente",
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange("priorita")}
                         >
                           <option value="Bassa">Bassa</option>
                           <option value="Media">Media</option>
@@ -1801,18 +2227,7 @@ const TaskManagement: React.FC = () => {
                         <select
                           className="form-select"
                           value={newTask.categoria}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              categoria: e.target.value as
-                                | "Vendita"
-                                | "Supporto"
-                                | "Tecnico"
-                                | "Amministrativo"
-                                | "Reclamo"
-                                | "Informazioni",
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange("categoria")}
                         >
                           <option value="Vendita">Vendita</option>
                           <option value="Supporto">Supporto</option>
@@ -1828,12 +2243,7 @@ const TaskManagement: React.FC = () => {
                           className="form-control"
                           rows={3}
                           value={newTask.descrizione}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              descrizione: e.target.value,
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange("descrizione")}
                         ></textarea>
                       </div>
 
@@ -1850,12 +2260,7 @@ const TaskManagement: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={newTask.clienteNome}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              clienteNome: e.target.value,
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange("clienteNome")}
                         />
                       </div>
                       <div className="col-md-4">
@@ -1864,12 +2269,7 @@ const TaskManagement: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={newTask.clienteCognome}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              clienteCognome: e.target.value,
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange("clienteCognome")}
                         />
                       </div>
                       <div className="col-md-4">
@@ -1878,12 +2278,7 @@ const TaskManagement: React.FC = () => {
                           type="email"
                           className="form-control"
                           value={newTask.clienteEmail}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              clienteEmail: e.target.value,
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange("clienteEmail")}
                         />
                       </div>
                       <div className="col-md-4">
@@ -1892,12 +2287,7 @@ const TaskManagement: React.FC = () => {
                           type="tel"
                           className="form-control"
                           value={newTask.clienteTelefono}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              clienteTelefono: e.target.value,
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange("clienteTelefono")}
                         />
                       </div>
                       <div className="col-md-4">
@@ -1906,26 +2296,18 @@ const TaskManagement: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={newTask.clienteAzienda}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              clienteAzienda: e.target.value,
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange("clienteAzienda")}
                         />
                       </div>
                       <div className="col-md-4">
-                        <label className="form-label">Tipo AttivitÃ </label>
+                        <label className="form-label">Tipo Attività</label>
                         <input
                           type="text"
                           className="form-control"
                           value={newTask.clienteTipoAttivita}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              clienteTipoAttivita: e.target.value,
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange(
+                            "clienteTipoAttivita"
+                          )}
                         />
                       </div>
 
@@ -1938,19 +2320,16 @@ const TaskManagement: React.FC = () => {
                         <select
                           className="form-select"
                           value={newTask.agenteAssegnatoId}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              agenteAssegnatoId: e.target.value,
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange(
+                            "agenteAssegnatoId"
+                          )}
                           disabled={isLoadingAgenti}
                         >
                           <option value="">
                             {isLoadingAgenti
                               ? "Caricamento agenti..."
                               : agenti.length === 0
-                              ? "âš ï¸ Nessun agente disponibile"
+                              ? "⚠️ Nessun agente disponibile"
                               : "Non assegnato"}
                           </option>
                           {agenti.map((agente) => (
@@ -1983,7 +2362,7 @@ const TaskManagement: React.FC = () => {
                                 className="btn btn-link p-0 text-warning"
                                 onClick={() => navigate("/agenti")}
                               >
-                                Vai alla gestione agenti â†’
+                                Vai alla gestione agenti ↻
                               </button>
                             </small>
                           )}
@@ -1994,30 +2373,18 @@ const TaskManagement: React.FC = () => {
                           type="datetime-local"
                           className="form-control"
                           value={newTask.dataScadenza}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              dataScadenza: e.target.value,
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange("dataScadenza")}
                         />
                       </div>
                       <div className="col-md-4">
-                        <label className="form-label">
-                          Valore Potenziale
-                        </label>
+                        <label className="form-label">Valore Potenziale</label>
                         <input
                           type="number"
                           className="form-control"
                           value={newTask.valorePotenziale || ""}
-                          onChange={(e) =>
-                            setNewTask({
-                              ...newTask,
-                              valorePotenziale: e.target.value
-                                ? parseFloat(e.target.value)
-                                : undefined,
-                            })
-                          }
+                          onChange={handleNewTaskFieldChange(
+                            "valorePotenziale"
+                          )}
                         />
                       </div>
                       <div className="col-12">
@@ -2026,9 +2393,7 @@ const TaskManagement: React.FC = () => {
                           className="form-control"
                           rows={2}
                           value={newTask.note}
-                          onChange={(e) =>
-                            setNewTask({ ...newTask, note: e.target.value })
-                          }
+                          onChange={handleNewTaskFieldChange("note")}
                         ></textarea>
                       </div>
                     </div>
@@ -2062,7 +2427,7 @@ const TaskManagement: React.FC = () => {
             </div>
           )}
 
-          {/* âœ… DETTAGLIO TASK MODAL */}
+          {/* DETTAGLIO TASK MODAL */}
           {showTaskDetail && selectedTask && (
             <div
               className="modal show d-block"
@@ -2103,7 +2468,7 @@ const TaskManagement: React.FC = () => {
                             </tr>
                             <tr>
                               <td>
-                                <strong>PrioritÃ :</strong>
+                                <strong>Priorità:</strong>
                               </td>
                               <td>
                                 <span
@@ -2213,7 +2578,7 @@ const TaskManagement: React.FC = () => {
                             </tr>
                             <tr>
                               <td>
-                                <strong>AttivitÃ :</strong>
+                                <strong>Attività:</strong>
                               </td>
                               <td>
                                 {selectedTask.cliente.tipoAttivita || "-"}
@@ -2221,7 +2586,7 @@ const TaskManagement: React.FC = () => {
                             </tr>
                             <tr>
                               <td>
-                                <strong>CittÃ :</strong>
+                                <strong>Città:</strong>
                               </td>
                               <td>
                                 {selectedTask.cliente.citta} (
@@ -2258,10 +2623,134 @@ const TaskManagement: React.FC = () => {
 
                     <div className="row mt-3">
                       <div className="col-12">
-                        <h6>
-                          Cronologia Interventi (
-                          {selectedTask.interventI?.length || 0})
-                        </h6>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <h6>
+                            Cronologia Interventi (
+                            {selectedTask.interventI?.length || 0})
+                          </h6>
+                          {/* <div className="d-flex gap-2">
+                            <button
+                              className="btn btn-sm btn-outline-success"
+                              onClick={async () => {
+                                console.log(
+                                  "🔄 Ricaricamento task dal server..."
+                                );
+                                const freshTask = await fetchSingleTask(
+                                  selectedTask.id
+                                );
+                                if (freshTask) {
+                                  setSelectedTask(freshTask);
+                                  setTasks(
+                                    tasks.map((t) =>
+                                      t.id === freshTask.id ? freshTask : t
+                                    )
+                                  );
+                                  alert(
+                                    `✅ Task ricaricato! Interventi trovati: ${
+                                      freshTask.interventI?.length || 0
+                                    }`
+                                  );
+                                } else {
+                                  alert("❌ Errore nel ricaricamento del task");
+                                }
+                              }}
+                            >
+                              🔄 RICARICA DAL SERVER
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => {
+                                console.log(
+                                  "🔍 DEBUG MODAL selectedTask:",
+                                  selectedTask
+                                );
+                                console.log(
+                                  "🔍 DEBUG MODAL selectedTask.interventI:",
+                                  selectedTask.interventI
+                                );
+                                console.log(
+                                  "🔍 DEBUG MODAL selectedTask.interventi:",
+                                  (selectedTask as any).interventi
+                                );
+                                console.log(
+                                  "🔍 DEBUG MODAL selectedTask.Interventi:",
+                                  (selectedTask as any).Interventi
+                                );
+                                console.log(
+                                  "🔍 DEBUG MODAL selectedTask keys:",
+                                  Object.keys(selectedTask)
+                                );
+                                console.log(
+                                  "🔍 DEBUG MODAL selectedTask ID:",
+                                  selectedTask.id
+                                );
+                                console.log(
+                                  "🔍 DEBUG MODAL tasks array completo:",
+                                  tasks
+                                );
+
+                                // Cerca il task nell'array tasks per confronto
+                                const taskFromArray = tasks.find(
+                                  (t) => t.id === selectedTask.id
+                                );
+                                console.log(
+                                  "🔍 DEBUG MODAL task dall'array tasks:",
+                                  taskFromArray
+                                );
+                                console.log(
+                                  "🔍 DEBUG MODAL task dall'array interventI:",
+                                  taskFromArray?.interventI
+                                );
+
+                                if (
+                                  selectedTask.interventI &&
+                                  selectedTask.interventI.length > 0
+                                ) {
+                                  selectedTask.interventI.forEach(
+                                    (intervento, index) => {
+                                      console.log(
+                                        `🔍 DEBUG MODAL Intervento ${
+                                          index + 1
+                                        }:`,
+                                        intervento
+                                      );
+                                    }
+                                  );
+                                } else {
+                                  console.log(
+                                    "🔍 DEBUG MODAL: Nessun intervento trovato nell'array"
+                                  );
+                                }
+
+                                // Mostra tutti i campi del selectedTask che potrebbero contenere interventi
+                                Object.keys(selectedTask).forEach((key) => {
+                                  if (key.toLowerCase().includes("intervent")) {
+                                    console.log(
+                                      `🔍 DEBUG MODAL Campo ${key}:`,
+                                      (selectedTask as any)[key]
+                                    );
+                                  }
+                                });
+
+                                alert(`DEBUG: 
+                                - Task ID: ${selectedTask.id}
+                                - interventI: ${
+                                  selectedTask?.interventI?.length || 0
+                                }
+                                - interventi: ${
+                                  (selectedTask as any)?.interventi?.length || 0
+                                }
+                                - Interventi: ${
+                                  (selectedTask as any)?.Interventi?.length || 0
+                                }
+                                
+                                Controlla la console per i dettagli completi.`);
+                              }}
+                            >
+                              🔍 DEBUG DETTAGLIATO
+                            </button>
+                          </div> */}
+                        </div>
                         {selectedTask.interventI &&
                         selectedTask.interventI.length > 0 ? (
                           <div className="timeline">
@@ -2358,15 +2847,6 @@ const TaskManagement: React.FC = () => {
                       Intervento
                     </button>
                     <button
-                      className="btn btn-warning me-2"
-                      onClick={() =>
-                        changeTaskStatus(selectedTask.id, "In Corso")
-                      }
-                      disabled={selectedTask.stato === "In Corso" || isLoading}
-                    >
-                      <i className="fa-solid fa-play me-1"></i>Prendi in Carico
-                    </button>
-                    <button
                       className="btn btn-info"
                       onClick={() => {
                         setShowTaskDetail(false);
@@ -2387,7 +2867,7 @@ const TaskManagement: React.FC = () => {
             </div>
           )}
 
-          {/* âœ… MODAL RIASSEGNAZIONE TASK */}
+          {/* MODAL RIASSEGNAZIONE TASK */}
           {showReassignModal && taskToReassign && (
             <div
               className="modal show d-block"
@@ -2407,6 +2887,7 @@ const TaskManagement: React.FC = () => {
                         setShowReassignModal(false);
                         setTaskToReassign(null);
                         setNewAssigneeId("");
+                        setReassignReason("");
                       }}
                     ></button>
                   </div>
@@ -2467,7 +2948,9 @@ const TaskManagement: React.FC = () => {
                           isLoading ? "fa-spinner fa-spin" : "fa-check"
                         } me-1`}
                       ></i>
-                      Conferma Riassegnazione
+                      {isLoading
+                        ? "Riassegnando..."
+                        : "Conferma Riassegnazione"}
                     </button>
                     <button
                       className="btn btn-secondary"
@@ -2486,22 +2969,29 @@ const TaskManagement: React.FC = () => {
             </div>
           )}
 
-          {/* âœ… MODAL AGGIUNGI INTERVENTO */}
-          {showAddInterventionModal && (
+          {/* MODAL AGGIUNGI INTERVENTO CON CAMBIO STATO */}
+          {showAddInterventionModal && selectedTask && (
             <div
               className="modal show d-block"
               style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
             >
-              <div className="modal-dialog modal-lg">
+              <div className="modal-dialog modal-xl">
                 <div className="modal-content">
-                  <div className="modal-header">
+                  <div className="modal-header bg-primary text-white">
                     <h5 className="modal-title">
-                      <i className="fa-solid fa-plus me-2"></i>Aggiungi
+                      <i className="fa-solid fa-plus me-2"></i>Registra
                       Intervento
+                      <small className="ms-3 opacity-75">
+                        Task: <strong>{selectedTask.numeroTask}</strong> -
+                        Stato:
+                        <span className="badge bg-light text-dark ms-1">
+                          {selectedTask.stato}
+                        </span>
+                      </small>
                     </h5>
                     <button
                       type="button"
-                      className="btn-close"
+                      className="btn-close btn-close-white"
                       onClick={() => {
                         setShowAddInterventionModal(false);
                         setNewIntervention(defaultNewIntervention);
@@ -2509,57 +2999,147 @@ const TaskManagement: React.FC = () => {
                     ></button>
                   </div>
                   <div className="modal-body">
+                    {/* SEZIONE CAMBIO STATO - PRIORITARIA */}
+                    <div className="card border-warning mb-4">
+                      <div className="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                        <h6 className="mb-0">
+                          <i className="fa-solid fa-exchange-alt me-2"></i>
+                          Cambio Stato del Task
+                        </h6>
+                        <small className="badge bg-dark">
+                          {getValidStates(selectedTask.stato).length > 0
+                            ? "Disponibile"
+                            : "Non disponibile"}
+                        </small>
+                      </div>
+                      <div className="card-body">
+                        {getValidStates(selectedTask.stato).length > 0 ? (
+                          <div className="row align-items-center">
+                            <div className="col-md-3">
+                              <label className="form-label small fw-bold">
+                                Stato Attuale
+                              </label>
+                              <div>
+                                <span
+                                  className={`${getStatusBadgeClass(
+                                    selectedTask.stato
+                                  )} fs-6`}
+                                >
+                                  <i className="fa-solid fa-circle me-1"></i>
+                                  {selectedTask.stato}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="col-md-1 text-center">
+                              <i className="fa-solid fa-arrow-right text-warning fa-2x"></i>
+                            </div>
+                            <div className="col-md-8">
+                              <label className="form-label small fw-bold">
+                                Nuovo Stato
+                              </label>
+                              <select
+                                className="form-select"
+                                value={newIntervention.nuovoStato || ""}
+                                onChange={handleNewInterventionFieldChange(
+                                  "nuovoStato"
+                                )}
+                              >
+                                <option value="">
+                                  🚫 Mantieni stato "{selectedTask.stato}"
+                                </option>
+                                {getValidStates(selectedTask.stato).map(
+                                  (stato) => {
+                                    const icon =
+                                      stato === "In Corso"
+                                        ? "▶️"
+                                        : stato === "Completato"
+                                        ? "✅"
+                                        : stato === "Chiuso"
+                                        ? "🔒"
+                                        : stato === "In Attesa"
+                                        ? "⏸️"
+                                        : stato === "Sospeso"
+                                        ? "⛔"
+                                        : "🔄";
+                                    return (
+                                      <option key={stato} value={stato}>
+                                        {icon} {stato}
+                                      </option>
+                                    );
+                                  }
+                                )}
+                              </select>
+                              {newIntervention.nuovoStato && (
+                                <div className="alert alert-success mt-2 py-2">
+                                  <i className="fa-solid fa-info-circle me-2"></i>
+                                  <strong>Cambio pianificato:</strong> Il task
+                                  passerà da
+                                  <span className="badge bg-secondary mx-1">
+                                    {selectedTask.stato}
+                                  </span>
+                                  a{" "}
+                                  <span className="badge bg-success mx-1">
+                                    {newIntervention.nuovoStato}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center text-muted">
+                            <i className="fa-solid fa-lock fa-2x mb-2"></i>
+                            <p className="mb-0">
+                              <strong>Nessun cambio stato disponibile</strong>
+                              <br />
+                              Il task è in stato "{selectedTask.stato}" e non
+                              può essere modificato.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* SEZIONE DETTAGLI INTERVENTO */}
                     <div className="row g-3">
                       <div className="col-md-6">
                         <label className="form-label">Tipo Intervento</label>
                         <select
                           className="form-select"
                           value={newIntervention.tipoIntervento}
-                          onChange={(e) =>
-                            setNewIntervention({
-                              ...newIntervention,
-                              tipoIntervento: e.target.value as
-                                | "Chiamata"
-                                | "Email"
-                                | "Note"
-                                | "Assegnazione"
-                                | "Cambio Stato"
-                                | "Altro",
-                            })
-                          }
+                          onChange={handleNewInterventionFieldChange(
+                            "tipoIntervento"
+                          )}
+                          disabled={!!newIntervention.nuovoStato}
                         >
-                          <option value="Chiamata">Chiamata</option>
-                          <option value="Email">Email</option>
-                          <option value="Note">Note</option>
-                          <option value="Assegnazione">Assegnazione</option>
-                          <option value="Cambio Stato">Cambio Stato</option>
-                          <option value="Altro">Altro</option>
+                          <option value="Chiamata">📞 Chiamata</option>
+                          <option value="Email">📧 Email</option>
+                          <option value="Note">📝 Note</option>
+                          <option value="Assegnazione">👤 Assegnazione</option>
+                          <option value="Cambio Stato">🔄 Cambio Stato</option>
+                          <option value="Altro">➕ Altro</option>
                         </select>
+                        {newIntervention.nuovoStato && (
+                          <small className="text-info">
+                            <i className="fa-solid fa-info-circle me-1"></i>
+                            Tipo automaticamente impostato su "Cambio Stato"
+                          </small>
+                        )}
                       </div>
                       <div className="col-md-6">
-                        <label className="form-label">Esito</label>
+                        <label className="form-label">Esito Intervento</label>
                         <select
                           className="form-select"
                           value={newIntervention.esitoIntervento || ""}
-                          onChange={(e) =>
-                            setNewIntervention({
-                              ...newIntervention,
-                              esitoIntervento:
-                                (e.target.value as
-                                  | "Positivo"
-                                  | "Negativo"
-                                  | "Neutrale"
-                                  | "Da Ricontattare"
-                                  | "") || undefined,
-                            })
-                          }
+                          onChange={handleNewInterventionFieldChange(
+                            "esitoIntervento"
+                          )}
                         >
-                          <option value="">Seleziona esito</option>
-                          <option value="Positivo">Positivo</option>
-                          <option value="Negativo">Negativo</option>
-                          <option value="Neutrale">Neutrale</option>
+                          <option value="">Seleziona esito...</option>
+                          <option value="Positivo">✅ Positivo</option>
+                          <option value="Negativo">❌ Negativo</option>
+                          <option value="Neutrale">➖ Neutrale</option>
                           <option value="Da Ricontattare">
-                            Da Ricontattare
+                            🔄 Da Ricontattare
                           </option>
                         </select>
                       </div>
@@ -2569,14 +3149,8 @@ const TaskManagement: React.FC = () => {
                           type="number"
                           className="form-control"
                           value={newIntervention.durata || ""}
-                          onChange={(e) =>
-                            setNewIntervention({
-                              ...newIntervention,
-                              durata: e.target.value
-                                ? parseInt(e.target.value)
-                                : undefined,
-                            })
-                          }
+                          onChange={handleNewInterventionFieldChange("durata")}
+                          placeholder="es. 15"
                         />
                       </div>
                       <div className="col-md-6">
@@ -2587,72 +3161,143 @@ const TaskManagement: React.FC = () => {
                           type="datetime-local"
                           className="form-control"
                           value={newIntervention.dataProximoContatto || ""}
-                          onChange={(e) =>
-                            setNewIntervention({
-                              ...newIntervention,
-                              dataProximoContatto: e.target.value || undefined,
-                            })
-                          }
+                          onChange={handleNewInterventionFieldChange(
+                            "dataProximoContatto"
+                          )}
                         />
                       </div>
                       <div className="col-12">
                         <label className="form-label">
-                          Descrizione Intervento *
+                          📝 Descrizione Intervento *
+                          {newIntervention.nuovoStato && (
+                            <span className="badge bg-warning text-dark ms-2">
+                              Includi motivazione del cambio stato
+                            </span>
+                          )}
                         </label>
                         <textarea
                           className="form-control"
-                          rows={4}
+                          rows={newIntervention.nuovoStato ? 5 : 4}
                           value={newIntervention.descrizione}
-                          onChange={(e) =>
-                            setNewIntervention({
-                              ...newIntervention,
-                              descrizione: e.target.value,
-                            })
+                          onChange={handleNewInterventionFieldChange(
+                            "descrizione"
+                          )}
+                          placeholder={
+                            newIntervention.nuovoStato
+                              ? `Descrivi l'intervento e MOTIVA il cambio stato da "${selectedTask.stato}" a "${newIntervention.nuovoStato}".\n\nEsempio: "Contattato cliente via telefono. Cliente ha confermato interesse e richiesto preventivo dettagliato. Procedo con elaborazione offerta commerciale."`
+                              : "Descrivi cosa è stato fatto durante l'intervento..."
                           }
-                          placeholder="Descrivi cosa Ã¨ stato fatto durante l'intervento..."
+                          style={{
+                            borderColor: newIntervention.nuovoStato
+                              ? "#ffc107"
+                              : "",
+                            borderWidth: newIntervention.nuovoStato
+                              ? "2px"
+                              : "1px",
+                          }}
                         ></textarea>
+                        {newIntervention.nuovoStato && (
+                          <div className="form-text text-warning">
+                            <i className="fa-solid fa-exclamation-triangle me-1"></i>
+                            <strong>Richiesta motivazione:</strong> Spiega
+                            dettagliatamente perché il task sta cambiando stato.
+                            Questa informazione verrà registrata permanentemente
+                            nella cronologia.
+                          </div>
+                        )}
                       </div>
                       <div className="col-12">
-                        <label className="form-label">Prossima Azione</label>
+                        <label className="form-label">
+                          🎯 Prossima Azione Pianificata
+                        </label>
                         <input
                           type="text"
                           className="form-control"
                           value={newIntervention.prossimaAzione || ""}
-                          onChange={(e) =>
-                            setNewIntervention({
-                              ...newIntervention,
-                              prossimaAzione: e.target.value || undefined,
-                            })
+                          onChange={handleNewInterventionFieldChange(
+                            "prossimaAzione"
+                          )}
+                          placeholder={
+                            newIntervention.nuovoStato === "Completato"
+                              ? "es. Preparare chiusura definitiva del task"
+                              : newIntervention.nuovoStato === "In Attesa"
+                              ? "es. Attendere risposta cliente entro 3 giorni"
+                              : "Cosa va fatto successivamente..."
                           }
-                          placeholder="Cosa va fatto successivamente..."
                         />
                       </div>
                     </div>
                   </div>
-                  <div className="modal-footer">
-                    <button
-                      className="btn btn-success"
-                      onClick={saveIntervention}
-                      disabled={
-                        !newIntervention.descrizione.trim() || isLoading
-                      }
-                    >
-                      <i
-                        className={`fa-solid ${
-                          isLoading ? "fa-spinner fa-spin" : "fa-save"
-                        } me-1`}
-                      ></i>
-                      Salva Intervento
-                    </button>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => {
-                        setShowAddInterventionModal(false);
-                        setNewIntervention(defaultNewIntervention);
-                      }}
-                    >
-                      Annulla
-                    </button>
+                  <div className="modal-footer bg-light">
+                    <div className="w-100">
+                      {/* Riepilogo azioni */}
+                      <div className="alert alert-info py-2 mb-3">
+                        <div className="d-flex align-items-center">
+                          <i className="fa-solid fa-info-circle fa-2x me-3"></i>
+                          <div>
+                            <strong>Riepilogo operazioni:</strong>
+                            <ul className="mb-0 mt-1">
+                              <li>
+                                ✅ Registrazione intervento di tipo "
+                                {newIntervention.tipoIntervento}"
+                              </li>
+                              {newIntervention.nuovoStato ? (
+                                <li className="text-warning">
+                                  <strong>
+                                    🔄 Cambio stato: da "{selectedTask.stato}" a
+                                    "{newIntervention.nuovoStato}"
+                                  </strong>
+                                </li>
+                              ) : (
+                                <li>➖ Nessun cambio stato</li>
+                              )}
+                              <li>📝 Aggiornamento cronologia task</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Pulsanti azione */}
+                      <div className="d-flex justify-content-between">
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => {
+                            setShowAddInterventionModal(false);
+                            setNewIntervention(defaultNewIntervention);
+                          }}
+                        >
+                          <i className="fa-solid fa-times me-1"></i>
+                          Annulla
+                        </button>
+
+                        <button
+                          className={`btn ${
+                            newIntervention.nuovoStato
+                              ? "btn-warning"
+                              : "btn-success"
+                          } px-4`}
+                          onClick={saveIntervention}
+                          disabled={
+                            !newIntervention.descrizione.trim() || isLoading
+                          }
+                        >
+                          <i
+                            className={`fa-solid ${
+                              isLoading
+                                ? "fa-spinner fa-spin"
+                                : newIntervention.nuovoStato
+                                ? "fa-exchange-alt"
+                                : "fa-save"
+                            } me-2`}
+                          ></i>
+                          {isLoading
+                            ? "Elaborazione..."
+                            : newIntervention.nuovoStato
+                            ? `Registra e Cambia Stato`
+                            : "Registra Intervento"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
