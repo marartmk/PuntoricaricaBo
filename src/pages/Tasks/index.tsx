@@ -204,10 +204,24 @@ const TaskManagement: React.FC = () => {
   const [taskToReassign, setTaskToReassign] = useState<Task | null>(null);
   const [showAddInterventionModal, setShowAddInterventionModal] =
     useState<boolean>(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   // STATI PER RIASSEGNAZIONE
   const [newAssigneeId, setNewAssigneeId] = useState<string>("");
   const [reassignReason, setReassignReason] = useState<string>("");
+
+  // HELPER PER GESTIRE DATETIME SENZA TIME
+  const toLocalDateTimeInput = (isoString: string) => {
+    const d = new Date(isoString);
+    // correzione locale per il campo datetime-local (senza secondi)
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const min = pad(d.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  };
 
   // STATI PER NUOVO INTERVENTO
   const defaultNewIntervention: NewInterventionForm = {
@@ -739,12 +753,53 @@ const TaskManagement: React.FC = () => {
   const updateTask = async (taskId: string, taskData: Partial<Task>) => {
     try {
       const headers = getAuthHeaders();
-      const url = `${API_URL}/api/Tasks/${taskId}`;
+      // se mancano campi chiave, carico il task esistente e completo il dto
+      const needFetch =
+        !taskData.titolo ||
+        !taskData.descrizione ||
+        !taskData.stato ||
+        !taskData.priorita ||
+        !taskData.categoria;
 
+      let dto = { ...taskData, id: taskId } as any;
+
+      if (needFetch) {
+        const current = await fetchSingleTask(taskId); // tua funzione già presente
+        if (!current) throw new Error("Task non trovato per l'update");
+
+        dto = {
+          id: taskId,
+          titolo: taskData.titolo ?? current.titolo,
+          descrizione: taskData.descrizione ?? current.descrizione,
+          stato: (taskData as any).stato ?? current.stato,
+          priorita: (taskData as any).priorita ?? current.priorita,
+          categoria: (taskData as any).categoria ?? current.categoria,
+          idAgenteAssegnato:
+            (taskData as any).idAgenteAssegnato ?? current.agenteAssegnato?.id,
+          dataScadenza: (taskData as any).dataScadenza ?? current.dataScadenza,
+          valorePotenziale:
+            (taskData as any).valorePotenziale ?? current.valorePotenziale,
+          note: (taskData as any).note ?? current.note,
+          cliente: (taskData as any).cliente ?? {
+            id: current.cliente?.id,
+            nome: current.cliente?.nome,
+            cognome: current.cliente?.cognome,
+            email: current.cliente?.email,
+            telefono: current.cliente?.telefono,
+            citta: current.cliente?.citta,
+            provincia: current.cliente?.provincia,
+            azienda: current.cliente?.azienda,
+            tipoAttivita: current.cliente?.tipoAttivita,
+          },
+          tags: (taskData as any).tags ?? current.tags ?? [],
+        };
+      }
+
+      const url = `${API_URL}/api/Tasks/${taskId}`;
       const response = await fetch(url, {
         method: "PUT",
         headers,
-        body: JSON.stringify({ ...taskData, id: taskId }),
+        body: JSON.stringify(dto),
       });
 
       if (!response.ok) {
@@ -755,13 +810,11 @@ const TaskManagement: React.FC = () => {
       }
 
       const data: ApiResponseDto<Task> = await response.json();
-
       if (data.success && data.data) {
         console.log("✅ Task aggiornato:", data.data);
         return data.data;
-      } else {
-        throw new Error(data.message || "Errore nell'aggiornamento task");
       }
+      throw new Error(data.message || "Errore nell'aggiornamento task");
     } catch (error) {
       console.error("🚨 Errore aggiornamento task:", error);
       throw error;
@@ -1442,19 +1495,197 @@ const TaskManagement: React.FC = () => {
   };
 
   const handleEditTask = (task: Task) => {
-    // TODO: qui caricheremo il task nel form di modifica
+    setEditingTaskId(task.id);
     setSelectedTask(task);
-    // eventuale apertura form/modal di modifica:
+
+    setNewTask({
+      titolo: task.titolo || "",
+      descrizione: task.descrizione || "",
+      priorita: task.priorita || "Media",
+      categoria: task.categoria || "Informazioni",
+      agenteAssegnatoId: task.agenteAssegnato?.id || "",
+      // se usi <input type="datetime-local"> conviene un valore "YYYY-MM-DDTHH:mm"
+      dataScadenza: task.dataScadenza
+        ? toLocalDateTimeInput(task.dataScadenza)
+        : "",
+      valorePotenziale: task.valorePotenziale,
+      note: task.note || "",
+      clienteNome: task.cliente?.nome || "",
+      clienteCognome: task.cliente?.cognome || "",
+      clienteEmail: task.cliente?.email || "",
+      clienteTelefono: task.cliente?.telefono || "",
+      clienteCitta: task.cliente?.citta || "",
+      clienteProvincia: task.cliente?.provincia || "",
+      clienteAzienda: task.cliente?.azienda || "",
+      clienteTipoAttivita: task.cliente?.tipoAttivita || "",
+    });
+
     setShowNewTaskForm(true);
-    // (in seguito popoleremo newTask con i dati del task)
-    alert(`(Stub) Modifica task ${task.numeroTask}`);
+
+    // 👇 stesso comportamento del bottone "Nuovo Task"
+    setTimeout(() => {
+      const formElement = document.getElementById(
+        "form-nuovo-task"
+      ) as HTMLElement;
+      const firstInput = document.getElementById(
+        "titolo-task"
+      ) as HTMLInputElement;
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        formElement.classList.add("border-warning");
+        formElement.style.boxShadow = "0 0 20px rgba(255, 193, 7, 0.5)";
+        formElement.style.borderWidth = "2px";
+
+        setTimeout(() => {
+          if (firstInput) firstInput.focus();
+        }, 500);
+
+        setTimeout(() => {
+          formElement.classList.remove("border-warning");
+          formElement.style.boxShadow = "";
+          formElement.style.borderWidth = "";
+        }, 3000);
+      }
+    }, 100);
   };
 
-  const handleDeleteTask = (task: Task) => {
-    // TODO: qui aggiungeremo conferma e chiamata API di cancellazione
-    const ok = window.confirm(`Vuoi cancellare il task ${task.numeroTask}?`);
+  const handleDeleteTask = async (task: Task) => {
+    const ok = window.confirm(
+      `Confermi l'eliminazione del task ${task.numeroTask}?`
+    );
     if (!ok) return;
-    alert(`(Stub) Cancellazione task ${task.numeroTask}`);
+
+    setIsLoading(true);
+    try {
+      await deleteTask(task.id);
+
+      // chiudi il dettaglio se stava mostrando proprio quel task
+      if (selectedTask?.id === task.id) {
+        setShowTaskDetail(false);
+        setSelectedTask(null);
+      }
+
+      // ricarica la lista come se avessi premuto "Aggiorna"
+      await fetchTasks({ page: 1, pageSize: itemsPerPage });
+      // oppure: handleFilterChange();
+
+      // refresh statistiche globali
+      fetchAllTasks().catch(console.warn);
+
+      alert("Task eliminato con successo.");
+    } catch (error) {
+      alert(
+        `Errore nella cancellazione: ${
+          error instanceof Error ? error.message : "Errore sconosciuto"
+        }`
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      const headers = getAuthHeaders();
+      const url = `${API_URL}/api/Tasks/${taskId}`;
+
+      const response = await fetch(url, { method: "DELETE", headers });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Errore nella cancellazione del task: ${response.status} - ${errorText}`
+        );
+      }
+
+      return true;
+    } catch (error) {
+      console.error("🚨 Errore cancellazione task:", error);
+      throw error;
+    }
+  };
+
+  const saveTask = async () => {
+    if (!newTask.titolo.trim()) {
+      alert("Il titolo del task è obbligatorio");
+      return;
+    }
+    if (!newTask.clienteNome.trim() || !newTask.clienteEmail.trim()) {
+      alert("Nome e email del cliente sono obbligatori");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // payload comune dal form
+      const basePayload = {
+        titolo: newTask.titolo,
+        descrizione: newTask.descrizione,
+        priorita: newTask.priorita,
+        categoria: newTask.categoria,
+        idAgenteAssegnato: newTask.agenteAssegnatoId || undefined,
+        dataScadenza: newTask.dataScadenza || undefined,
+        valorePotenziale: newTask.valorePotenziale,
+        note: newTask.note,
+        cliente: {
+          // in update passo anche l'id cliente se disponibile
+          id: selectedTask?.cliente?.id,
+          nome: newTask.clienteNome,
+          cognome: newTask.clienteCognome || undefined,
+          email: newTask.clienteEmail,
+          telefono: newTask.clienteTelefono || undefined,
+          citta: newTask.clienteCitta || undefined,
+          provincia: newTask.clienteProvincia || undefined,
+          azienda: newTask.clienteAzienda || undefined,
+          tipoAttivita: newTask.clienteTipoAttivita || undefined,
+        },
+        tags: [] as string[],
+      };
+
+      if (editingTaskId) {
+        // ===== PUT (UPDATE) =====
+        // Il BE richiede: id, titolo, descrizione, stato, priorita, categoria
+        const dto = {
+          ...basePayload,
+          id: editingTaskId,
+          stato: selectedTask?.stato || "Aperto",
+        };
+
+        const updated = await updateTask(editingTaskId, dto); // tua updateTask blindata va bene :contentReference[oaicite:2]{index=2}
+
+        // aggiorna lista e dettaglio
+        setTasks((prev) =>
+          prev.map((t) => (t.id === updated.id ? updated : t))
+        );
+        if (selectedTask?.id === updated.id) setSelectedTask(updated);
+
+        alert("Task aggiornato con successo!");
+      } else {
+        // ===== POST (CREATE) =====
+        const created = await createTask(basePayload); // già presente :contentReference[oaicite:3]{index=3}
+        // opzionale: prepend
+        // setTasks(prev => [created, ...prev]);
+        alert("Task creato con successo!");
+      }
+
+      // chiudi form + reset stato edit
+      setShowNewTaskForm(false);
+      setNewTask(defaultNewTask);
+      setEditingTaskId(null);
+
+      // ricarica come fa il tuo bottone “Aggiorna”
+      await fetchTasks({ page: currentPage, pageSize: itemsPerPage }); // oppure handleFilterChange()
+      fetchAllTasks().catch(console.warn);
+    } catch (error) {
+      console.error("🚨 Salvataggio task:", error);
+      alert(
+        `Errore nel salvataggio: ${
+          error instanceof Error ? error.message : "Errore sconosciuto"
+        }`
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -1548,6 +1779,7 @@ const TaskManagement: React.FC = () => {
               <button
                 className="btn btn-outline-primary-dark"
                 onClick={() => {
+                  setEditingTaskId(null);
                   setNewTask(defaultNewTask);
                   setShowNewTaskForm(true);
                   setTimeout(() => {
@@ -2187,14 +2419,20 @@ const TaskManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* FORM NUOVO TASK */}
+          {/* FORM NUOVO/MODIFICA TASK */}
           {showNewTaskForm && (
             <div className="row mb-4">
               <div className="col-12">
                 <div className="card" id="form-nuovo-task">
                   <div className="custom-card-header">
-                    <span>Nuovo Task</span>
-                    <i className="fa-solid fa-plus"></i>
+                    <span>
+                      {editingTaskId ? "Modifica Task" : "Nuovo Task"}
+                    </span>
+                    <i
+                      className={`fa-solid ${
+                        editingTaskId ? "fa-pen-to-square" : "fa-plus"
+                      }`}
+                    ></i>
                   </div>
                   <div className="card-body">
                     <div className="row g-3">
@@ -2401,7 +2639,7 @@ const TaskManagement: React.FC = () => {
                     <div className="mt-3">
                       <button
                         className="btn btn-success me-2"
-                        onClick={saveNewTask}
+                        onClick={saveTask}
                         disabled={isLoading}
                       >
                         <i
@@ -2409,13 +2647,18 @@ const TaskManagement: React.FC = () => {
                             isLoading ? "fa-spinner fa-spin" : "fa-save"
                           } me-1`}
                         ></i>
-                        {isLoading ? "Salvando..." : "Salva Task"}
+                        {isLoading
+                          ? "Salvando..."
+                          : editingTaskId
+                          ? "Salva Modifiche"
+                          : "Salva Task"}
                       </button>
                       <button
                         className="btn btn-secondary"
                         onClick={() => {
                           setShowNewTaskForm(false);
                           setNewTask(defaultNewTask);
+                          setEditingTaskId(null);
                         }}
                       >
                         <i className="fa-solid fa-times me-1"></i>Annulla
