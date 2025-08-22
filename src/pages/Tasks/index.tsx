@@ -165,6 +165,58 @@ interface NewInterventionForm extends Omit<TaskIntervento, "id" | "taskId"> {
   esitoChiusuraFinale?: "Positivo" | "Negativo";
 }
 
+interface Prodotto {
+  id: number;
+  nome: string;
+  prezzo?: number | null;
+}
+
+const ATTIVITA_OPTIONS = [
+  "Agenzia assicurativa",
+  "Agenzia pratiche auto",
+  "Agenzia di Viaggio",
+  "Alimentari e prodotti casa",
+  "Amministratore di condominio",
+  "Bar",
+  "CAF e associazioni",
+  "Cartolibreria",
+  "Centro scommesse",
+  "Edicola",
+  "Elettronica, Telefonia e Informatica",
+  "Energia e Carburanti",
+  "Farmacia",
+  "Money Transfer",
+  "Poste private",
+  "Tabacchi",
+  "Varie",
+];
+
+const GESTORI_OPTIONS = [
+  "Eurobet",
+  "Bet365",
+  "Sisal",
+  "Lottomatica",
+  "Snaitech",
+  "PlanetWin365",
+  "GoldBet",
+  "Stanleybet",
+  "Admiral",
+  "Altro",
+];
+
+const CONCESSIONARI_OPTIONS = [
+  "Eurobet",
+  "Bet365",
+  "Sisal",
+  "Lottomatica",
+  "Snaitech",
+  "PlanetWin365",
+  "GoldBet",
+  "Stanleybet",
+  "Admiral",
+  "Altro",
+];
+
 const TaskManagement: React.FC = () => {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
@@ -277,6 +329,16 @@ const TaskManagement: React.FC = () => {
 
   const [newTask, setNewTask] = useState<NuovoTaskForm>(defaultNewTask);
 
+  // --- Stati per i prodotti e la scelta nell’intervento
+  const [prodotti, setProdotti] = useState<Prodotto[]>([]);
+  const [isLoadingProdotti, setIsLoadingProdotti] = useState<boolean>(false);
+  const [errorProdotti, setErrorProdotti] = useState<string>("");
+
+  const [selectedProdottoId, setSelectedProdottoId] = useState<number | "">("");
+  const [valorePotenzialeProdotto, setValorePotenzialeProdotto] = useState<
+    number | ""
+  >("");
+
   // HELPER PER TOKEN AUTH
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
@@ -290,6 +352,26 @@ const TaskManagement: React.FC = () => {
       "Content-Type": "application/json",
     };
   };
+
+  // --- helper per resettare il form intervento
+  const resetInterventionForm = () => {
+    setNewIntervention(defaultNewIntervention);
+    setSelectedProdottoId("");
+    setValorePotenzialeProdotto("");
+    setHasOtherProvider(null);
+    setOtherProviderName("");
+    setPvrInterest(null);
+    setPvrConcessionario("");
+  };
+
+  // DATI PROVIDER
+  const [hasOtherProvider, setHasOtherProvider] = useState<null | boolean>(
+    null
+  );
+  const [otherProviderName, setOtherProviderName] = useState<string>("");
+
+  const [pvrInterest, setPvrInterest] = useState<null | boolean>(null);
+  const [pvrConcessionario, setPvrConcessionario] = useState<string>("");
 
   // DATI FAKE PER FALLBACK
   const generateTasksFake = (): Task[] => [
@@ -959,20 +1041,19 @@ const TaskManagement: React.FC = () => {
       }
     }
 
-    // NEW: se sto chiudendo il task, l'esito finale è obbligatorio
-    const closing = newIntervention.nuovoStato === "Chiuso"; // NEW
+    // Se sto chiudendo il task, l'esito finale è obbligatorio
+    const closing = newIntervention.nuovoStato === "Chiuso";
     if (closing && !newIntervention.esitoChiusuraFinale) {
-      // NEW
       alert(
         "Se imposti lo stato su 'Chiuso' devi selezionare l'esito finale (Positivo o Negativo)."
-      ); // NEW
-      return; // NEW
-    } // NEW
+      );
+      return;
+    }
 
     setIsLoading(true);
 
     try {
-      // Prepara la descrizione dell'intervento includendo il cambio stato se presente
+      // Prepara la descrizione dell'intervento
       let descrizioneCompleta = newIntervention.descrizione;
       if (
         newIntervention.nuovoStato &&
@@ -980,11 +1061,47 @@ const TaskManagement: React.FC = () => {
       ) {
         descrizioneCompleta = `${descrizioneCompleta}\n\n📋 CAMBIO STATO: Da "${selectedTask.stato}" a "${newIntervention.nuovoStato}"`;
       }
-      // NEW: se chiudo, annota anche l'esito finale nella descrizione (solo informativo)
       if (closing && newIntervention.esitoChiusuraFinale) {
-        // NEW
-        descrizioneCompleta += `\n✅ ESITO FINALE: ${newIntervention.esitoChiusuraFinale}`; // NEW
-      } // NEW
+        descrizioneCompleta += `\n✅ ESITO FINALE: ${newIntervention.esitoChiusuraFinale}`;
+      }
+
+      // Append info prodotto scelto
+      if (selectedProdottoId !== "") {
+        const prod = prodotti.find((p) => p.id === selectedProdottoId);
+        const valoreTxt =
+          typeof valorePotenzialeProdotto === "number" &&
+          !isNaN(valorePotenzialeProdotto)
+            ? ` • Valore potenziale: € ${valorePotenzialeProdotto.toFixed(2)}`
+            : "";
+        descrizioneCompleta += `\n🛒 PROPOSTA PRODOTTO: ${
+          prod?.nome ?? "N/D"
+        }${valoreTxt}`;
+      }
+
+      const isFirstIntervention = (selectedTask.interventI?.length ?? 0) === 0;
+
+      if (isFirstIntervention) {
+        const righe: string[] = [];
+        if (hasOtherProvider !== null) {
+          righe.push(
+            `• Servizi con altri gestori: ${hasOtherProvider ? "Sì" : "No"}`
+          );
+          if (hasOtherProvider && otherProviderName) {
+            righe.push(`  Gestore attuale: ${otherProviderName}`);
+          }
+        }
+        if (pvrInterest !== null) {
+          righe.push(`• Interesse PVR: ${pvrInterest ? "Sì" : "No"}`);
+          if (pvrInterest && pvrConcessionario) {
+            righe.push(`  Concessionario preferito: ${pvrConcessionario}`);
+          }
+        }
+        if (righe.length) {
+          descrizioneCompleta += `\n📌 DATI PRIMO CONTATTO:\n${righe.join(
+            "\n"
+          )}`;
+        }
+      }
 
       const interventoData = {
         operatoreId: newIntervention.operatoreId || "current-user",
@@ -1009,8 +1126,8 @@ const TaskManagement: React.FC = () => {
       );
       console.log("✅ DEBUG: Intervento salvato dal server:", nuovoIntervento);
 
-      // 2. Se è stato specificato un nuovo stato, aggiorna il task
-      let updatedTaskFromServer: Task | null = null; // NEW
+      // 2. Eventuale update del task per cambio stato
+      let updatedTaskFromServer: Task | null = null;
       if (
         newIntervention.nuovoStato &&
         newIntervention.nuovoStato !== selectedTask.stato
@@ -1026,25 +1143,12 @@ const TaskManagement: React.FC = () => {
           dataScadenza: selectedTask.dataScadenza,
           valorePotenziale: selectedTask.valorePotenziale,
           note: selectedTask.note,
-          cliente: {
-            id: selectedTask.cliente.id,
-            nome: selectedTask.cliente.nome,
-            cognome: selectedTask.cliente.cognome,
-            email: selectedTask.cliente.email,
-            telefono: selectedTask.cliente.telefono,
-            citta: selectedTask.cliente.citta,
-            provincia: selectedTask.cliente.provincia,
-            azienda: selectedTask.cliente.azienda,
-            tipoAttivita: selectedTask.cliente.tipoAttivita,
-            indirizzo: selectedTask.cliente.indirizzo,
-            cap: selectedTask.cliente.cap,
-          },
+          cliente: { ...selectedTask.cliente },
           tags: selectedTask.tags || [],
         };
 
-        // NEW: se sto chiudendo il task, invia l'esito finale al BE
         if (closing) {
-          taskUpdateData.esitoChiusura = newIntervention.esitoChiusuraFinale; // NEW
+          taskUpdateData.esitoChiusura = newIntervention.esitoChiusuraFinale;
         }
 
         console.log(
@@ -1054,25 +1158,80 @@ const TaskManagement: React.FC = () => {
         updatedTaskFromServer = await updateTask(
           selectedTask.id,
           taskUpdateData
-        ); // NEW (salvo la risposta server)
+        );
       }
 
-      // 3. AGGIORNAMENTO MANUALE DEL TASK
+      // 2.b. Se è stato selezionato un prodotto, aggiorna task con tag + incremento valore
+      let updatedTaskAfterProduct: Task | null = null;
+      if (selectedProdottoId !== "") {
+        const baseTask = updatedTaskFromServer || selectedTask;
+
+        const tagProd = `prod:${selectedProdottoId}`;
+        const tagsEsistenti = baseTask.tags ?? [];
+        const tagsAggiornati = Array.from(new Set([...tagsEsistenti, tagProd]));
+
+        const haValore =
+          typeof valorePotenzialeProdotto === "number" &&
+          !isNaN(valorePotenzialeProdotto);
+
+        const nuovoValorePotenziale = haValore
+          ? (baseTask.valorePotenziale ?? 0) + valorePotenzialeProdotto
+          : baseTask.valorePotenziale;
+
+        updatedTaskAfterProduct = await updateTask(baseTask.id, {
+          valorePotenziale: nuovoValorePotenziale,
+          tags: tagsAggiornati,
+        } as Partial<Task>);
+      }
+
+      // 2.c. Se è il primo intervento, aggiorna i tag con i dati raccolti
+      let updatedTaskAfterExtras: Task | null = null;
+      if (isFirstIntervention) {
+        const baseTask =
+          updatedTaskAfterProduct || updatedTaskFromServer || selectedTask;
+        const extraTags: string[] = [];
+
+        if (hasOtherProvider !== null)
+          extraTags.push(`has_other:${hasOtherProvider ? "yes" : "no"}`);
+        if (hasOtherProvider && otherProviderName)
+          extraTags.push(`other_provider:${otherProviderName}`);
+
+        if (pvrInterest !== null)
+          extraTags.push(`pvr_interest:${pvrInterest ? "yes" : "no"}`);
+        if (pvrInterest && pvrConcessionario)
+          extraTags.push(`pvr_conc:${pvrConcessionario}`);
+
+        if (extraTags.length) {
+          const tagsAggiornati = Array.from(
+            new Set([...(baseTask.tags ?? []), ...extraTags])
+          );
+          updatedTaskAfterExtras = await updateTask(baseTask.id, {
+            tags: tagsAggiornati,
+          } as Partial<Task>);
+        }
+      }
+
+      // 3. Aggiornamento manuale del task in memoria
       console.log("🔄 DEBUG: Aggiornamento manuale del task...");
 
+      const sorgenteAggiornata =
+        updatedTaskAfterExtras ||
+        updatedTaskAfterProduct ||
+        updatedTaskFromServer ||
+        selectedTask;
+
       const nuovoStatoEffettivo =
-        newIntervention.nuovoStato || selectedTask.stato; // NEW
+        newIntervention.nuovoStato || sorgenteAggiornata.stato;
+
       const taskAggiornato: Task = {
-        ...(updatedTaskFromServer || selectedTask), // NEW
+        ...sorgenteAggiornata,
         interventI: [...(selectedTask.interventI || []), nuovoIntervento],
         dataUltimaModifica: new Date().toISOString(),
         stato: nuovoStatoEffettivo,
-        // NEW: aggiorna l'esito finale in UI (se chiuso lo setti, altrimenti lo azzeri)
         esitoChiusura:
           nuovoStatoEffettivo === "Chiuso"
             ? newIntervention.esitoChiusuraFinale ??
-              updatedTaskFromServer?.esitoChiusura ??
-              selectedTask.esitoChiusura ??
+              sorgenteAggiornata.esitoChiusura ??
               null
             : null,
       };
@@ -1082,7 +1241,7 @@ const TaskManagement: React.FC = () => {
         taskAggiornato.interventI?.length || 0
       );
 
-      // 4. Aggiorna gli stati locali
+      // 4. Aggiorna stati locali
       setTasks(
         tasks.map((task) =>
           task.id === selectedTask.id ? taskAggiornato : task
@@ -1091,10 +1250,10 @@ const TaskManagement: React.FC = () => {
       setSelectedTask(taskAggiornato);
 
       // 5. Reset form e chiudi modal
-      setNewIntervention(defaultNewIntervention);
+      resetInterventionForm();
       setShowAddInterventionModal(false);
 
-      // 6. Ricarica la lista dei task per aggiornare le statistiche (in background)
+      // 6. Ricarica la lista dei task per aggiornare statistiche
       fetchTasks({ page: currentPage, pageSize: itemsPerPage }).catch(
         console.warn
       );
@@ -1108,7 +1267,6 @@ const TaskManagement: React.FC = () => {
           : "✅ Intervento registrato con successo!";
 
       alert(messaggioSuccesso);
-
       console.log("🎉 DEBUG: Operazione completata con successo!");
     } catch (error) {
       console.error("🚨 DEBUG: Errore salvataggio intervento:", error);
@@ -1208,6 +1366,8 @@ const TaskManagement: React.FC = () => {
       setError("Token di autenticazione non trovato. Effettua il login.");
       return;
     }
+
+    fetchProdottiLookup();
 
     const loadInitialData = async () => {
       try {
@@ -1438,59 +1598,59 @@ const TaskManagement: React.FC = () => {
   };
 
   // SALVA NUOVO TASK
-  const saveNewTask = async () => {
-    if (!newTask.titolo.trim()) {
-      alert("Il titolo del task è obbligatorio");
-      return;
-    }
+  // const saveNewTask = async () => {
+  //   if (!newTask.titolo.trim()) {
+  //     alert("Il titolo del task è obbligatorio");
+  //     return;
+  //   }
 
-    if (!newTask.clienteNome.trim() || !newTask.clienteEmail.trim()) {
-      alert("Nome e email del cliente sono obbligatori");
-      return;
-    }
+  //   if (!newTask.clienteNome.trim() || !newTask.clienteEmail.trim()) {
+  //     alert("Nome e email del cliente sono obbligatori");
+  //     return;
+  //   }
 
-    setIsLoading(true);
+  //   setIsLoading(true);
 
-    try {
-      const taskData = {
-        titolo: newTask.titolo,
-        descrizione: newTask.descrizione,
-        priorita: newTask.priorita,
-        categoria: newTask.categoria,
-        idAgenteAssegnato: newTask.agenteAssegnatoId || undefined,
-        dataScadenza: newTask.dataScadenza || undefined,
-        valorePotenziale: newTask.valorePotenziale,
-        note: newTask.note,
-        cliente: {
-          nome: newTask.clienteNome,
-          cognome: newTask.clienteCognome,
-          email: newTask.clienteEmail,
-          telefono: newTask.clienteTelefono,
-          citta: newTask.clienteCitta,
-          provincia: newTask.clienteProvincia,
-          azienda: newTask.clienteAzienda,
-          tipoAttivita: newTask.clienteTipoAttivita,
-        },
-        tags: [],
-      };
+  //   try {
+  //     const taskData = {
+  //       titolo: newTask.titolo,
+  //       descrizione: newTask.descrizione,
+  //       priorita: newTask.priorita,
+  //       categoria: newTask.categoria,
+  //       idAgenteAssegnato: newTask.agenteAssegnatoId || undefined,
+  //       dataScadenza: newTask.dataScadenza || undefined,
+  //       valorePotenziale: newTask.valorePotenziale,
+  //       note: newTask.note,
+  //       cliente: {
+  //         nome: newTask.clienteNome,
+  //         cognome: newTask.clienteCognome,
+  //         email: newTask.clienteEmail,
+  //         telefono: newTask.clienteTelefono,
+  //         citta: newTask.clienteCitta,
+  //         provincia: newTask.clienteProvincia,
+  //         azienda: newTask.clienteAzienda,
+  //         tipoAttivita: newTask.clienteTipoAttivita,
+  //       },
+  //       tags: [],
+  //     };
 
-      await createTask(taskData);
-      setNewTask(defaultNewTask);
-      setShowNewTaskForm(false);
-      alert("Task creato con successo!");
+  //     await createTask(taskData);
+  //     setNewTask(defaultNewTask);
+  //     setShowNewTaskForm(false);
+  //     alert("Task creato con successo!");
 
-      await fetchTasks({ page: 1, pageSize: itemsPerPage });
-    } catch (error) {
-      console.error("🚨 Errore salvataggio task:", error);
-      alert(
-        `Errore nella creazione del task: ${
-          error instanceof Error ? error.message : "Errore sconosciuto"
-        }`
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //     await fetchTasks({ page: 1, pageSize: itemsPerPage });
+  //   } catch (error) {
+  //     console.error("🚨 Errore salvataggio task:", error);
+  //     alert(
+  //       `Errore nella creazione del task: ${
+  //         error instanceof Error ? error.message : "Errore sconosciuto"
+  //       }`
+  //     );
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   // RIASSEGNA TASK
   const confirmReassignTask = async () => {
@@ -1686,6 +1846,10 @@ const TaskManagement: React.FC = () => {
           ...basePayload,
           id: editingTaskId,
           stato: selectedTask?.stato || "Aperto",
+          cliente: {
+            ...basePayload.cliente,
+            id: selectedTask?.cliente?.id ?? "",
+          },
         };
 
         const updated = await updateTask(editingTaskId, dto); // tua updateTask blindata va bene :contentReference[oaicite:2]{index=2}
@@ -1699,7 +1863,7 @@ const TaskManagement: React.FC = () => {
         alert("Task aggiornato con successo!");
       } else {
         // ===== POST (CREATE) =====
-        const created = await createTask(basePayload); // già presente :contentReference[oaicite:3]{index=3}
+        await createTask(basePayload); // già presente :contentReference[oaicite:3]{index=3}
         // opzionale: prepend
         // setTasks(prev => [created, ...prev]);
         alert("Task creato con successo!");
@@ -1722,6 +1886,42 @@ const TaskManagement: React.FC = () => {
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchProdottiLookup = async () => {
+    setIsLoadingProdotti(true);
+    setErrorProdotti("");
+    try {
+      const headers = getAuthHeaders();
+      const url = `${API_URL}/api/Lookup/prodotti`;
+      const res = await fetch(url, { method: "GET", headers });
+
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`Lookup prodotti: ${res.status} - ${t}`);
+      }
+
+      // La tua API di solito ritorna { success, data } come negli altri lookup
+      const json = (await res.json()) as ApiResponseDto<Prodotto[]>;
+      if (json.success && Array.isArray(json.data)) {
+        setProdotti(json.data);
+      } else {
+        throw new Error(json.message || "Struttura lookup prodotti non valida");
+      }
+    } catch (err) {
+      setErrorProdotti(
+        err instanceof Error
+          ? err.message
+          : "Errore imprevisto nel lookup prodotti"
+      );
+      // fallback opzionale
+      setProdotti([
+        { id: 1, nome: "POS A920PRO" },
+        { id: 2, nome: "Stampante termica" },
+      ]);
+    } finally {
+      setIsLoadingProdotti(false);
     }
   };
 
@@ -2590,14 +2790,20 @@ const TaskManagement: React.FC = () => {
                       </div>
                       <div className="col-md-4">
                         <label className="form-label">Tipo Attività</label>
-                        <input
-                          type="text"
-                          className="form-control"
+                        <select
+                          className="form-select"
                           value={newTask.clienteTipoAttivita}
                           onChange={handleNewTaskFieldChange(
                             "clienteTipoAttivita"
                           )}
-                        />
+                        >
+                          <option value="">Seleziona Attività</option>
+                          {ATTIVITA_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       <div className="col-12">
@@ -3393,6 +3599,114 @@ const TaskManagement: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* DATI PRIMO CONTATTO - visibile solo al 1° intervento */}
+                    {(selectedTask?.interventI?.length ?? 0) === 0 && (
+                      <div className="card border-info mb-4">
+                        <div className="card-header bg-info text-white">
+                          <strong>📞 Dati raccolti al primo contatto</strong>
+                        </div>
+                        <div className="card-body">
+                          <div className="row g-3">
+                            <div className="col-md-6">
+                              <label className="form-label">
+                                Ha già i nostri servizi con altri gestori?
+                              </label>
+                              <select
+                                className="form-select"
+                                value={
+                                  hasOtherProvider === null
+                                    ? ""
+                                    : hasOtherProvider
+                                    ? "yes"
+                                    : "no"
+                                }
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setHasOtherProvider(
+                                    v === "" ? null : v === "yes"
+                                  );
+                                  if (v !== "yes") setOtherProviderName("");
+                                }}
+                              >
+                                <option value="">Seleziona…</option>
+                                <option value="yes">Sì</option>
+                                <option value="no">No</option>
+                              </select>
+                            </div>
+
+                            <div className="col-md-6">
+                              <label className="form-label">
+                                Gestore attuale
+                              </label>
+                              <select
+                                className="form-select"
+                                disabled={!hasOtherProvider}
+                                value={otherProviderName}
+                                onChange={(e) =>
+                                  setOtherProviderName(e.target.value)
+                                }
+                              >
+                                <option value="">Seleziona gestore…</option>
+                                {GESTORI_OPTIONS.map((g) => (
+                                  <option key={g} value={g}>
+                                    {g}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="col-md-6">
+                              <label className="form-label">
+                                Interessato a diventare PVR?
+                              </label>
+                              <select
+                                className="form-select"
+                                value={
+                                  pvrInterest === null
+                                    ? ""
+                                    : pvrInterest
+                                    ? "yes"
+                                    : "no"
+                                }
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setPvrInterest(v === "" ? null : v === "yes");
+                                  if (v !== "yes") setPvrConcessionario("");
+                                }}
+                              >
+                                <option value="">Seleziona…</option>
+                                <option value="yes">Sì</option>
+                                <option value="no">No</option>
+                              </select>
+                            </div>
+
+                            <div className="col-md-6">
+                              <label className="form-label">
+                                Concessionario preferito
+                              </label>
+                              <select
+                                className="form-select"
+                                disabled={!pvrInterest}
+                                value={pvrConcessionario}
+                                onChange={(e) =>
+                                  setPvrConcessionario(e.target.value)
+                                }
+                              >
+                                <option value="">
+                                  Seleziona concessionario…
+                                </option>
+                                {CONCESSIONARI_OPTIONS.map((c) => (
+                                  <option key={c} value={c}>
+                                    {c}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* SEZIONE DETTAGLI INTERVENTO */}
                     <div className="row g-3">
                       <div className="col-md-6">
@@ -3527,6 +3841,69 @@ const TaskManagement: React.FC = () => {
                           </div>
                         )}
                       </div>
+                      {/* Proposta prodotto + valore potenziale */}
+                      <div className="row g-3 mt-2">
+                        <div className="col-md-6">
+                          <label className="form-label fw-bold">
+                            Prodotto proposto (opzionale)
+                          </label>
+                          <select
+                            className="form-select"
+                            value={selectedProdottoId}
+                            onChange={(e) => {
+                              const v = e.target.value
+                                ? parseInt(e.target.value, 10)
+                                : "";
+                              setSelectedProdottoId(
+                                isNaN(Number(v)) ? "" : (v as number)
+                              );
+                              // se deseleziono, azzero il valore
+                              if (v === "") setValorePotenzialeProdotto("");
+                            }}
+                            disabled={isLoadingProdotti}
+                          >
+                            <option value="">
+                              {isLoadingProdotti
+                                ? "Caricamento prodotti..."
+                                : "Seleziona prodotto"}
+                            </option>
+                            {prodotti.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.nome}
+                              </option>
+                            ))}
+                          </select>
+                          {errorProdotti && (
+                            <small className="text-danger d-block mt-1">
+                              {errorProdotti}
+                            </small>
+                          )}
+                        </div>
+
+                        <div className="col-md-6">
+                          <label className="form-label fw-bold">
+                            Valore potenziale (€)
+                          </label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            placeholder="0,00"
+                            min={0}
+                            step="0.01"
+                            value={valorePotenzialeProdotto}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              setValorePotenzialeProdotto(
+                                raw === "" ? "" : Number(raw)
+                              );
+                            }}
+                            disabled={selectedProdottoId === ""}
+                          />
+                          <small className="text-muted">
+                            Attivo solo se selezioni un prodotto.
+                          </small>
+                        </div>
+                      </div>
                       <div className="col-12">
                         <label className="form-label">
                           🎯 Prossima Azione Pianificata
@@ -3562,6 +3939,7 @@ const TaskManagement: React.FC = () => {
                                 ✅ Registrazione intervento di tipo "
                                 {newIntervention.tipoIntervento}"
                               </li>
+
                               {newIntervention.nuovoStato ? (
                                 <li className="text-warning">
                                   <strong>
@@ -3572,7 +3950,57 @@ const TaskManagement: React.FC = () => {
                               ) : (
                                 <li>➖ Nessun cambio stato</li>
                               )}
+
                               <li>📝 Aggiornamento cronologia task</li>
+
+                              {selectedProdottoId !== "" && (
+                                <li>
+                                  🛒 Proposta prodotto:{" "}
+                                  <strong>
+                                    {
+                                      prodotti.find(
+                                        (p) => p.id === selectedProdottoId
+                                      )?.nome
+                                    }
+                                  </strong>
+                                  {typeof valorePotenzialeProdotto ===
+                                    "number" && !isNaN(valorePotenzialeProdotto)
+                                    ? ` (valore potenziale € ${valorePotenzialeProdotto.toFixed(
+                                        2
+                                      )})`
+                                    : ""}
+                                </li>
+                              )}
+
+                              {/* ⬇️ RIEPILOGO DATI PRIMO CONTATTO (solo al 1° intervento) */}
+                              {(selectedTask?.interventI?.length ?? 0) ===
+                                0 && (
+                                <>
+                                  {hasOtherProvider !== null && (
+                                    <li>
+                                      📌 Servizi con altri gestori:{" "}
+                                      <strong>
+                                        {hasOtherProvider ? "Sì" : "No"}
+                                      </strong>
+                                      {hasOtherProvider && otherProviderName
+                                        ? ` — ${otherProviderName}`
+                                        : ""}
+                                    </li>
+                                  )}
+                                  {pvrInterest !== null && (
+                                    <li>
+                                      🎯 Interesse PVR:{" "}
+                                      <strong>
+                                        {pvrInterest ? "Sì" : "No"}
+                                      </strong>
+                                      {pvrInterest && pvrConcessionario
+                                        ? ` — ${pvrConcessionario}`
+                                        : ""}
+                                    </li>
+                                  )}
+                                </>
+                              )}
+                              {/* ⬆️ FINE BLOCCO PRIMO CONTATTO */}
                             </ul>
                           </div>
                         </div>
@@ -3583,14 +4011,13 @@ const TaskManagement: React.FC = () => {
                         <button
                           className="btn btn-secondary"
                           onClick={() => {
+                            resetInterventionForm();
                             setShowAddInterventionModal(false);
-                            setNewIntervention(defaultNewIntervention);
                           }}
                         >
                           <i className="fa-solid fa-times me-1"></i>
                           Annulla
                         </button>
-
                         <button
                           className={`btn ${
                             newIntervention.nuovoStato
