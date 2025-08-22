@@ -78,6 +78,7 @@ interface Task {
   dataUltimaModifica?: string;
   dataScadenza?: string;
   dataChiusura?: string;
+  esitoChiusura?: "Positivo" | "Negativo" | null;
   origine: "Email" | "Telefono" | "Sito Web" | "Manuale" | "Chat" | "Social";
   categoria:
     | "Vendita"
@@ -161,6 +162,7 @@ interface PaginatedResponse<T> {
 
 interface NewInterventionForm extends Omit<TaskIntervento, "id" | "taskId"> {
   nuovoStato?: Task["stato"];
+  esitoChiusuraFinale?: "Positivo" | "Negativo";
 }
 
 const TaskManagement: React.FC = () => {
@@ -236,6 +238,7 @@ const TaskManagement: React.FC = () => {
     prossimaAzione: undefined,
     dataProximoContatto: undefined,
     nuovoStato: undefined,
+    esitoChiusuraFinale: undefined,
   };
 
   // GESTIONE RUOLO UTENTE
@@ -956,6 +959,16 @@ const TaskManagement: React.FC = () => {
       }
     }
 
+    // NEW: se sto chiudendo il task, l'esito finale è obbligatorio
+    const closing = newIntervention.nuovoStato === "Chiuso"; // NEW
+    if (closing && !newIntervention.esitoChiusuraFinale) {
+      // NEW
+      alert(
+        "Se imposti lo stato su 'Chiuso' devi selezionare l'esito finale (Positivo o Negativo)."
+      ); // NEW
+      return; // NEW
+    } // NEW
+
     setIsLoading(true);
 
     try {
@@ -967,6 +980,11 @@ const TaskManagement: React.FC = () => {
       ) {
         descrizioneCompleta = `${descrizioneCompleta}\n\n📋 CAMBIO STATO: Da "${selectedTask.stato}" a "${newIntervention.nuovoStato}"`;
       }
+      // NEW: se chiudo, annota anche l'esito finale nella descrizione (solo informativo)
+      if (closing && newIntervention.esitoChiusuraFinale) {
+        // NEW
+        descrizioneCompleta += `\n✅ ESITO FINALE: ${newIntervention.esitoChiusuraFinale}`; // NEW
+      } // NEW
 
       const interventoData = {
         operatoreId: newIntervention.operatoreId || "current-user",
@@ -992,11 +1010,12 @@ const TaskManagement: React.FC = () => {
       console.log("✅ DEBUG: Intervento salvato dal server:", nuovoIntervento);
 
       // 2. Se è stato specificato un nuovo stato, aggiorna il task
+      let updatedTaskFromServer: Task | null = null; // NEW
       if (
         newIntervention.nuovoStato &&
         newIntervention.nuovoStato !== selectedTask.stato
       ) {
-        const taskUpdateData = {
+        const taskUpdateData: any = {
           id: selectedTask.id,
           titolo: selectedTask.titolo,
           descrizione: selectedTask.descrizione,
@@ -1023,21 +1042,39 @@ const TaskManagement: React.FC = () => {
           tags: selectedTask.tags || [],
         };
 
+        // NEW: se sto chiudendo il task, invia l'esito finale al BE
+        if (closing) {
+          taskUpdateData.esitoChiusura = newIntervention.esitoChiusuraFinale; // NEW
+        }
+
         console.log(
           "🔄 DEBUG: Aggiornando stato task:",
           newIntervention.nuovoStato
         );
-        await updateTask(selectedTask.id, taskUpdateData);
+        updatedTaskFromServer = await updateTask(
+          selectedTask.id,
+          taskUpdateData
+        ); // NEW (salvo la risposta server)
       }
 
       // 3. AGGIORNAMENTO MANUALE DEL TASK
       console.log("🔄 DEBUG: Aggiornamento manuale del task...");
 
-      const taskAggiornato = {
-        ...selectedTask,
+      const nuovoStatoEffettivo =
+        newIntervention.nuovoStato || selectedTask.stato; // NEW
+      const taskAggiornato: Task = {
+        ...(updatedTaskFromServer || selectedTask), // NEW
         interventI: [...(selectedTask.interventI || []), nuovoIntervento],
         dataUltimaModifica: new Date().toISOString(),
-        stato: newIntervention.nuovoStato || selectedTask.stato,
+        stato: nuovoStatoEffettivo,
+        // NEW: aggiorna l'esito finale in UI (se chiuso lo setti, altrimenti lo azzeri)
+        esitoChiusura:
+          nuovoStatoEffettivo === "Chiuso"
+            ? newIntervention.esitoChiusuraFinale ??
+              updatedTaskFromServer?.esitoChiusura ??
+              selectedTask.esitoChiusura ??
+              null
+            : null,
       };
 
       console.log(
@@ -2220,7 +2257,21 @@ const TaskManagement: React.FC = () => {
                                   >
                                     {task.stato}
                                   </span>
+                                  {task.stato === "Chiuso" &&
+                                    task.esitoChiusura && (
+                                      <span
+                                        className={`badge ms-2 ${
+                                          task.esitoChiusura === "Positivo"
+                                            ? "bg-success"
+                                            : "bg-danger"
+                                        }`}
+                                        title="Esito chiusura"
+                                      >
+                                        {task.esitoChiusura}
+                                      </span>
+                                    )}
                                 </td>
+
                                 <td>
                                   <span
                                     className={getCategoryBadgeClass(
@@ -3386,6 +3437,33 @@ const TaskManagement: React.FC = () => {
                           </option>
                         </select>
                       </div>
+                      {newIntervention.nuovoStato === "Chiuso" && (
+                        <div className="col-md-4">
+                          <label className="form-label">Esito finale *</label>
+                          <select
+                            className="form-select"
+                            value={newIntervention.esitoChiusuraFinale || ""}
+                            onChange={(e) =>
+                              setNewIntervention((prev) => ({
+                                ...prev,
+                                esitoChiusuraFinale: e.target.value as
+                                  | "Positivo"
+                                  | "Negativo",
+                              }))
+                            }
+                            required
+                          >
+                            <option value="">— seleziona —</option>
+                            <option value="Positivo">Positivo</option>
+                            <option value="Negativo">Negativo</option>
+                          </select>
+                          <small className="text-muted">
+                            Obbligatorio quando imposti lo stato su{" "}
+                            <b>Chiuso</b>.
+                          </small>
+                        </div>
+                      )}
+
                       <div className="col-md-6">
                         <label className="form-label">Durata (minuti)</label>
                         <input
