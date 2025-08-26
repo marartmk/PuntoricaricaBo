@@ -1,5 +1,5 @@
 // src/components/Topbar.tsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./topbar.css";
 import logo from "../assets/admiralpay_logo_top.png";
@@ -10,6 +10,64 @@ interface TopbarProps {
 
 const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL as string | undefined;
+
+  function getAuthHeaders() {
+    const token = localStorage.getItem("token") || "";
+    return {
+      "Content-Type": "application/json",
+      Authorization: token ? `Bearer ${token}` : "",
+    };
+  }
+
+  const [userName, setUserName] = useState<string>("");
+
+  useEffect(() => {
+    const idUser = localStorage.getItem("idUser") || "";
+    const cachedFullName = localStorage.getItem("fullName") || "";
+
+    // Mostra subito il nome cached se presente
+    if (cachedFullName) setUserName(cachedFullName);
+
+    if (!API_URL || !idUser) return;
+
+    const ac = new AbortController();
+    (async () => {
+      try {
+        // 🔁 Adatta l’endpoint se il tuo BE espone un path diverso
+        const res = await fetch(`${API_URL}/api/Auth/users/${idUser}`, {
+          method: "GET",
+          headers: getAuthHeaders(),
+          signal: ac.signal,
+        });
+        if (!res.ok) return; // fallback resta cachedFullName
+
+        const u = (await res.json()) as {
+          id?: string;
+          fullName?: string;
+          nome?: string;
+          cognome?: string;
+          firstName?: string;
+          lastName?: string;
+          username?: string;
+        };
+
+        const resolved =
+          u.fullName ||
+          [u.nome ?? u.firstName ?? "", u.cognome ?? u.lastName ?? ""]
+            .join(" ")
+            .trim() ||
+          u.username ||
+          cachedFullName;
+
+        if (resolved) setUserName(resolved);
+      } catch {
+        // ignora errori → resta il fallback
+      }
+    })();
+
+    return () => ac.abort();
+  }, []);
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark border-bottom">
@@ -18,6 +76,12 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
         <div className="logo-container">
           <img src={logo} alt="Medialab Logo" />
           <span className="ms-2">Medialab (Admin)</span>
+        </div>
+
+        {/* User display (tra logo e menu) */}
+        <div className="user-display ms-3 me-3" title={userName || "Utente"}>
+          <i className="fa-solid fa-user-circle me-2" aria-hidden="true"></i>
+          <span className="user-name">{userName || "Utente"}</span>
         </div>
 
         {/* Mobile menu toggle button */}
@@ -140,7 +204,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/iphone/software")}
                       >
-                       ...
+                        ...
                       </button>
                     </li>
                     <li>
@@ -256,7 +320,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                         className="dropdown-item"
                         onClick={() => navigate("/riparazioni/macbook/pro")}
                       >
-                       ...
+                        ...
                       </button>
                     </li>
                   </ul>
@@ -299,7 +363,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                           navigate("/riparazioni/ipad/chip-livello2")
                         }
                       >
-                       ...
+                        ...
                       </button>
                     </li>
                     <li>
@@ -340,7 +404,7 @@ const Topbar: React.FC<TopbarProps> = ({ toggleMenu }) => {
                 </li>
                 <li className="dropdown-submenu">
                   <button className="dropdown-item dropdown-toggle">
-                    Terminale POS 
+                    Terminale POS
                   </button>
                   <ul className="dropdown-menu">
                     <li>

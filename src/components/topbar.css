@@ -171,13 +171,15 @@
     padding-left: 0.5rem;
   }
   
-  .navbar-collapse {
-    display: flex !important;
-    flex-basis: auto;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-  }
+ .navbar-collapse {
+  display: flex !important;
+  flex-basis: auto;
+  align-items: center;
+  justify-content: space-between;
+  /* width: 100%;  <-- RIMUOVI QUESTA */
+  flex-grow: 1;     /* <-- AGGIUNGI QUESTA */
+}
+
   
   /* Assicura che gli elementi siano allineati orizzontalmente */
   .navbar > * {
@@ -209,4 +211,69 @@
   color: #222;
   font-size: 16px;
 }
+
+/* Badge utente tra logo e menu */
+.user-display {
+  display: flex;
+  align-items: center;
+  color: #fff;               /* testo chiaro su bg blu */
+  font-weight: 600;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-display i {
+  font-size: 18px;
+  opacity: 0.9;
+}
+
+.user-name {
+  display: inline-block;
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive: stringi su schermi piccoli */
+@media (max-width: 576px) {
+  .user-display {
+    max-width: 160px;
+    font-weight: 500;
+  }
+  .user-name { max-width: 120px; }
+}
+
+/* Badge utente tra logo e menu */
+.user-display {
+  display: flex;
+  align-items: center;
+  color: #fff;
+  font-weight: 600;
+  flex-shrink: 0;           /* ← non comprimere */
+  min-width: 160px;         /* ← spazio minimo */
+  max-width: 30vw;          /* ← evita che rubi tutta la riga */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-display i {
+  font-size: 18px;
+  opacity: 0.9;
+}
+
+.user-name {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Facoltativo: anche il logo non deve restringersi */
+.logo-container { flex-shrink: 0; }
+
 

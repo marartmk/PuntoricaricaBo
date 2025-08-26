@@ -136,11 +136,18 @@ const GestioneAgenti: React.FC = () => {
   const [errorLookups, setErrorLookups] = useState<string>("");
   const [errorAttivita, setErrorAttivita] = useState<string>("");
 
+  // ✅ DATI GLOBALI PER GESTIONE FILTRI ADMIN/USER
+  const userRole = (localStorage.getItem("userLevel") || "").toLowerCase();
+  const isAdmin = userRole === "admin";
+  const currentUserId = localStorage.getItem("idUser") || "";
+
   // ✅ STATI PER FILTRI
   const [settimanaSelezionata, setSettimanaSelezionata] =
     useState<string>("Tutte");
   const [giornoSelezionato, setGiornoSelezionato] = useState<string>("Tutti");
-  const [agenteSelezionato, setAgenteSelezionato] = useState<string>("Tutti");
+  const [agenteSelezionato, setAgenteSelezionato] = useState<string>(
+    isAdmin ? "Tutti" : currentUserId || "Tutti"
+  );
   const [mostraFormAggiunta, setMostraFormAggiunta] = useState<boolean>(false);
 
   // ✅ STATI PER PAGINAZIONE
@@ -538,7 +545,13 @@ const GestioneAgenti: React.FC = () => {
     setErrorAttivita("");
 
     try {
-      const response = await fetch(`${API_URL}/api/AttivitaAgenti`, {
+      const baseUrl = `${API_URL}/api/AttivitaAgenti`;
+      const url =
+        !isAdmin && currentUserId
+          ? `${baseUrl}?idUser=${encodeURIComponent(currentUserId)}`
+          : baseUrl;
+
+      const response = await fetch(url, {
         method: "GET",
         headers: getAuthHeaders(),
       });
@@ -547,15 +560,21 @@ const GestioneAgenti: React.FC = () => {
         throw new Error(`Errore caricamento attività: ${response.status}`);
       }
 
-      const data: AttivitaAgente[] = await response.json();
+      let data: AttivitaAgente[] = await response.json();
+
+      // 🔐 Fallback: se il backend non filtra, filtro client-side
+      if (!isAdmin && currentUserId) {
+        data = data.filter((a) => a.idAgente === currentUserId);
+      }
+
       setAttivita(data);
     } catch (error) {
       console.error("🚨 Errore caricamento attività:", error);
-      if (error instanceof Error) {
-        setErrorAttivita(error.message);
-      } else {
-        setErrorAttivita("Errore imprevisto nel caricamento attività");
-      }
+      setErrorAttivita(
+        error instanceof Error
+          ? error.message
+          : "Errore imprevisto nel caricamento attività"
+      );
     } finally {
       setIsLoadingAttivita(false);
     }
@@ -771,6 +790,14 @@ const GestioneAgenti: React.FC = () => {
   useEffect(() => {
     setPaginaCorrente(1);
   }, [settimanaSelezionata, giornoSelezionato, agenteSelezionato]);
+
+  useEffect(() => {
+    // se non admin, forza il filtro sull’utente loggato
+    if (!isAdmin && currentUserId && agenteSelezionato !== currentUserId) {
+      setAgenteSelezionato(currentUserId);
+    }
+    // si riesegue quando cambia lista agenti (dopo fetch) o ruolo/utente
+  }, [isAdmin, currentUserId, agenti.length, agenteSelezionato]);
 
   // ✅ GESTIONE TOGGLE MENU
   const toggleMenu = () => {
@@ -1064,7 +1091,10 @@ const GestioneAgenti: React.FC = () => {
               <button
                 className="btn btn-outline-primary-dark"
                 onClick={() => {
-                  setNuovaAttivita(defaultNuovaAttivita);
+                  setNuovaAttivita({
+                    ...defaultNuovaAttivita,
+                    agenteId: !isAdmin && currentUserId ? currentUserId : "",
+                  });
                   setModalitaModifica(false);
                   setIdAttivitaInModifica("");
                   setMostraFormAggiunta(true);
@@ -1082,14 +1112,16 @@ const GestioneAgenti: React.FC = () => {
                 Aggiungi Attività
               </button>
 
-              <button
-                className="btn btn-outline-success"
-                onClick={() => navigate("/agenti")}
-                title="Gestisci anagrafica agenti"
-              >
-                <i className="fa-solid fa-user-plus me-1"></i>
-                Gestisci Agenti
-              </button>
+              {isAdmin && (
+                <button
+                  className="btn btn-outline-success"
+                  onClick={() => navigate("/agenti")}
+                  title="Gestisci anagrafica agenti"
+                >
+                  <i className="fa-solid fa-user-plus me-1"></i>
+                  Gestisci Agenti
+                </button>
+              )}
               <button className="btn btn-outline-primary-dark">
                 <i className="fa-solid fa-download me-1"></i>
                 Esporta
@@ -1189,13 +1221,33 @@ const GestioneAgenti: React.FC = () => {
                         className="form-select"
                         value={agenteSelezionato}
                         onChange={(e) => setAgenteSelezionato(e.target.value)}
+                        disabled={!isAdmin} // 🔒 Utente semplice: non può cambiare
+                        title={!isAdmin ? "Limitato al tuo utente" : undefined}
                       >
-                        <option value="Tutti">Tutti gli agenti</option>
-                        {agenti.map((agente) => (
-                          <option key={agente.id} value={agente.id}>
-                            {agente.nome} {agente.cognome}
-                          </option>
-                        ))}
+                        {isAdmin ? (
+                          <>
+                            <option value="Tutti">Tutti</option>
+                            {agenti.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.nome} {a.cognome}
+                              </option>
+                            ))}
+                          </>
+                        ) : (
+                          <>
+                            {/* utente semplice: mostra solo se stesso */}
+                            <option value={currentUserId}>
+                              {(() => {
+                                const me = agenti.find(
+                                  (a) => a.id === currentUserId
+                                );
+                                return me
+                                  ? `${me.nome} ${me.cognome}`
+                                  : "Me stesso";
+                              })()}
+                            </option>
+                          </>
+                        )}
                       </select>
                     </div>
                   </div>
@@ -1316,17 +1368,30 @@ const GestioneAgenti: React.FC = () => {
                               agenteId: e.target.value,
                             })
                           }
+                          disabled={!isAdmin} // 🔒 Utente semplice non cambia l’agente
                         >
-                          <option value="">
-                            {agenti.length === 0
-                              ? "⚠️ Nessun agente disponibile"
-                              : "Seleziona agente"}
-                          </option>
-                          {agenti.map((agente) => (
-                            <option key={agente.id} value={agente.id}>
-                              {agente.nome} {agente.cognome}
-                            </option>
-                          ))}
+                          {isAdmin
+                            ? agenti.map((a) => (
+                                <option key={a.id} value={a.id}>
+                                  {a.nome} {a.cognome}
+                                </option>
+                              ))
+                            : (() => {
+                                const me = agenti.find(
+                                  (a) => a.id === currentUserId
+                                );
+                                if (!me)
+                                  return (
+                                    <option value={currentUserId}>
+                                      Me stesso
+                                    </option>
+                                  );
+                                return (
+                                  <option value={me.id}>
+                                    {me.nome} {me.cognome}
+                                  </option>
+                                );
+                              })()}
                         </select>
                         {agenti.length === 0 && (
                           <small className="text-warning">

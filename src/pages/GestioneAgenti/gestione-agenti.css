@@ -565,3 +565,8 @@
 .table td {
   vertical-align: middle;
 }
+
+.gestione-agenti-page .form-select:disabled {
+  opacity: .85;
+  cursor: not-allowed;
+}

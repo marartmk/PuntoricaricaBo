@@ -38,6 +38,11 @@ const DettagliAttivita: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [menuState, setMenuState] = useState<"open" | "closed">("open");
 
+  // ✅ RUOLO USER/ADMIM
+  const userRole = (localStorage.getItem("userLevel") || "").toLowerCase();
+  const isAdmin = userRole === "admin";
+  const currentUserId = localStorage.getItem("idUser") || "";
+
   // ✅ STATI
   const [attivita, setAttivita] = useState<DettaglioAttivita | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -83,6 +88,11 @@ const DettagliAttivita: React.FC = () => {
       }
 
       const data: DettaglioAttivita = await response.json();
+      // 🔐 Access control: se non admin, consenti solo se l'attività è dell'utente
+      if (!isAdmin && currentUserId && data.idAgente !== currentUserId) {
+        throw new Error("Non sei autorizzato a visualizzare questa attività.");
+      }
+
       setAttivita(data);
     } catch (error) {
       console.error("🚨 Errore caricamento dettagli:", error);
@@ -246,24 +256,19 @@ const DettagliAttivita: React.FC = () => {
                 <i className="fa-solid fa-arrow-left me-1"></i>
                 Torna alla Lista
               </button>
-              {attivita && (
+              {attivita && (isAdmin || attivita.idAgente === currentUserId) && (
                 <>
                   <button
                     className="btn btn-outline-warning"
-                    onClick={() => {
-                      // TODO: Implementare modifica
-                      alert("Funzione modifica - Da implementare");
-                    }}
+                    onClick={() => alert("Funzione modifica - Da implementare")}
                   >
-                    <i className="fa-solid fa-edit me-1"></i>
-                    Modifica
+                    <i className="fa-solid fa-edit me-1"></i> Modifica
                   </button>
                   <button
                     className="btn btn-outline-danger"
                     onClick={eliminaAttivita}
                   >
-                    <i className="fa-solid fa-trash me-1"></i>
-                    Elimina
+                    <i className="fa-solid fa-trash me-1"></i> Elimina
                   </button>
                 </>
               )}
