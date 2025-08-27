@@ -1983,6 +1983,7 @@ const TaskManagement: React.FC = () => {
   };
 
   const saveTask = async () => {
+    // 1) Validazioni base
     if (!newTask.titolo.trim()) {
       alert("Il titolo del task è obbligatorio");
       return;
@@ -1992,21 +1993,26 @@ const TaskManagement: React.FC = () => {
       return;
     }
 
+    // 2) Helper per rimuovere i campi undefined
+    const clean = <T extends object>(obj: T): T =>
+      JSON.parse(JSON.stringify(obj));
+
     setIsLoading(true);
     try {
-      // payload comune dal form
+      const isEdit = !!editingTaskId;
+
+      // 3) Payload comune dal form
       const basePayload = {
         titolo: newTask.titolo,
-        descrizione: newTask.descrizione,
-        priorita: newTask.priorita,
-        categoria: newTask.categoria,
+        descrizione: newTask.descrizione || undefined,
+        priorita: newTask.priorita || "Media",
+        categoria: newTask.categoria || "Vendita",
         idAgenteAssegnato: newTask.agenteAssegnatoId || undefined,
         dataScadenza: newTask.dataScadenza || undefined,
-        valorePotenziale: newTask.valorePotenziale,
-        note: newTask.note,
+        // ⚠️ valorePotenziale NON lo includiamo in create; lo gestiamo in update solo se serve
+        note: newTask.note || undefined,
         cliente: {
-          // in update passo anche l'id cliente se disponibile
-          id: selectedTask?.cliente?.id,
+          // in update aggiungiamo anche l'id sotto
           nome: newTask.clienteNome,
           cognome: newTask.clienteCognome || undefined,
           email: newTask.clienteEmail,
@@ -2019,20 +2025,31 @@ const TaskManagement: React.FC = () => {
         tags: [] as string[],
       };
 
-      if (editingTaskId) {
+      if (isEdit) {
         // ===== PUT (UPDATE) =====
-        // Il BE richiede: id, titolo, descrizione, stato, priorita, categoria
-        const dto = {
+        const statoCorrente = selectedTask?.stato || "Aperto";
+
+        // costruisci DTO per update
+        const dto: any = clean({
           ...basePayload,
           id: editingTaskId,
-          stato: selectedTask?.stato || "Aperto",
-          cliente: {
+          stato: statoCorrente,
+          valorePotenziale:
+            typeof newTask.valorePotenziale === "number"
+              ? newTask.valorePotenziale
+              : undefined,
+          cliente: clean({
             ...basePayload.cliente,
-            id: selectedTask?.cliente?.id ?? "",
-          },
-        };
+            id: selectedTask?.cliente?.id ?? "", // il BE lo vuole in update
+          }),
+        });
 
-        const updated = await updateTask(editingTaskId, dto); // tua updateTask blindata va bene :contentReference[oaicite:2]{index=2}
+        // ✅ se lo stato è "Chiuso" il BE richiede esitoChiusura
+        if (statoCorrente === "Chiuso") {
+          dto.esitoChiusura = selectedTask?.esitoChiusura ?? "Negativo";
+        }
+
+        const updated = await updateTask(editingTaskId, dto);
 
         // aggiorna lista e dettaglio
         setTasks((prev) =>
@@ -2043,19 +2060,19 @@ const TaskManagement: React.FC = () => {
         alert("Task aggiornato con successo!");
       } else {
         // ===== POST (CREATE) =====
-        await createTask(basePayload); // già presente :contentReference[oaicite:3]{index=3}
-        // opzionale: prepend
-        // setTasks(prev => [created, ...prev]);
+        // niente valorePotenziale in creazione: viene calcolato dopo con le proposte
+        const dtoCreate = clean(basePayload);
+        await createTask(dtoCreate);
         alert("Task creato con successo!");
       }
 
-      // chiudi form + reset stato edit
+      // 4) Chiudi form + reset stato edit
       setShowNewTaskForm(false);
       setNewTask(defaultNewTask);
       setEditingTaskId(null);
 
-      // ricarica come fa il tuo bottone “Aggiorna”
-      await fetchTasks({ page: currentPage, pageSize: itemsPerPage }); // oppure handleFilterChange()
+      // 5) Ricarica lista/statistiche
+      await fetchTasks({ page: currentPage, pageSize: itemsPerPage });
       fetchAllTasks().catch(console.warn);
     } catch (error) {
       console.error("🚨 Salvataggio task:", error);
@@ -3093,17 +3110,22 @@ const TaskManagement: React.FC = () => {
                           onChange={handleNewTaskFieldChange("dataScadenza")}
                         />
                       </div>
-                      <div className="col-md-4">
-                        <label className="form-label">Valore Potenziale</label>
-                        <input
-                          type="number"
-                          className="form-control"
-                          value={newTask.valorePotenziale || ""}
-                          onChange={handleNewTaskFieldChange(
-                            "valorePotenziale"
-                          )}
-                        />
-                      </div>
+                      {/* Valore Potenziale: visibile SOLO in modifica */}
+                      {editingTaskId && (
+                        <div className="col-md-4">
+                          <label className="form-label">
+                            Valore Potenziale
+                          </label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            value={newTask.valorePotenziale || ""}
+                            onChange={handleNewTaskFieldChange(
+                              "valorePotenziale"
+                            )}
+                          />
+                        </div>
+                      )}
                       <div className="col-12">
                         <label className="form-label">Note</label>
                         <textarea
