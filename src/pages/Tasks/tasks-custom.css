@@ -805,3 +805,15 @@
 .task-management-page .modal-body::-webkit-scrollbar-thumb:hover {
   background: #003875;
 }
+
+.product-proposals-card {
+  background: #f8fafc;
+  border: 1px dashed #d0d7de;
+}
+
+.btn:disabled {
+  opacity: .55;
+  cursor: not-allowed !important;
+  pointer-events: auto; /* lascia passare il tooltip 'title' */
+}
+

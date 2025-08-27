@@ -91,6 +91,7 @@ interface Task {
   note?: string;
   interventI: TaskIntervento[];
   tags?: string[];
+  productProposals?: TaskProductProposalDto[];
 }
 
 interface TaskStats {
@@ -169,6 +170,19 @@ interface Prodotto {
   id: number;
   nome: string;
   prezzo?: number | null;
+}
+
+// Proposta di prodotto associata al Task
+interface TaskProductProposalDto {
+  id: string;
+  productCode: string;
+  productName: string;
+  quantity: number;
+  unitPrice?: number | null;
+  notes?: string | null;
+  insertDateUtc?: string;
+  isActive: boolean;
+  isDeleted: boolean;
 }
 
 const ATTIVITA_OPTIONS = [
@@ -277,6 +291,10 @@ const TaskManagement: React.FC = () => {
     return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
   };
 
+  // HELPER Task chiuso?
+  const isTaskClosed = (t?: Task | null) =>
+    (t?.stato || "").toLowerCase() === "chiuso";
+
   // STATI PER NUOVO INTERVENTO
   const defaultNewIntervention: NewInterventionForm = {
     operatoreId: "",
@@ -338,6 +356,14 @@ const TaskManagement: React.FC = () => {
   const [valorePotenzialeProdotto, setValorePotenzialeProdotto] = useState<
     number | ""
   >("");
+
+  // HELPER PER CALCOLARE IL TOTALE DELLE PROPOSTE
+  const getProposalsTotal = (task?: Task | null) => {
+    if (!task?.productProposals?.length) return 0;
+    return task.productProposals
+      .filter((p) => !p.isDeleted)
+      .reduce((sum, p) => sum + (p.unitPrice ?? 0) * (p.quantity ?? 1), 0);
+  };
 
   // HELPER PER TOKEN AUTH
   const getAuthHeaders = () => {
@@ -960,51 +986,106 @@ const TaskManagement: React.FC = () => {
       console.log("🔄 DEBUG fetchSingleTask - URL:", url);
 
       const response = await fetch(url, { method: "GET", headers });
-
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(`Errore nel caricamento task: ${response.status}`);
+
+      const payload: ApiResponseDto<any> = await response.json();
+      console.log("🔄 DEBUG fetchSingleTask - Dati ricevuti:", payload);
+
+      if (!payload.success || !payload.data) return null;
+
+      const srv = payload.data as any;
+
+      // 1) Normalizza interventi (qualsiasi casing) e ordina DESC per DataIntervento
+      const interventionsRaw =
+        srv.interventI ?? srv.interventi ?? srv.Interventi ?? [];
+      const interventI = Array.isArray(interventionsRaw)
+        ? [...interventionsRaw].sort((a, b) => {
+            const da = new Date(
+              a.dataIntervento ?? a.DataIntervento ?? 0
+            ).getTime();
+            const db = new Date(
+              b.dataIntervento ?? b.DataIntervento ?? 0
+            ).getTime();
+            return db - da;
+          })
+        : [];
+
+      // 2) Proposte prodotto: dal DTO se presenti (qualsiasi casing)
+      let productProposals: TaskProductProposalDto[] = Array.isArray(
+        srv.productProposals ?? srv.ProductProposals
+      )
+        ? srv.productProposals ?? srv.ProductProposals
+        : [];
+
+      // Filtra cancellate e ordina per InsertDate desc (se disponibile)
+      const sortByInsertDesc = (list: any[]) =>
+        [...list]
+          .filter((p) => !p.isDeleted)
+          .sort((a, b) => {
+            const da = new Date(
+              a.insertDateUtc ?? a.InsertDateUtc ?? 0
+            ).getTime();
+            const db = new Date(
+              b.insertDateUtc ?? b.InsertDateUtc ?? 0
+            ).getTime();
+            return db - da;
+          });
+
+      productProposals = sortByInsertDesc(
+        productProposals
+      ) as TaskProductProposalDto[];
+
+      // 2.b) Fallback: se il DTO non le contiene, prova a leggerle dall’endpoint dedicato
+      if ((!productProposals || productProposals.length === 0) && taskId) {
+        try {
+          const urlProps = `${API_URL}/api/Tasks/${taskId}/proposals`;
+          console.log(
+            "🧩 DEBUG fetchSingleTask - Fallback proposte:",
+            urlProps
+          );
+          const resProps = await fetch(urlProps, { method: "GET", headers });
+          if (resProps.ok) {
+            const jsonProps = await resProps.json(); // { success, data }
+            const list = Array.isArray(jsonProps?.data) ? jsonProps.data : [];
+            productProposals = sortByInsertDesc(
+              list
+            ) as TaskProductProposalDto[];
+          } else {
+            console.warn(
+              "⚠️ DEBUG fetchSingleTask - Fallback proposte non ok:",
+              resProps.status
+            );
+          }
+        } catch (e) {
+          console.warn(
+            "⚠️ DEBUG fetchSingleTask - Errore fallback proposte:",
+            e
+          );
+        }
       }
 
-      const data: ApiResponseDto<Task> = await response.json();
-      console.log("🔄 DEBUG fetchSingleTask - Dati ricevuti:", data);
+      // 3) Costruisci il task normalizzato verso il FE
+      const taskWithInterventi: Task = {
+        ...srv,
+        interventI,
+        productProposals,
+      };
 
-      if (data.success && data.data) {
-        console.log("🔄 DEBUG fetchSingleTask - Task data:", data.data);
-        console.log(
-          "🔄 DEBUG fetchSingleTask - interventI:",
-          data.data.interventI
-        );
-        console.log(
-          "🔄 DEBUG fetchSingleTask - interventi:",
-          (data.data as any).interventi
-        );
-        console.log(
-          "🔄 DEBUG fetchSingleTask - Interventi:",
-          (data.data as any).Interventi
-        );
+      console.log(
+        "🔄 DEBUG fetchSingleTask - Task finale:",
+        taskWithInterventi
+      );
+      console.log(
+        "🔄 DEBUG fetchSingleTask - Interventi finali:",
+        taskWithInterventi.interventI?.length || 0
+      );
+      console.log(
+        "🔄 DEBUG fetchSingleTask - Proposte prodotto:",
+        taskWithInterventi.productProposals?.length || 0
+      );
 
-        const taskWithInterventi = {
-          ...data.data,
-          interventI:
-            data.data.interventI ||
-            (data.data as any).interventi ||
-            (data.data as any).Interventi ||
-            [],
-        };
-
-        console.log(
-          "🔄 DEBUG fetchSingleTask - Task finale:",
-          taskWithInterventi
-        );
-        console.log(
-          "🔄 DEBUG fetchSingleTask - Interventi finali:",
-          taskWithInterventi.interventI?.length || 0
-        );
-
-        return taskWithInterventi;
-      }
-
-      return null;
+      return taskWithInterventi;
     } catch (error) {
       console.error("🚨 DEBUG fetchSingleTask - Errore:", error);
       return null;
@@ -1020,6 +1101,11 @@ const TaskManagement: React.FC = () => {
 
     if (!selectedTask) {
       alert("Nessun task selezionato");
+      return;
+    }
+
+    if (isTaskClosed(selectedTask)) {
+      alert("Il task è chiuso: non è possibile aggiungere interventi.");
       return;
     }
 
@@ -1053,8 +1139,9 @@ const TaskManagement: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Prepara la descrizione dell'intervento
+      // 0) Prepara la descrizione dell'intervento
       let descrizioneCompleta = newIntervention.descrizione;
+
       if (
         newIntervention.nuovoStato &&
         newIntervention.nuovoStato !== selectedTask.stato
@@ -1065,9 +1152,11 @@ const TaskManagement: React.FC = () => {
         descrizioneCompleta += `\n✅ ESITO FINALE: ${newIntervention.esitoChiusuraFinale}`;
       }
 
-      // Append info prodotto scelto
+      // Append info prodotto scelto (solo testo informativo nell'intervento)
       if (selectedProdottoId !== "") {
-        const prod = prodotti.find((p) => p.id === selectedProdottoId);
+        const prod = prodotti.find(
+          (p) => String(p.id) === String(selectedProdottoId)
+        );
         const valoreTxt =
           typeof valorePotenzialeProdotto === "number" &&
           !isNaN(valorePotenzialeProdotto)
@@ -1119,14 +1208,14 @@ const TaskManagement: React.FC = () => {
 
       console.log("📝 DEBUG: Salvando intervento:", interventoData);
 
-      // 1. Aggiungi l'intervento
+      // 1) Aggiungi l'intervento
       const nuovoIntervento = await addTaskIntervention(
         selectedTask.id,
         interventoData
       );
       console.log("✅ DEBUG: Intervento salvato dal server:", nuovoIntervento);
 
-      // 2. Eventuale update del task per cambio stato
+      // 2) Eventuale update del task per cambio stato
       let updatedTaskFromServer: Task | null = null;
       if (
         newIntervention.nuovoStato &&
@@ -1141,7 +1230,7 @@ const TaskManagement: React.FC = () => {
           categoria: selectedTask.categoria,
           idAgenteAssegnato: selectedTask.agenteAssegnato?.id,
           dataScadenza: selectedTask.dataScadenza,
-          valorePotenziale: selectedTask.valorePotenziale,
+          valorePotenziale: selectedTask.valorePotenziale, // ❗ non modifichiamo col prezzo del prodotto
           note: selectedTask.note,
           cliente: { ...selectedTask.cliente },
           tags: selectedTask.tags || [],
@@ -1161,34 +1250,115 @@ const TaskManagement: React.FC = () => {
         );
       }
 
-      // 2.b. Se è stato selezionato un prodotto, aggiorna task con tag + incremento valore
-      let updatedTaskAfterProduct: Task | null = null;
+      // 2.b) NUOVO: se è stato selezionato un prodotto → crea *proposta prodotto* su BE
+      //            (sostituisce vecchio tag 'prod:<id>' + incremento ValorePotenziale)
+      let proposalsAfterPost: TaskProductProposalDto[] | null = null;
       if (selectedProdottoId !== "") {
         const baseTask = updatedTaskFromServer || selectedTask;
+        const prod = prodotti.find(
+          (p) => String(p.id) === String(selectedProdottoId)
+        );
 
-        const tagProd = `prod:${selectedProdottoId}`;
-        const tagsEsistenti = baseTask.tags ?? [];
-        const tagsAggiornati = Array.from(new Set([...tagsEsistenti, tagProd]));
-
-        const haValore =
+        const unitPriceFromUI =
           typeof valorePotenzialeProdotto === "number" &&
-          !isNaN(valorePotenzialeProdotto);
+          !isNaN(valorePotenzialeProdotto)
+            ? valorePotenzialeProdotto
+            : undefined;
 
-        const nuovoValorePotenziale = haValore
-          ? (baseTask.valorePotenziale ?? 0) + valorePotenzialeProdotto
-          : baseTask.valorePotenziale;
+        // Usa helper se esiste, altrimenti fallback inline
+        const doAddProposal = async () => {
+          if (typeof (globalThis as any).addTaskProposal === "function") {
+            await (globalThis as any).addTaskProposal(baseTask.id, {
+              productCode: String(selectedProdottoId),
+              productName: prod?.nome ?? "Prodotto",
+              quantity: 1, // se in UI aggiungi Qta, sostituisci qui
+              unitPrice:
+                unitPriceFromUI ??
+                (prod as any)?.prezzo ??
+                (prod as any)?.price ??
+                null,
+              notes: "Selezione da intervento",
+            });
+          } else {
+            // fallback diretto
+            const url = `${API_URL}/api/Tasks/${baseTask.id}/proposals`;
+            const res = await fetch(url, {
+              method: "POST",
+              headers: getAuthHeaders(),
+              body: JSON.stringify({
+                productCode: String(selectedProdottoId),
+                productName: prod?.nome ?? "Prodotto",
+                quantity: 1,
+                unitPrice:
+                  unitPriceFromUI ??
+                  (prod as any)?.prezzo ??
+                  (prod as any)?.price ??
+                  null,
+                notes: "Selezione da intervento",
+              }),
+            });
+            if (!res.ok) {
+              const t = await res.text();
+              throw new Error(`Errore proposta prodotto: ${res.status} - ${t}`);
+            }
+          }
+        };
 
-        updatedTaskAfterProduct = await updateTask(baseTask.id, {
-          valorePotenziale: nuovoValorePotenziale,
-          tags: tagsAggiornati,
-        } as Partial<Task>);
+        const doFetchProposals = async () => {
+          if (typeof (globalThis as any).fetchTaskProposals === "function") {
+            return (await (globalThis as any).fetchTaskProposals(
+              baseTask.id
+            )) as TaskProductProposalDto[];
+          } else {
+            const url = `${API_URL}/api/Tasks/${baseTask.id}/proposals`;
+            const res = await fetch(url, {
+              method: "GET",
+              headers: getAuthHeaders(),
+            });
+            if (!res.ok)
+              throw new Error(`Errore lettura proposte: ${res.status}`);
+            const json = await res.json();
+            return (json?.data ?? []) as TaskProductProposalDto[];
+          }
+        };
+
+        try {
+          await doAddProposal();
+          proposalsAfterPost = await doFetchProposals();
+          console.log(
+            "🧾 DEBUG: Proposte ricaricate:",
+            proposalsAfterPost?.length || 0
+          );
+        } catch (e) {
+          console.error(
+            "🚨 DEBUG: Errore creazione/lettura proposta prodotto:",
+            e
+          );
+          // non blocco il flusso: l'intervento resta salvato
+        }
       }
 
-      // 2.c. Se è il primo intervento, aggiorna i tag con i dati raccolti
+      // 2.d) Riallinea ValorePotenziale del task = somma delle proposte (anche se non ho aggiunto prodotti)
+      const proposalsForValue =
+        proposalsAfterPost ?? selectedTask.productProposals ?? [];
+      const newTotal = proposalsForValue
+        .filter((p) => !p.isDeleted)
+        .reduce((s, p) => s + (p.unitPrice ?? 0) * (p.quantity ?? 1), 0);
+
+      // Salvo su BE usando il PUT /api/Tasks/{id} (updateTask accetta partial)
+      try {
+        await updateTask(selectedTask.id, {
+          valorePotenziale: newTotal,
+        } as Partial<Task>);
+        console.log("💾 DEBUG: ValorePotenziale aggiornato (PUT):", newTotal);
+      } catch (e) {
+        console.warn("⚠️ DEBUG: Persistenza ValorePotenziale fallita:", e);
+      }
+
+      // 2.c) Se è il primo intervento, aggiorna i tag con i dati raccolti (come prima)
       let updatedTaskAfterExtras: Task | null = null;
       if (isFirstIntervention) {
-        const baseTask =
-          updatedTaskAfterProduct || updatedTaskFromServer || selectedTask;
+        const baseTask = updatedTaskFromServer || selectedTask;
         const extraTags: string[] = [];
 
         if (hasOtherProvider !== null)
@@ -1211,21 +1381,23 @@ const TaskManagement: React.FC = () => {
         }
       }
 
-      // 3. Aggiornamento manuale del task in memoria
+      // 3) Aggiornamento manuale del task in memoria (interventi + proposte + stato)
       console.log("🔄 DEBUG: Aggiornamento manuale del task...");
 
       const sorgenteAggiornata =
-        updatedTaskAfterExtras ||
-        updatedTaskAfterProduct ||
-        updatedTaskFromServer ||
-        selectedTask;
-
+        updatedTaskAfterExtras || updatedTaskFromServer || selectedTask;
       const nuovoStatoEffettivo =
         newIntervention.nuovoStato || sorgenteAggiornata.stato;
 
       const taskAggiornato: Task = {
         ...sorgenteAggiornata,
         interventI: [...(selectedTask.interventI || []), nuovoIntervento],
+        productProposals:
+          proposalsAfterPost ??
+          sorgenteAggiornata.productProposals ??
+          selectedTask.productProposals ??
+          [],
+        valorePotenziale: newTotal, // 👈 allinea subito la UI e la lista
         dataUltimaModifica: new Date().toISOString(),
         stato: nuovoStatoEffettivo,
         esitoChiusura:
@@ -1240,8 +1412,12 @@ const TaskManagement: React.FC = () => {
         "📊 DEBUG: Task aggiornato - nuovi interventi:",
         taskAggiornato.interventI?.length || 0
       );
+      console.log(
+        "📦 DEBUG: Task aggiornato - proposte prodotto:",
+        taskAggiornato.productProposals?.length || 0
+      );
 
-      // 4. Aggiorna stati locali
+      // 4) Aggiorna stati locali
       setTasks(
         tasks.map((task) =>
           task.id === selectedTask.id ? taskAggiornato : task
@@ -1249,17 +1425,17 @@ const TaskManagement: React.FC = () => {
       );
       setSelectedTask(taskAggiornato);
 
-      // 5. Reset form e chiudi modal
+      // 5) Reset form e chiudi modal
       resetInterventionForm();
       setShowAddInterventionModal(false);
 
-      // 6. Ricarica la lista dei task per aggiornare statistiche
+      // 6) Ricarica lista dei task per aggiornare statistiche
       fetchTasks({ page: currentPage, pageSize: itemsPerPage }).catch(
         console.warn
       );
       fetchAllTasks().catch(console.warn);
 
-      // 7. Messaggio di successo
+      // 7) Messaggio di successo
       const messaggioSuccesso =
         newIntervention.nuovoStato &&
         newIntervention.nuovoStato !== selectedTask.stato
@@ -1593,6 +1769,10 @@ const TaskManagement: React.FC = () => {
   };
 
   const handleReassignTask = (task: Task) => {
+    if (isTaskClosed(task)) {
+      alert("Il task è chiuso: non può essere riassegnato.");
+      return;
+    }
     setTaskToReassign(task);
     setShowReassignModal(true);
   };
@@ -1924,6 +2104,41 @@ const TaskManagement: React.FC = () => {
       setIsLoadingProdotti(false);
     }
   };
+
+  // POST /api/Tasks/{taskId}/proposals
+  // TODO[MG][2025-08-27]: breve motivo. Rimuovere se in futuro non necessario.
+  // const addTaskProposal = async (
+  //   taskId: string,
+  //   payload: {
+  //     productCode: string;
+  //     productName: string;
+  //     quantity: number;
+  //     unitPrice?: number | null;
+  //     notes?: string | null;
+  //   }
+  // ): Promise<TaskProductProposalDto> => {
+  //   const headers = getAuthHeaders();
+  //   const url = `${API_URL}/api/Tasks/${taskId}/proposals`;
+
+  //   const res = await fetch(url, {
+  //     method: "POST",
+  //     headers,
+  //     body: JSON.stringify(payload),
+  //   });
+
+  //   if (!res.ok) {
+  //     const t = await res.text();
+  //     throw new Error(`Errore proposta prodotto: ${res.status} - ${t}`);
+  //   }
+
+  //   const json: ApiResponseDto<TaskProductProposalDto> = await res.json();
+  //   if (!json.success || !json.data) {
+  //     throw new Error(
+  //       json.message || "Impossibile creare la proposta prodotto"
+  //     );
+  //   }
+  //   return json.data;
+  // };
 
   return (
     <div
@@ -2539,14 +2754,22 @@ const TaskManagement: React.FC = () => {
                                     </button>
                                     <button
                                       className="btn btn-outline-secondary btn-sm"
-                                      onClick={() => handleReassignTask(task)}
                                       title="Riassegna task"
+                                      disabled={isTaskClosed(task)}
+                                      onClick={() => {
+                                        if (!isTaskClosed(task))
+                                          handleReassignTask(task);
+                                      }}
                                     >
                                       <i className="fa-solid fa-user-check"></i>
                                     </button>
+
                                     <button
                                       className="btn btn-outline-info btn-sm"
+                                      title="Aggiungi intervento"
+                                      disabled={isTaskClosed(task)}
                                       onClick={() => {
+                                        if (isTaskClosed(task)) return;
                                         setSelectedTask(task);
                                         setShowAddInterventionModal(true);
                                         setNewIntervention({
@@ -2556,7 +2779,6 @@ const TaskManagement: React.FC = () => {
                                           cognomeOperatore: "Admin",
                                         });
                                       }}
-                                      title="Aggiungi intervento"
                                     >
                                       <i className="fa-solid fa-plus"></i>
                                     </button>
@@ -3021,9 +3243,26 @@ const TaskManagement: React.FC = () => {
                                 <strong>Valore:</strong>
                               </td>
                               <td>
-                                {selectedTask.valorePotenziale
-                                  ? `${selectedTask.valorePotenziale.toLocaleString()}`
-                                  : "-"}
+                                {(() => {
+                                  const tot = getProposalsTotal(selectedTask); // somma € di tutte le proposte attive
+                                  if (tot > 0) {
+                                    return `€ ${tot.toLocaleString("it-IT", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}`;
+                                  }
+                                  // fallback: se non ci sono proposte mostro l’eventuale valorePotenziale storico
+                                  return selectedTask.valorePotenziale &&
+                                    selectedTask.valorePotenziale > 0
+                                    ? `€ ${selectedTask.valorePotenziale.toLocaleString(
+                                        "it-IT",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}`
+                                    : "-";
+                                })()}
                               </td>
                             </tr>
                           </tbody>
@@ -3107,6 +3346,51 @@ const TaskManagement: React.FC = () => {
                         </table>
                       </div>
                     </div>
+
+                    {selectedTask?.productProposals &&
+                      selectedTask.productProposals.filter((p) => !p.isDeleted)
+                        .length > 0 && (
+                        <div className="row mt-2">
+                          <div className="col-12">
+                            <div className="card product-proposals-card">
+                              <div className="card-body py-2">
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                  <h6 className="mb-0">Prodotti prenotati</h6>
+                                  <span className="badge bg-secondary">
+                                    Totale €{" "}
+                                    {getProposalsTotal(selectedTask).toFixed(2)}
+                                  </span>
+                                </div>
+                                <ul className="list-unstyled mb-0 small">
+                                  {selectedTask.productProposals
+                                    .filter((p) => !p.isDeleted)
+                                    .map((p) => (
+                                      <li
+                                        key={p.id}
+                                        className="d-flex justify-content-between"
+                                      >
+                                        <span>
+                                          🛒 {p.productName}
+                                          {p.productCode
+                                            ? ` (${p.productCode})`
+                                            : ""}{" "}
+                                          × {p.quantity}
+                                        </span>
+                                        <span>
+                                          {p.unitPrice != null
+                                            ? `€ ${(
+                                                p.unitPrice * (p.quantity ?? 1)
+                                              ).toFixed(2)}`
+                                            : "-"}
+                                        </span>
+                                      </li>
+                                    ))}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                     <div className="row mt-3">
                       <div className="col-12">
@@ -3332,7 +3616,14 @@ const TaskManagement: React.FC = () => {
                   <div className="modal-footer">
                     <button
                       className="btn btn-success"
+                      title={
+                        isTaskClosed(selectedTask)
+                          ? "Il task è chiuso"
+                          : "Aggiungi intervento"
+                      }
+                      disabled={isTaskClosed(selectedTask)}
                       onClick={() => {
+                        if (isTaskClosed(selectedTask)) return;
                         setShowAddInterventionModal(true);
                         setNewIntervention({
                           ...defaultNewIntervention,
@@ -3341,20 +3632,28 @@ const TaskManagement: React.FC = () => {
                           cognomeOperatore: "Admin",
                         });
                       }}
-                      title="Aggiungi intervento"
                     >
                       <i className="fa-solid fa-plus me-1"></i>Aggiungi
                       Intervento
                     </button>
+
                     <button
                       className="btn btn-info"
+                      title={
+                        isTaskClosed(selectedTask)
+                          ? "Il task è chiuso"
+                          : "Riassegna"
+                      }
+                      disabled={isTaskClosed(selectedTask)}
                       onClick={() => {
+                        if (isTaskClosed(selectedTask)) return;
                         setShowTaskDetail(false);
                         handleReassignTask(selectedTask);
                       }}
                     >
                       <i className="fa-solid fa-user-check me-1"></i>Riassegna
                     </button>
+
                     <button
                       className="btn btn-secondary"
                       onClick={() => setShowTaskDetail(false)}
@@ -3441,7 +3740,11 @@ const TaskManagement: React.FC = () => {
                     <button
                       className="btn btn-primary"
                       onClick={confirmReassignTask}
-                      disabled={!newAssigneeId || isLoading}
+                      disabled={
+                        isTaskClosed(taskToReassign) ||
+                        !newAssigneeId ||
+                        isLoading
+                      }
                     >
                       <i
                         className={`fa-solid ${
