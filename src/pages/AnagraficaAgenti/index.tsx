@@ -92,6 +92,7 @@ interface UserDto {
   isEnabled: boolean;
   accessLevel?: string;
   twoFactorEnabled?: boolean;
+  requires2FA?: boolean;
 }
 
 interface UserExistsResponse {
@@ -886,15 +887,6 @@ const AnagraficaAgenti: React.FC = () => {
     const data = await res.json();
     await checkAccountEsistente(accountUtente?.idUser ?? agenteInModifica);
     return data;
-  };
-
-  const avviaSetup2FA = async (userId: string) => {
-    const url = `${API_URL}/api/TwoFactor/setup?userId=${encodeURIComponent(
-      userId
-    )}`;
-    const res = await fetch(url, { method: "GET", headers: getAuthHeaders() });
-    if (!res.ok) throw new Error(`Errore setup 2FA (${res.status})`);
-    // Non mostriamo il QR qui: serve solo a far mettere TwoFactorEnabled=true lato BE
   };
 
   return (
