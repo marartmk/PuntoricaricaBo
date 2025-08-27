@@ -521,16 +521,31 @@ const TaskManagement: React.FC = () => {
           HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
         >
       ) => {
-        const value =
-          e.target.type === "number"
-            ? e.target.value
-              ? parseInt(e.target.value)
-              : undefined
-            : e.target.value || undefined;
+        const el = e.target as
+          | HTMLInputElement
+          | HTMLTextAreaElement
+          | HTMLSelectElement;
+
+        let value: any;
+
+        if (field === "descrizione") {
+          // 👇 sempre stringa (anche ""), niente undefined
+          value = (el as HTMLTextAreaElement).value;
+        } else if (el.type === "number") {
+          // numeri: "" -> undefined, altrimenti Number(...) con guardia NaN
+          const raw = (el as HTMLInputElement).value.trim();
+          const n = raw === "" ? undefined : Number(raw);
+          value = Number.isNaN(n) ? undefined : n;
+        } else {
+          // altri campi testo/select: "" -> undefined
+          const raw = el.value;
+          value = raw === "" ? undefined : raw;
+        }
 
         setNewIntervention((prev) => ({
           ...prev,
           [field]: value,
+          // auto-set del tipo se cambio stato
           ...(field === "nuovoStato" && value
             ? { tipoIntervento: "Cambio Stato" }
             : {}),
@@ -2105,7 +2120,10 @@ const TaskManagement: React.FC = () => {
       } else {
         // ===== POST (CREATE) =====
         // niente valorePotenziale in creazione: viene calcolato dopo con le proposte
-        const dtoCreate = clean(basePayload);
+        const dtoCreate = {
+          ...clean(basePayload),
+          descrizione: basePayload.descrizione ?? "",
+        };
         await createTask(dtoCreate);
         alert("Task creato con successo!");
       }
@@ -4172,7 +4190,7 @@ const TaskManagement: React.FC = () => {
                         <textarea
                           className="form-control"
                           rows={newIntervention.nuovoStato ? 5 : 4}
-                          value={newIntervention.descrizione}
+                          value={newIntervention.descrizione ?? ""}
                           onChange={handleNewInterventionFieldChange(
                             "descrizione"
                           )}
