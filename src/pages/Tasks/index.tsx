@@ -206,16 +206,16 @@ const ATTIVITA_OPTIONS = [
 ];
 
 const GESTORI_OPTIONS = [
-  "Eurobet",
-  "Bet365",
-  "Sisal",
-  "Lottomatica",
-  "Snaitech",
-  "PlanetWin365",
-  "GoldBet",
-  "Stanleybet",
-  "Admiral",
-  "Altro",
+"Lis",
+"Drop point",
+"Mooney",
+"Buffetti Finance",
+"Moneynet",
+"Snaipay",
+"Euronet",
+"MBSpay",
+"MrPay",
+"aLTRO",
 ];
 
 const CONCESSIONARI_OPTIONS = [
@@ -1458,37 +1458,42 @@ const TaskManagement: React.FC = () => {
 
   // Helper per mappare i tab ai filtri
   const getFiltersForTab = (
-    tab: string,
+    tab: "tutti" | "aperti" | "completati" | "scaduti",
     searchTerm: string,
     selectedPriority: string,
     selectedCategory: string,
-    selectedAgent: string
+    selectedAgent: string,
+    selectedStatus?: string
   ) => {
     let stato: string | undefined;
     let scaduti: boolean | undefined;
 
     switch (tab) {
-      case "tutti":
-        stato = undefined;
-        break;
       case "aperti":
         stato = "Aperto";
         break;
       case "completati":
+        // per default mostro "Completato"; "Chiuso" si può selezionare dal dropdown Stato
         stato = "Completato";
         break;
       case "scaduti":
-        stato = undefined;
         scaduti = true;
         break;
+      case "tutti":
       default:
-        stato = undefined;
+        break;
+    }
+
+    // 🔁 override: se l'utente ha scelto uno stato specifico dal filtro
+    if (selectedStatus && selectedStatus !== "tutti") {
+      stato = selectedStatus as Task["stato"];
+      scaduti = undefined; // uno esclude l'altro
     }
 
     return {
       page: 1,
-      pageSize: 10,
-      search: searchTerm || undefined,
+      pageSize: itemsPerPage, // 👈 non fisso a 10
+      search: (searchTerm || "").trim() || undefined,
       stato,
       priorita: selectedPriority === "tutte" ? undefined : selectedPriority,
       categoria: selectedCategory === "tutte" ? undefined : selectedCategory,
@@ -1497,31 +1502,70 @@ const TaskManagement: React.FC = () => {
     };
   };
 
+  type FilterOverrides = Partial<{
+    activeTab: "tutti" | "aperti" | "completati" | "scaduti";
+    searchTerm: string;
+    selectedPriority: string;
+    selectedCategory: string;
+    selectedAgent: string;
+    selectedStatus: string;
+  }>;
+
   // GESTIONE FILTRI COLLEGATA ALLE API
-  const handleFilterChange = () => {
-    setCurrentPage(1);
+  const handleFilterChange = (over?: FilterOverrides) => {
+    const tab = over?.activeTab ?? activeTab;
+
     const filters = getFiltersForTab(
-      activeTab,
-      searchTerm,
-      selectedPriority,
-      selectedCategory,
-      selectedAgent
+      tab,
+      over?.searchTerm ?? searchTerm,
+      over?.selectedPriority ?? selectedPriority,
+      over?.selectedCategory ?? selectedCategory,
+      over?.selectedAgent ?? selectedAgent,
+      over?.selectedStatus ?? selectedStatus
     );
+
+    setCurrentPage(1);
     fetchTasks(filters);
   };
 
   // GESTIONE PAGINAZIONE COLLEGATA ALLE API
   const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > serverTotalPages || newPage === currentPage)
+      return;
+
     setCurrentPage(newPage);
+
+    // mappa il tab ai valori attesi dal BE
+    const statoFromTab =
+      activeTab === "aperti"
+        ? "Aperto"
+        : activeTab === "completati"
+        ? "Completato"
+        : undefined;
+
+    // il filtro Stato (dropdown) ha la precedenza sul tab
+    const stato =
+      selectedStatus && selectedStatus !== "tutti"
+        ? selectedStatus
+        : statoFromTab;
+
+    // se scegli uno stato specifico, "scaduti" non si applica
+    const scaduti =
+      selectedStatus && selectedStatus !== "tutti"
+        ? undefined
+        : activeTab === "scaduti"
+        ? true
+        : undefined;
+
     fetchTasks({
       page: newPage,
       pageSize: itemsPerPage,
-      search: searchTerm || undefined,
-      stato: activeTab === "tutti" ? undefined : activeTab,
+      search: (searchTerm || "").trim() || undefined,
+      stato,
       priorita: selectedPriority === "tutte" ? undefined : selectedPriority,
       categoria: selectedCategory === "tutte" ? undefined : selectedCategory,
       agenteId: selectedAgent === "tutti" ? undefined : selectedAgent,
-      scaduti: activeTab === "scaduti" ? true : undefined,
+      scaduti,
     });
   };
 
@@ -2457,16 +2501,10 @@ const TaskManagement: React.FC = () => {
                                     | "completati"
                                     | "scaduti";
                                   setActiveTab(newTab);
-                                  setCurrentPage(1);
-
-                                  const filters = getFiltersForTab(
-                                    tab,
-                                    searchTerm,
-                                    selectedPriority,
-                                    selectedCategory,
-                                    selectedAgent
-                                  );
-                                  fetchTasks(filters);
+                                  handleFilterChange({
+                                    activeTab: newTab,
+                                    selectedStatus,
+                                  });
                                 }}
                               >
                                 {tab.charAt(0).toUpperCase() + tab.slice(1)} (
@@ -2491,17 +2529,13 @@ const TaskManagement: React.FC = () => {
                         placeholder="Cerca per numero task, titolo, cliente..."
                         value={searchTerm}
                         onChange={(e) => {
-                          setSearchTerm(e.target.value);
-                          setCurrentPage(1);
-
-                          if (searchTimeoutRef.current) {
+                          const v = e.target.value;
+                          setSearchTerm(v);
+                          if (searchTimeoutRef.current)
                             clearTimeout(searchTimeoutRef.current);
-                          }
-
-                          searchTimeoutRef.current = setTimeout(
-                            handleFilterChange,
-                            500
-                          );
+                          searchTimeoutRef.current = setTimeout(() => {
+                            handleFilterChange({ searchTerm: v });
+                          }, 500);
                         }}
                       />
                     </div>
@@ -2513,9 +2547,9 @@ const TaskManagement: React.FC = () => {
                         className="form-select form-select-sm"
                         value={selectedPriority}
                         onChange={(e) => {
-                          setSelectedPriority(e.target.value);
-                          setCurrentPage(1);
-                          handleFilterChange();
+                          const v = e.target.value;
+                          setSelectedPriority(v);
+                          handleFilterChange({ selectedPriority: v });
                         }}
                       >
                         <option value="tutte">Tutte le priorità</option>
@@ -2530,9 +2564,9 @@ const TaskManagement: React.FC = () => {
                         className="form-select form-select-sm"
                         value={selectedAgent}
                         onChange={(e) => {
-                          setSelectedAgent(e.target.value);
-                          setCurrentPage(1);
-                          handleFilterChange();
+                          const v = e.target.value;
+                          setSelectedAgent(v);
+                          handleFilterChange({ selectedAgent: v });
                         }}
                         disabled={isLoadingAgenti}
                       >
@@ -2572,9 +2606,9 @@ const TaskManagement: React.FC = () => {
                         className="form-select form-select-sm"
                         value={selectedStatus}
                         onChange={(e) => {
-                          setSelectedStatus(e.target.value);
-                          setCurrentPage(1);
-                          handleFilterChange();
+                          const v = e.target.value;
+                          setSelectedStatus(v);
+                          handleFilterChange({ selectedStatus: v });
                         }}
                       >
                         <option value="tutti">Tutti gli stati</option>
