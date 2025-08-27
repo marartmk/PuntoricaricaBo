@@ -206,16 +206,16 @@ const ATTIVITA_OPTIONS = [
 ];
 
 const GESTORI_OPTIONS = [
-"Lis",
-"Drop point",
-"Mooney",
-"Buffetti Finance",
-"Moneynet",
-"Snaipay",
-"Euronet",
-"MBSpay",
-"MrPay",
-"aLTRO",
+  "Lis",
+  "Drop point",
+  "Mooney",
+  "Buffetti Finance",
+  "Moneynet",
+  "Snaipay",
+  "Euronet",
+  "MBSpay",
+  "MrPay",
+  "aLTRO",
 ];
 
 const CONCESSIONARI_OPTIONS = [
@@ -478,19 +478,19 @@ const TaskManagement: React.FC = () => {
   const getValidStates = (currentState: Task["stato"]): Task["stato"][] => {
     switch (currentState) {
       case "Aperto":
-        return ["In Corso", "In Attesa", "Sospeso"];
+        return ["In Corso", "In Attesa", "Sospeso", "Chiuso"];
       case "In Corso":
-        return ["In Attesa", "Completato", "Sospeso"];
+        return ["In Attesa", "Completato", "Sospeso", "Chiuso"];
       case "In Attesa":
-        return ["In Corso", "Completato", "Sospeso"];
+        return ["In Corso", "Completato", "Sospeso", "Chiuso"];
       case "Completato":
         return ["Chiuso"];
       case "Sospeso":
-        return ["Aperto", "In Corso"];
+        return ["Aperto", "In Corso", "Chiuso"];
       case "Chiuso":
         return [];
       default:
-        return [];
+        return ["Chiuso"]; // fallback prudente
     }
   };
 
