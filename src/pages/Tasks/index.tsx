@@ -11,7 +11,7 @@ import "./tasks-custom.css";
 import Sidebar from "../../components/sidebar";
 import Topbar from "../../components/topbar";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { getCurrentSession, getAuthHeaders } from "../../utils/auth";
+import HardwarePopup from "./HardwarePopup";
 
 // INTERFACCE PER TASK MANAGEMENT
 interface Cliente {
@@ -232,12 +232,6 @@ const CONCESSIONARI_OPTIONS = [
   "Altro",
 ];
 
-type TaskFilters = {
-  agenteId: string | "Tutti";
-  stato?: string;
-  testo?: string;
-};
-
 const TaskManagement: React.FC = () => {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
@@ -265,7 +259,39 @@ const TaskManagement: React.FC = () => {
 
   const currentAgentId =
     localStorage.getItem("idUser") || localStorage.getItem("userId") || ""; // fallback
-  const currentAgentName = localStorage.getItem("fullName") || "";
+
+  // presenza icona per task
+  const [hardwarePresence, setHardwarePresence] = useState<
+    Record<string, boolean>
+  >({});  
+
+  // --- hardware detector per product proposals
+  const HW_KEYWORDS = [
+    "sunmi",
+    "piatt",
+    "piatt.web",
+    "pos",
+    "lettore",
+    "device",
+    "terminal",
+  ];
+  const isHardwareProposal = (p?: TaskProductProposalDto | null) => {
+    if (!p) return false;
+    const text = `${p.productName ?? ""} ${p.productCode ?? ""}`.toLowerCase();
+    return HW_KEYWORDS.some((k) => text.includes(k));
+  };
+
+  // popup hardware per riga
+  const [hardwarePopoverForTask, setHardwarePopoverForTask] = useState<
+    string | null
+  >(null);
+  const [hardwarePopupTriggerRect, setHardwarePopupTriggerRect] =
+    useState<DOMRect | null>(null);
+
+  // cache proposte per non ricaricarle ogni volta
+  const [proposalsCache, setProposalsCache] = useState<
+    Record<string, TaskProductProposalDto[]>
+  >({});
 
   // STATI PAGINAZIONE SERVER
   const [totalCount, setTotalCount] = useState<number>(0);
@@ -849,6 +875,7 @@ const TaskManagement: React.FC = () => {
         setTasks(tasksWithInterventi);
         setTotalCount(data.data.totalCount);
         setServerTotalPages(data.data.totalPages);
+        prefetchHardwareFor(tasksWithInterventi);
         return data.data;
       } else {
         throw new Error(data.message || "Errore nel recupero tasks");
@@ -1690,6 +1717,26 @@ const TaskManagement: React.FC = () => {
     }
   }, [showNewTaskForm, editingTaskId, isAdmin, currentAgentId]);
 
+  // CHIUSURA POPOVER HARDWARE CLICKANDO FUORI
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Se clicco sul bottone hardware, non chiudo (gestito dal toggle)
+      const hardwareBtn = target.closest(".hardware-icon-btn");
+      if (hardwareBtn) return;
+
+      // Il Portal gestisce già il click outside con l'overlay
+      // Ma manteniamo questa logica per sicurezza con eventi di tastiera etc
+    };
+
+    document.addEventListener("mousedown", onDocClick, true);
+
+    return () => {
+      document.removeEventListener("mousedown", onDocClick, true);
+    };
+  }, []);
+
   // FUNZIONE TOGGLE MENU
   const toggleMenu = () => {
     const newState = menuState === "open" ? "closed" : "open";
@@ -1769,6 +1816,60 @@ const TaskManagement: React.FC = () => {
       fill: colors[stato as keyof typeof colors] || "#6c757d",
     }));
   }, [tasks]);
+
+  // DATI PER GRAFICO VENDITA HARDWARE
+  // MATERIALI VENDUTI: una fetta per ogni prodotto (no raggruppamenti)
+  const hardwareChartData = useMemo(() => {
+    // prendi TUTTE le proposte associate ai task (cache se disponibile)
+    const allProposals = tasks.flatMap((t) =>
+      (proposalsCache[t.id] ?? t.productProposals ?? []).filter(
+        (p) => !p.isDeleted
+      )
+    );
+
+    // key unica per prodotto (nome + codice se presente)
+    const getProductKey = (p: TaskProductProposalDto) => {
+      // prende solo il nome, ignorando il codice
+      return (p.productName ?? "").trim();
+    };
+
+    // somma quantità per ciascun prodotto
+    const counts: Record<string, number> = {};
+    for (const p of allProposals) {
+      const key = getProductKey(p);
+      const qty =
+        typeof p.quantity === "number" && p.quantity > 0 ? p.quantity : 1;
+      counts[key] = (counts[key] || 0) + qty;
+    }
+
+    // ordina per valore discendente (opzionale, ma rende più leggibile)
+    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+    // palette di colori (si ricicla se i prodotti superano la lunghezza)
+    const palette = [
+      "#1f77b4",
+      "#ff7f0e",
+      "#2ca02c",
+      "#d62728",
+      "#9467bd",
+      "#8c564b",
+      "#e377c2",
+      "#7f7f7f",
+      "#bcbd22",
+      "#17becf",
+      "#6f42c1",
+      "#fd7e14",
+      "#20c997",
+      "#dc3545",
+      "#0d6efd",
+    ];
+
+    return entries.map(([name, value], idx) => ({
+      name,
+      value,
+      fill: palette[idx % palette.length],
+    }));
+  }, [tasks, proposalsCache]);
 
   // BADGE FUNCTIONS
   const getPriorityBadgeClass = (priorita: string) => {
@@ -2256,6 +2357,116 @@ const TaskManagement: React.FC = () => {
     }
   };
 
+  const toggleHardwarePopover = async (
+    task: Task,
+    event?: React.MouseEvent
+  ) => {
+    // Salva il rect PRIMA di prevenire l'evento (React pooling)
+    let buttonRect: DOMRect | null = null;
+    if (event && event.currentTarget) {
+      const button = event.currentTarget as HTMLElement;
+      buttonRect = button.getBoundingClientRect();
+      event.stopPropagation();
+      event.preventDefault();
+    }
+
+    // Toggle se già aperto
+    if (hardwarePopoverForTask === task.id) {
+      setHardwarePopoverForTask(null);
+      setHardwarePopupTriggerRect(null);
+      return;
+    }
+
+    // Chiudi qualsiasi altro popup aperto
+    setHardwarePopoverForTask(null);
+    setHardwarePopupTriggerRect(null);
+
+    // Piccolo delay per evitare il "vibrating" effect
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Usa il rect salvato
+    if (buttonRect) {
+      setHardwarePopupTriggerRect(buttonRect);
+    }
+
+    // Se non ho proposte in cache e il task non le porta già → le scarico adesso
+    const already = proposalsCache[task.id] ?? task.productProposals ?? [];
+    if (!already.length) {
+      try {
+        const headers = getAuthHeaders();
+        const urlProps = `${API_URL}/api/Tasks/${task.id}/proposals`;
+        const resProps = await fetch(urlProps, { method: "GET", headers });
+        if (resProps.ok) {
+          const jsonProps = await resProps.json();
+          const list = Array.isArray(jsonProps?.data) ? jsonProps.data : [];
+          setProposalsCache((prev) => ({ ...prev, [task.id]: list }));
+        }
+      } catch (e) {
+        console.warn("Popup hardware: errore caricamento proposals", e);
+      }
+    } else {
+      setProposalsCache((prev) => ({ ...prev, [task.id]: already }));
+    }
+
+    setHardwarePopoverForTask(task.id);
+  };
+
+  // Prefetch proposte per i task visibili in lista
+  const prefetchHardwareFor = async (tasksPage: Task[]) => {
+    if (!tasksPage?.length) return;
+
+    try {
+      const headers = getAuthHeaders();
+      const results = await Promise.allSettled(
+        tasksPage.map(async (t) => {
+          // se già in cache, non ricarico
+          if (proposalsCache[t.id]?.length) {
+            const hasHW = proposalsCache[t.id].some(
+              (p) => !p.isDeleted && isHardwareProposal(p)
+            );
+            return { id: t.id, proposals: proposalsCache[t.id], hasHW };
+          }
+
+          const res = await fetch(`${API_URL}/api/Tasks/${t.id}/proposals`, {
+            method: "GET",
+            headers,
+          });
+          if (!res.ok) throw new Error(String(res.status));
+          const json = await res.json();
+          const list: TaskProductProposalDto[] = Array.isArray(json?.data)
+            ? json.data
+            : [];
+
+          const hasHW = list.some((p) => !p.isDeleted && isHardwareProposal(p));
+          return { id: t.id, proposals: list, hasHW };
+        })
+      );
+
+      // aggiorna cache e presenza icona
+      const nextCache: Record<string, TaskProductProposalDto[]> = {
+        ...proposalsCache,
+      };
+      const nextPresence: Record<string, boolean> = { ...hardwarePresence };
+
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) {
+          const { id, proposals, hasHW } = r.value as {
+            id: string;
+            proposals: TaskProductProposalDto[];
+            hasHW: boolean;
+          };
+          if (!nextCache[id]) nextCache[id] = proposals;
+          nextPresence[id] = hasHW;
+        }
+      }
+
+      setProposalsCache(nextCache);
+      setHardwarePresence(nextPresence);
+    } catch (e) {
+      console.warn("⚠️ Prefetch hardware: errore", e);
+    }
+  };
+
   // POST /api/Tasks/{taskId}/proposals
   // TODO[MG][2025-08-27]: breve motivo. Rimuovere se in futuro non necessario.
   // const addTaskProposal = async (
@@ -2452,9 +2663,10 @@ const TaskManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* STATISTICHE E GRAFICO */}
-          <div className="row mb-4">
-            <div className="col-xl-8 mb-3">
+          {/* STATISTICHE, GRAFICI & KPI */}
+          <div className="row mb-4 g-3 align-items-stretch">
+            {/* 1) Distribuzione Task per Stato */}
+            <div className="col-12 col-xl-4">
               <div className="card h-100">
                 <div className="custom-card-header">
                   <span>Distribuzione Task per Stato</span>
@@ -2469,15 +2681,18 @@ const TaskManagement: React.FC = () => {
                             data={chartData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={80}
-                            outerRadius={140}
+                            innerRadius={70}
+                            outerRadius={120}
                             paddingAngle={5}
                             dataKey="value"
                             stroke="#fff"
                             strokeWidth={3}
                           >
                             {chartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                              <Cell
+                                key={`state-cell-${index}`}
+                                fill={entry.fill}
+                              />
                             ))}
                           </Pie>
                           <Tooltip />
@@ -2505,7 +2720,7 @@ const TaskManagement: React.FC = () => {
                                 <i
                                   className="fa-solid fa-circle me-2"
                                   style={{ fontSize: "0.6rem" }}
-                                ></i>
+                                />
                                 {item.name}
                               </span>
                               <span
@@ -2527,7 +2742,93 @@ const TaskManagement: React.FC = () => {
               </div>
             </div>
 
-            <div className="col-xl-4 mb-3">
+            {/* 2) Vendita hardware (stesso layout & legenda) */}
+            <div className="col-12 col-xl-4">
+              <div className="card h-100">
+                <div className="custom-card-header">
+                  <span>Prodotti Prenotati</span>
+                  <i className="fa-solid fa-microchip"></i>
+                </div>
+                <div className="card-body">
+                  <div className="row h-100">
+                    <div className="col-md-8">
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={hardwareChartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={70}
+                            outerRadius={120}
+                            paddingAngle={5}
+                            dataKey="value"
+                            stroke="#fff"
+                            strokeWidth={3}
+                          >
+                            {hardwareChartData.map((entry, index) => (
+                              <Cell
+                                key={`hw-cell-${index}`}
+                                fill={entry.fill}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="col-md-4">
+                      <div className="h-100 d-flex flex-column justify-content-center">
+                        <div className="text-center mb-4">
+                          <h1 className="display-4 text-primary mb-2">
+                            {hardwareChartData.reduce(
+                              (acc, i) => acc + (i.value || 0),
+                              0
+                            )}
+                          </h1>
+                          <h5 className="text-muted">Prodotti Prenotati</h5>
+                        </div>
+                        <div className="d-grid gap-2">
+                          {hardwareChartData.map((item, index) => (
+                            <div
+                              key={index}
+                              className="d-flex justify-content-between align-items-center p-2 border rounded"
+                            >
+                              <span
+                                style={{ color: item.fill }}
+                                className="fw-bold"
+                              >
+                                <i
+                                  className="fa-solid fa-circle me-2"
+                                  style={{ fontSize: "0.6rem" }}
+                                />
+                                {item.name}
+                              </span>
+                              <span
+                                className="badge"
+                                style={{
+                                  backgroundColor: item.fill,
+                                  color: "white",
+                                }}
+                              >
+                                {item.value}
+                              </span>
+                            </div>
+                          ))}
+                          {hardwareChartData.length === 0 && (
+                            <div className="text-center text-muted small">
+                              Nessun prodotto hardware associato ai task
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3) KPI a destra (stessa riga) */}
+            <div className="col-12 col-xl-4">
               <div className="row h-100">
                 <div className="col-6 mb-3">
                   <div className="card bg-warning text-white h-100">
@@ -2758,6 +3059,16 @@ const TaskManagement: React.FC = () => {
                               <th>Categoria</th>
                               <th>Assegnato a</th>
                               <th>Scadenza</th>
+                              <th
+                                className="text-center"
+                                style={{ width: 48 }}
+                                title="Hardware"
+                              >
+                                <i
+                                  className="fa fa-microchip"
+                                  aria-hidden="true"
+                                ></i>
+                              </th>
                               <th>Valore</th>
                               <th>Azioni</th>
                             </tr>
@@ -2881,6 +3192,38 @@ const TaskManagement: React.FC = () => {
                                     <span className="text-muted">Nessuna</span>
                                   )}
                                 </td>
+                                {/* ...cella Scadenza... */}
+
+                                <td className="text-center hw-cell">
+                                  {(() => {
+                                    const proposals = (
+                                      task.productProposals ??
+                                      proposalsCache[task.id] ??
+                                      []
+                                    ).filter((p) => !p.isDeleted);
+                                    const hasHW =
+                                      hardwarePresence[task.id] ??
+                                      proposals.some(isHardwareProposal);
+                                    if (!hasHW) return null;
+
+                                    return (
+                                      <button
+                                        type="button"
+                                        className="btn btn-link p-0 hardware-icon-btn"
+                                        title="Prodotti proposti"
+                                        onClick={(e) =>
+                                          toggleHardwarePopover(task, e)
+                                        }
+                                      >
+                                        <i
+                                          className="fa fa-microchip"
+                                          aria-hidden="true"
+                                        ></i>
+                                      </button>
+                                    );
+                                  })()}
+                                </td>
+
                                 <td>
                                   {task.valorePotenziale ? (
                                     <span className="fw-bold text-success">
@@ -4523,6 +4866,19 @@ const TaskManagement: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* HARDWARE POPUP PORTAL */}
+      {hardwarePopoverForTask && (
+        <HardwarePopup
+          isOpen={hardwarePopoverForTask !== null}
+          onClose={() => {
+            setHardwarePopoverForTask(null);
+            setHardwarePopupTriggerRect(null);
+          }}
+          proposals={proposalsCache[hardwarePopoverForTask] ?? []}
+          triggerRect={hardwarePopupTriggerRect}
+          isHardwareProposal={isHardwareProposal}
+        />
+      )}
     </div>
   );
 };
