@@ -11,6 +11,7 @@ import "./tasks-custom.css";
 import Sidebar from "../../components/sidebar";
 import Topbar from "../../components/topbar";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { getCurrentSession, getAuthHeaders } from "../../utils/auth";
 
 // INTERFACCE PER TASK MANAGEMENT
 interface Cliente {
@@ -231,6 +232,12 @@ const CONCESSIONARI_OPTIONS = [
   "Altro",
 ];
 
+type TaskFilters = {
+  agenteId: string | "Tutti";
+  stato?: string;
+  testo?: string;
+};
+
 const TaskManagement: React.FC = () => {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
@@ -250,6 +257,16 @@ const TaskManagement: React.FC = () => {
   const [isLoadingAgenti, setIsLoadingAgenti] = useState<boolean>(false);
   const [errorAgenti, setErrorAgenti] = useState<string>("");
 
+  // GESTIONE RUOLO UTENTE
+  const userRole = (localStorage.getItem("userLevel") || "")
+    .trim()
+    .toLowerCase();
+  const isAdmin = userRole === "admin";
+
+  const currentAgentId =
+    localStorage.getItem("idUser") || localStorage.getItem("userId") || ""; // fallback
+  const currentAgentName = localStorage.getItem("fullName") || "";
+
   // STATI PAGINAZIONE SERVER
   const [totalCount, setTotalCount] = useState<number>(0);
   const [serverTotalPages, setServerTotalPages] = useState<number>(0);
@@ -260,7 +277,9 @@ const TaskManagement: React.FC = () => {
   >("aperti");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedPriority, setSelectedPriority] = useState<string>("tutte");
-  const [selectedAgent, setSelectedAgent] = useState<string>("tutti");
+  const [selectedAgent, setSelectedAgent] = useState<string>(
+    isAdmin ? "tutti" : currentAgentId || "tutti"
+  );
   const [selectedCategory, setSelectedCategory] = useState<string>("tutte");
   const [selectedStatus, setSelectedStatus] = useState<string>("tutti");
 
@@ -310,12 +329,6 @@ const TaskManagement: React.FC = () => {
     nuovoStato: undefined,
     esitoChiusuraFinale: undefined,
   };
-
-  // GESTIONE RUOLO UTENTE
-  const userRole = (localStorage.getItem("userLevel") || "")
-    .trim()
-    .toLowerCase();
-  const isAdmin = userRole === "admin";
 
   const [newIntervention, setNewIntervention] = useState<NewInterventionForm>(
     defaultNewIntervention
@@ -617,6 +630,44 @@ const TaskManagement: React.FC = () => {
 
     try {
       const headers = getAuthHeaders();
+
+      // 🔒 Se NON è admin, carico solo l’agente loggato
+      if (!isAdmin && currentAgentId) {
+        console.log(
+          "👤 User mode: carico solo l'agente corrente",
+          currentAgentId
+        );
+        const res = await fetch(`${API_URL}/api/Agenti/${currentAgentId}`, {
+          method: "GET",
+          headers,
+        });
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("isAuthenticated");
+            throw new Error("Sessione scaduta. Effettua nuovamente il login.");
+          }
+          const errorText = await res.text();
+          throw new Error(
+            `Errore nel recupero agente corrente: ${res.status} - ${errorText}`
+          );
+        }
+
+        const data: ApiResponseDto<AgenteDto> = await res.json();
+        if (data.success && data.data) {
+          setAgenti([data.data]); // <-- array con un solo agente (sé stesso)
+          console.log("✅ Agente corrente caricato");
+        } else {
+          throw new Error(
+            data.message || "Errore nel recupero agente corrente"
+          );
+        }
+
+        return; // ⛔ stop qui: non andare a prendere tutta la lista
+      }
+
+      // 🛡️ Admin: lista completa
       const url = `${API_URL}/api/Agenti?pageSize=1000`;
       console.log("🔗 URL chiamata agenti:", url);
 
@@ -639,9 +690,9 @@ const TaskManagement: React.FC = () => {
       console.log("📝 Dati ricevuti agenti:", data);
 
       if (data.success && data.data && data.data.items) {
-        console.log("✅ Agenti caricati:", data.data.items.length);
         const agentiAttivi = data.data.items.filter((agente) => agente.attivo);
         setAgenti(agentiAttivi);
+        console.log("✅ Agenti caricati:", agentiAttivi.length);
       } else {
         throw new Error(data.message || "Errore nel recupero agenti");
       }
@@ -700,6 +751,14 @@ const TaskManagement: React.FC = () => {
     try {
       const headers = getAuthHeaders();
       const params = new URLSearchParams();
+      const currentAgentId =
+        localStorage.getItem("idUser") || localStorage.getItem("userId") || "";
+
+      const effectiveAgenteId = !isAdmin
+        ? currentAgentId
+        : filters?.agenteId && filters.agenteId !== "tutti"
+        ? filters.agenteId
+        : undefined;
 
       if (filters?.page) params.append("page", filters.page.toString());
       if (filters?.pageSize)
@@ -711,8 +770,7 @@ const TaskManagement: React.FC = () => {
         params.append("priorita", filters.priorita);
       if (filters?.categoria && filters.categoria !== "tutte")
         params.append("categoria", filters.categoria);
-      if (filters?.agenteId && filters.agenteId !== "tutti")
-        params.append("agenteId", filters.agenteId);
+      if (effectiveAgenteId) params.append("agenteId", effectiveAgenteId);
       if (filters?.scaduti) params.append("scaduti", "true");
 
       const url = `${API_URL}/api/Tasks?${params.toString()}`;
@@ -1617,6 +1675,20 @@ const TaskManagement: React.FC = () => {
 
     loadInitialData();
   }, [API_URL]);
+
+  // SE NON SONO ADMIN, FORZO L'AGENTE ASSEGNATO AL PROPRIO ID
+  useEffect(() => {
+    if (!isAdmin && currentAgentId) {
+      setSelectedAgent(currentAgentId);
+    }
+  }, [isAdmin, currentAgentId]);
+
+  // QUANDO APRO IL FORM NUOVO TASK, SE NON SONO ADMIN PRECOMPILO L'AGENTE ASSEGNATO
+  useEffect(() => {
+    if (showNewTaskForm && !editingTaskId && !isAdmin && currentAgentId) {
+      setNewTask((prev) => ({ ...prev, agenteAssegnatoId: currentAgentId }));
+    }
+  }, [showNewTaskForm, editingTaskId, isAdmin, currentAgentId]);
 
   // FUNZIONE TOGGLE MENU
   const toggleMenu = () => {
@@ -2586,16 +2658,22 @@ const TaskManagement: React.FC = () => {
                           setSelectedAgent(v);
                           handleFilterChange({ selectedAgent: v });
                         }}
-                        disabled={isLoadingAgenti}
+                        disabled={!isAdmin || isLoadingAgenti}
                       >
-                        <option value="tutti">
-                          {isLoadingAgenti
-                            ? "Caricamento..."
-                            : "Tutti gli agenti"}
-                        </option>
-                        {agenti.map((agente) => (
-                          <option key={agente.id} value={agente.id}>
-                            {agente.nome} {agente.cognome}
+                        {isAdmin && (
+                          <option value="tutti">
+                            {isLoadingAgenti
+                              ? "Caricamento..."
+                              : "Tutti gli agenti"}
+                          </option>
+                        )}
+                        {(isAdmin
+                          ? agenti
+                          : agenti.filter((a) => a.id === currentAgentId)
+                        ).map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.nome} {a.cognome}
+                            {!isAdmin && " (Tu)"}
                           </option>
                         ))}
                       </select>
@@ -3105,26 +3183,36 @@ const TaskManagement: React.FC = () => {
                         <label className="form-label">Assegna a</label>
                         <select
                           className="form-select"
-                          value={newTask.agenteAssegnatoId}
-                          onChange={handleNewTaskFieldChange(
-                            "agenteAssegnatoId"
-                          )}
-                          disabled={isLoadingAgenti}
+                          value={
+                            isAdmin ? newTask.agenteAssegnatoId : currentAgentId
+                          }
+                          onChange={(e) => {
+                            if (!isAdmin) return; // blocca eventuali tentativi
+                            setNewTask((prev) => ({
+                              ...prev,
+                              agenteAssegnatoId: e.target.value,
+                            }));
+                          }}
+                          disabled={!isAdmin}
                         >
-                          <option value="">
-                            {isLoadingAgenti
-                              ? "Caricamento agenti..."
-                              : agenti.length === 0
-                              ? "⚠️ Nessun agente disponibile"
-                              : "Non assegnato"}
-                          </option>
-                          {agenti.map((agente) => (
-                            <option key={agente.id} value={agente.id}>
-                              {agente.nome} {agente.cognome} (
-                              {agente.codiceAgente})
-                              {agente.email && ` - ${agente.email}`}
-                            </option>
-                          ))}
+                          {isAdmin
+                            ? agenti.map((a) => (
+                                <option key={a.id} value={a.id}>
+                                  {a.nome} {a.cognome}{" "}
+                                  {a.codiceAgente ? `(${a.codiceAgente})` : ""}
+                                </option>
+                              ))
+                            : // User: mostra solo se stesso
+                              agenti
+                                .filter((a) => a.id === currentAgentId)
+                                .map((a) => (
+                                  <option key={a.id} value={a.id}>
+                                    {a.nome} {a.cognome}{" "}
+                                    {a.codiceAgente
+                                      ? `(${a.codiceAgente})`
+                                      : ""}
+                                  </option>
+                                ))}
                         </select>
                         {isLoadingAgenti && (
                           <small className="text-info">
