@@ -1113,15 +1113,26 @@ const GestioneAgenti: React.FC = () => {
               </button>
 
               {isAdmin && (
-                <button
-                  className="btn btn-outline-success"
-                  onClick={() => navigate("/agenti")}
-                  title="Gestisci anagrafica agenti"
-                >
-                  <i className="fa-solid fa-user-plus me-1"></i>
-                  Gestisci Agenti
-                </button>
+                <>
+                  <button
+                    className="btn btn-outline-success"
+                    onClick={() => navigate("/agenti")}
+                    title="Gestisci anagrafica agenti"
+                  >
+                    <i className="fa-solid fa-user-plus me-1"></i>
+                    Gestisci Agenti
+                  </button>
+                  <button
+                    className="btn btn-outline-info"
+                    onClick={() => navigate("/mbo")}
+                    title="Gestisci KPI e obiettivi degli agenti"
+                  >
+                    <i className="fa-solid fa-chart-bar me-1"></i>
+                    KPI/MBO
+                  </button>
+                </>
               )}
+
               <button className="btn btn-outline-primary-dark">
                 <i className="fa-solid fa-download me-1"></i>
                 Esporta

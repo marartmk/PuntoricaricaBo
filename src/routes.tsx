@@ -12,6 +12,8 @@ import EWalletAnalytics from "./pages/EWallet";
 import OnBoardingAnalytics from "./pages/EWalletOnBoarding";
 import AnagraficaAgenti from "./pages/AnagraficaAgenti";
 import TaskManagement from "./pages/Tasks";
+import Mbo from "./pages/Mbo";
+
 
 // Componente per proteggere le route
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -122,6 +124,16 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <TaskManagement />
+          </ProtectedRoute>
+        }
+      />
+
+         {/* Rotte protette */}
+      <Route
+        path="/mbo"
+        element={
+          <ProtectedRoute>
+            <Mbo />
           </ProtectedRoute>
         }
       />
