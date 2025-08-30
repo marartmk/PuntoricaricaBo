@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../pages/Dashboard/dashboard.css";
 import "./mbo-styles.css";
@@ -788,15 +788,15 @@ const MboPage: React.FC = () => {
                         <table className="table table-hover">
                           <thead className="table-primary">
                             <tr>
-                              <th width="50%">
+                              <th style={{ width: "50%" }}>
                                 <i className="fa-solid fa-box me-2"></i>
                                 Prodotto
                               </th>
-                              <th width="30%">
+                              <th style={{ width: "30%" }}>
                                 <i className="fa-solid fa-target me-2"></i>
                                 Obiettivo Mensile
                               </th>
-                              <th width="20%">
+                              <th style={{ width: "20%" }}>
                                 <i className="fa-solid fa-info-circle me-2"></i>
                                 Azioni
                               </th>
