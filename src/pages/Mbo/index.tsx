@@ -342,7 +342,7 @@ const MboPage: React.FC = () => {
 
       const result: KpiBatchResultDto = await resp.json();
 
-      // Aggiorna stato locale con i risultati “veri” dal BE
+      // Aggiorna stato locale con i risultati "veri" dal BE
       const nuovi: KpiObjective[] = result.results.map((k) => ({
         id: k.id,
         agenteId: k.agenteId,
@@ -459,7 +459,7 @@ const MboPage: React.FC = () => {
         })),
       }));
 
-      // (opzionale) aggiorna lo stato kpiData per il badge “KPI attivi”
+      // (opzionale) aggiorna lo stato kpiData per il badge "KPI attivi"
       const nuovi: KpiObjective[] = list.map((k) => ({
         id: k.id,
         agenteId: k.agenteId,
@@ -555,6 +555,13 @@ const MboPage: React.FC = () => {
                   } me-1`}
                 ></i>
                 Aggiorna
+              </button>
+              <button
+                className="btn btn-primary-dark"
+                onClick={() => navigate("/kpi-analysis")}
+              >
+                <i className="fa-solid fa-chart-line me-1"></i>
+                Analisi KPI Agenti
               </button>
               <button className="btn btn-outline-success">
                 <i className="fa-solid fa-download me-1"></i>

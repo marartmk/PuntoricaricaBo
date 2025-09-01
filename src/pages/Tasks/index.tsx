@@ -1378,6 +1378,7 @@ const TaskManagement: React.FC = () => {
                 (prod as any)?.price ??
                 null,
               notes: "Selezione da intervento",
+              agentId: currentAgentId || undefined,
             });
           } else {
             // fallback diretto
@@ -1395,6 +1396,7 @@ const TaskManagement: React.FC = () => {
                   (prod as any)?.price ??
                   null,
                 notes: "Selezione da intervento",
+                agentId: currentAgentId || undefined,
               }),
             });
             if (!res.ok) {

@@ -13,6 +13,7 @@ import OnBoardingAnalytics from "./pages/EWalletOnBoarding";
 import AnagraficaAgenti from "./pages/AnagraficaAgenti";
 import TaskManagement from "./pages/Tasks";
 import Mbo from "./pages/Mbo";
+import KpiAnalysisPage from "./pages/KpyAnalysis";
 
 
 // Componente per proteggere le route
@@ -128,12 +129,22 @@ const AppRoutes = () => {
         }
       />
 
-         {/* Rotte protette */}
+      {/* Rotte protette */}
       <Route
         path="/mbo"
         element={
           <ProtectedRoute>
             <Mbo />
+          </ProtectedRoute>
+        }
+      />
+
+       {/* Rotte protette */}
+      <Route
+        path="/kpi-analysis"
+        element={
+          <ProtectedRoute>
+            <KpiAnalysisPage />
           </ProtectedRoute>
         }
       />
