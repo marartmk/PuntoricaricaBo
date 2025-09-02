@@ -1,14 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
-  ArrowLeft,
-  Search,
-  Calendar,
-  ShoppingCart,
-  Users,
+  ArrowLeft, 
+  Calendar, 
+  UserPlus,
   BarChart,
   MonitorSmartphone,
-  Store,
   UsersRound,
   LineChart,
   TrendingUp,
@@ -45,13 +42,13 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
           <ArrowLeft className="icon" />
           <span className="item-text">Indietro</span>
         </button>
-        <button
+        {/* <button
           className="list-group-item"
           onClick={() => navigate("/ricerca-schede")}
         >
           <Search className="icon" />
           <span className="item-text">Ricerca Clienti</span>
-        </button>
+        </button> */}
         <button
           className="list-group-item"
           onClick={() => navigate("/task-management")}
@@ -66,20 +63,20 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
           <UsersRound className="icon" />
           <span className="item-text">Gestione Agenti</span>
         </button>
-        <button
+        {/* <button
           className="list-group-item"
           onClick={() => navigate("/ordini-ricambi")}
         >
           <ShoppingCart className="icon" />
           <span className="item-text">Listini Servizi</span>
-        </button>
-        <button
+        </button> */}
+        {/* <button
           className="list-group-item"
           onClick={() => navigate("/anagrafica-clienti")}
         >
           <Users className="icon" />
           <span className="item-text">Anagrafica Clienti</span>
-        </button>
+        </button> */}
         <button
           className="list-group-item"
           onClick={() => navigate("/anagrafica-agenti")}
@@ -87,13 +84,13 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
           <MonitorSmartphone className="icon" />
           <span className="item-text">Anagrafica Agenti</span>
         </button>
-        <button
+        {/* <button
           className="list-group-item"
           onClick={() => navigate("/vendite")}
         >
           <Store className="icon" />
           <span className="item-text">Vendite</span>
-        </button>
+        </button> */}
         <button className="list-group-item" onClick={() => navigate("/report")}>
           <BarChart className="icon" />
           <span className="item-text">Report</span>
@@ -123,7 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
           className="list-group-item"
           onClick={() => navigate("/elwallet-onboarding")}
         >
-          <Activity className="icon" />
+          <UserPlus className="icon" />
           <span className="item-text">e-Wallet On Boarding</span>
         </button>
       </div>

@@ -1747,9 +1747,13 @@ const TaskManagement: React.FC = () => {
   };
 
   // STATISTICHE TASKS
+
   const stats = useMemo((): TaskStats => {
     const oggi = new Date();
-    const scaduti = tasks.filter((task) => {
+    // Usa _allTasks per le statistiche globali, non tasks che è filtrato
+    const allTasksForStats = _allTasks.length > 0 ? _allTasks : tasks;
+
+    const scaduti = allTasksForStats.filter((task) => {
       if (
         !task.dataScadenza ||
         task.stato === "Completato" ||
@@ -1759,7 +1763,7 @@ const TaskManagement: React.FC = () => {
       return new Date(task.dataScadenza) < oggi;
     }).length;
 
-    const completati = tasks.filter(
+    const completati = allTasksForStats.filter(
       (task) => task.stato === "Completato" || task.stato === "Chiuso"
     );
 
@@ -1779,20 +1783,67 @@ const TaskManagement: React.FC = () => {
         : 0;
 
     return {
-      totaleTask: totalCount || tasks.length,
-      aperti: tasks.filter((t) => t.stato === "Aperto").length,
-      inCorso: tasks.filter(
+      totaleTask: totalCount || allTasksForStats.length,
+      aperti: allTasksForStats.filter((t) => t.stato === "Aperto").length,
+      inCorso: allTasksForStats.filter(
         (t) => t.stato === "In Corso" || t.stato === "In Attesa"
       ).length,
       completati: completati.length,
       scaduti,
       mediaRisoluzione: Math.round(mediaRisoluzione * 10) / 10,
-      valoreTotalePotenziale: tasks.reduce(
+      valoreTotalePotenziale: allTasksForStats.reduce(
         (acc, t) => acc + (t.valorePotenziale || 0),
         0
       ),
     };
-  }, [tasks, totalCount]);
+  }, [_allTasks, tasks, totalCount]);
+
+  // const stats = useMemo((): TaskStats => {
+  //   const oggi = new Date();
+  //   const scaduti = tasks.filter((task) => {
+  //     if (
+  //       !task.dataScadenza ||
+  //       task.stato === "Completato" ||
+  //       task.stato === "Chiuso"
+  //     )
+  //       return false;
+  //     return new Date(task.dataScadenza) < oggi;
+  //   }).length;
+
+  //   const completati = tasks.filter(
+  //     (task) => task.stato === "Completato" || task.stato === "Chiuso"
+  //   );
+
+  //   const mediaRisoluzione =
+  //     completati.length > 0
+  //       ? completati.reduce((acc, task) => {
+  //           if (task.dataChiusura) {
+  //             const giorni = Math.ceil(
+  //               (new Date(task.dataChiusura).getTime() -
+  //                 new Date(task.dataCreazione).getTime()) /
+  //                 (1000 * 60 * 60 * 24)
+  //             );
+  //             return acc + giorni;
+  //           }
+  //           return acc;
+  //         }, 0) / completati.length
+  //       : 0;
+
+  //   return {
+  //     totaleTask: totalCount || tasks.length,
+  //     aperti: tasks.filter((t) => t.stato === "Aperto").length,
+  //     inCorso: tasks.filter(
+  //       (t) => t.stato === "In Corso" || t.stato === "In Attesa"
+  //     ).length,
+  //     completati: completati.length,
+  //     scaduti,
+  //     mediaRisoluzione: Math.round(mediaRisoluzione * 10) / 10,
+  //     valoreTotalePotenziale: tasks.reduce(
+  //       (acc, t) => acc + (t.valorePotenziale || 0),
+  //       0
+  //     ),
+  //   };
+  // }, [tasks, totalCount]);
 
   // DATI PER GRAFICO STATI
   const chartData = useMemo(() => {
