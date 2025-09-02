@@ -263,7 +263,7 @@ const TaskManagement: React.FC = () => {
   // presenza icona per task
   const [hardwarePresence, setHardwarePresence] = useState<
     Record<string, boolean>
-  >({});  
+  >({});
 
   // --- hardware detector per product proposals
   const HW_KEYWORDS = [
@@ -1872,6 +1872,28 @@ const TaskManagement: React.FC = () => {
       fill: palette[idx % palette.length],
     }));
   }, [tasks, proposalsCache]);
+
+  // PRODOTTI DISPONIBILI PER PROPOSTA
+  const getAvailableProducts = useMemo(() => {
+    if (!selectedTask || !prodotti.length) return prodotti;
+
+    // Ottieni le proposte attive del task corrente
+    const existingProposals = (
+      selectedTask.productProposals ??
+      proposalsCache[selectedTask.id] ??
+      []
+    ).filter((p) => !p.isDeleted);
+
+    // Estrai i productCode (che corrispondono agli id dei prodotti) già prenotati
+    const bookedProductIds = existingProposals.map((p) =>
+      String(p.productCode)
+    );
+
+    // Filtra i prodotti escludendo quelli già prenotati
+    return prodotti.filter(
+      (produto) => !bookedProductIds.includes(String(produto.id))
+    );
+  }, [prodotti, selectedTask, proposalsCache]);
 
   // BADGE FUNCTIONS
   const getPriorityBadgeClass = (priorita: string) => {
@@ -4675,14 +4697,37 @@ const TaskManagement: React.FC = () => {
                             <option value="">
                               {isLoadingProdotti
                                 ? "Caricamento prodotti..."
+                                : getAvailableProducts.length === 0
+                                ? "Nessun prodotto disponibile"
                                 : "Seleziona prodotto"}
                             </option>
-                            {prodotti.map((p) => (
+                            {getAvailableProducts.map((p) => (
                               <option key={p.id} value={p.id}>
                                 {p.nome}
                               </option>
                             ))}
                           </select>
+                          {/* Messaggio informativo se tutti i prodotti sono già prenotati */}
+                          {!isLoadingProdotti &&
+                            getAvailableProducts.length === 0 &&
+                            prodotti.length > 0 && (
+                              <small className="text-muted d-block mt-1">
+                                <i className="fa-solid fa-info-circle me-1"></i>
+                                Tutti i prodotti sono già stati prenotati per
+                                questo task
+                              </small>
+                            )}
+                          {/* Messaggio informativo sui prodotti esclusi */}
+                          {!isLoadingProdotti &&
+                            getAvailableProducts.length < prodotti.length &&
+                            getAvailableProducts.length > 0 && (
+                              <small className="text-info d-block mt-1">
+                                <i className="fa-solid fa-filter me-1"></i>
+                                {prodotti.length -
+                                  getAvailableProducts.length}{" "}
+                                prodotto/i già prenotato/i per questo task
+                              </small>
+                            )}
                           {errorProdotti && (
                             <small className="text-danger d-block mt-1">
                               {errorProdotti}

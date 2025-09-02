@@ -850,7 +850,41 @@ const KpiAnalysisPage: React.FC = () => {
                                         return [value, "Vendite"];
                                       return [value, name];
                                     }}
+                                    // 👇 NUOVO: percentuale in etichetta
+                                    labelFormatter={(label, payload) => {
+                                      const p = payload && payload[0]?.payload;
+                                      const objective = Number(
+                                        p?.objective || 0
+                                      );
+                                      const sales = Number(p?.sales || 0);
+                                      const perc =
+                                        objective > 0
+                                          ? (sales / objective) * 100
+                                          : 0;
+
+                                      return (
+                                        <div
+                                          style={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                          }}
+                                        >
+                                          <span style={{ fontWeight: 700 }}>
+                                            {label}
+                                          </span>
+                                          <span
+                                            style={{
+                                              color: "#dc3545",
+                                              fontWeight: 600,
+                                            }}
+                                          >
+                                            Raggiungimento: {perc.toFixed(1)}%
+                                          </span>
+                                        </div>
+                                      );
+                                    }}
                                   />
+
                                   <Legend
                                     wrapperStyle={{ fontSize: "12px" }}
                                     formatter={(value) => {
