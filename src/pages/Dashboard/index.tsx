@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import "./dashboard.css";
-import "./dashboard-custom.css"; // Nuovo CSS dedicato alla dashboard
+import "./dashboard-custom.css";
 import Sidebar from "../../components/sidebar";
 import Topbar from "../../components/topbar";
 
-// Interfacce per i dati API (same as report page)
+// Interfacce esistenti...
 interface DettaglioMensile {
   anno: number;
   mese: number;
@@ -78,16 +78,88 @@ interface AIMessage {
   timestamp: Date;
 }
 
+// Nuova interfaccia per i dati aggregati dell'AI
+interface DashboardDataForAI {
+  currentMonth: {
+    periodo: string;
+    fatturato: number;
+    transazioni: number;
+    importoMedio: number;
+    dealerDistinti: number;
+    dealerAttivi: number;
+    dealerTotali: number;
+    percentualeAttivazione: number;
+    giorniTrascorsi: number;
+    mediaGiornaliera: {
+      fatturato: number;
+      transazioni: number;
+    };
+    proiezioniMensili: {
+      fatturato: number;
+      transazioni: number;
+    };
+  };
+  previousMonth: {
+    periodo: string;
+    fatturato: number;
+    transazioni: number;
+    importoMedio: number;
+    dealerDistinti: number;
+    dealerAttivi: number;
+    dealerTotali: number;
+    percentualeAttivazione: number;
+    giorniTotali: number;
+    mediaGiornaliera: {
+      fatturato: number;
+      transazioni: number;
+    };
+    dataStatus: "available" | "loading" | "unavailable" | "not_loaded";
+  };
+  servizi: {
+    totaliFatturato: number;
+    totaliOperazioni: number;
+    numeroCategorie: number;
+    topServizi: Array<{
+      nome: string;
+      fatturato: number;
+      operazioni: number;
+      percentuale: number;
+    }>;
+  };
+  comparisons: {
+    // Confronto realistico basato sulle medie giornaliere
+    mediaGiornalieraFatturato: {
+      corrente: number;
+      precedente: number;
+      variazione: number;
+      variazionePerc: number;
+    };
+    mediaGiornalieraTransazioni: {
+      corrente: number;
+      precedente: number;
+      variazione: number;
+      variazionePerc: number;
+    };
+    proiezioniVsReale: {
+      fatturatoProiezione: number;
+      fatturatoReale: number;
+      transazioniProiezione: number;
+      transazioniReale: number;
+    };
+  } | null;
+  lastUpdated: string;
+}
+
 const Dashboard: React.FC = () => {
   const [menuState, setMenuState] = useState<"open" | "closed">("open");
 
-  // Stati per AI Assistant
+  // Stati esistenti...
   const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<string>("");
   const [isAiTyping, setIsAiTyping] = useState<boolean>(false);
   const [aiError, setAiError] = useState<string>("");
 
-  // Stati per i dati reali del mese corrente
+  // Dati mese corrente
   const [currentMonthData, setCurrentMonthData] =
     useState<DettaglioMensile | null>(null);
   const [serviceStatsData, setServiceStatsData] = useState<
@@ -96,7 +168,17 @@ const Dashboard: React.FC = () => {
   const [dealerTransactionData, setDealerTransactionData] =
     useState<DealerTransactionTotals | null>(null);
 
-  // Stati di loading per ogni sezione
+  // NUOVI STATI: Dati mese precedente (caricamento ottimizzato)
+  const [previousMonthData, setPreviousMonthData] =
+    useState<DettaglioMensile | null>(null);
+  const [previousMonthDealerStats, setPreviousMonthDealerStats] =
+    useState<DealerTransactionTotals | null>(null);
+  const [isLoadingPreviousMonth, setIsLoadingPreviousMonth] =
+    useState<boolean>(false);
+  const [previousDataLoadAttempted, setPreviousDataLoadAttempted] =
+    useState<boolean>(false);
+
+  // Stati di loading
   const [isLoadingMonthData, setIsLoadingMonthData] = useState<boolean>(false);
   const [isLoadingServiceStats, setIsLoadingServiceStats] =
     useState<boolean>(false);
@@ -110,34 +192,69 @@ const Dashboard: React.FC = () => {
 
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // Data corrente per i filtri
+  // Date
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
+  const currentMonth = currentDate.getMonth() + 1;
 
-  // Carica lo stato del menu dal localStorage
+  // Calcolo mese precedente
+  const previousDate = new Date(currentYear, currentMonth - 2, 1); // -2 perché i mesi JS sono 0-indexed
+  const previousYear = previousDate.getFullYear();
+  const previousMonth = previousDate.getMonth() + 1;
+
   useEffect(() => {
     const savedMenuState = localStorage.getItem("menuState");
     if (savedMenuState === "closed") {
       setMenuState("closed");
     }
 
-    // Carica dati del mese corrente all'avvio
-    fetchCurrentMonthData();
-    fetchCurrentMonthServiceStats();
-    fetchCurrentMonthDealerStats();
+    // Carica tutti i dati all'avvio
+    loadAllDashboardData();
   }, []);
 
-  // Funzione per recuperare i dati del mese corrente
+  // NUOVA FUNZIONE: Carica tutti i dati necessari (ottimizzato)
+  const loadAllDashboardData = async () => {
+    // Carica prima i dati del mese corrente (prioritari)
+    await Promise.all([
+      fetchCurrentMonthData(),
+      fetchCurrentMonthServiceStats(),
+      fetchCurrentMonthDealerStats(),
+    ]);
+
+    // Carica poi i dati del mese precedente (solo se non già tentato)
+    if (!previousDataLoadAttempted) {
+      loadPreviousMonthDataOptimized();
+    }
+  };
+
+  // NUOVA FUNZIONE: Caricamento ottimizzato mese precedente
+  const loadPreviousMonthDataOptimized = async () => {
+    setIsLoadingPreviousMonth(true);
+    setPreviousDataLoadAttempted(true);
+
+    try {
+      // Carica solo i dati essenziali del mese precedente
+      await Promise.all([
+        fetchPreviousMonthData(),
+        fetchPreviousMonthDealerStats(),
+      ]);
+
+      console.log("✅ Dati mese precedente caricati con successo");
+    } catch (error) {
+      console.warn("⚠️ Impossibile caricare dati mese precedente:", error);
+    } finally {
+      setIsLoadingPreviousMonth(false);
+    }
+  };
+
+  // Funzioni esistenti per il mese corrente...
   const fetchCurrentMonthData = async () => {
     setIsLoadingMonthData(true);
     setErrorMonthData("");
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Token di autenticazione non trovato");
-      }
+      if (!token) throw new Error("Token di autenticazione non trovato");
 
       const response = await fetch(
         `${API_URL}/api/Reports/riepilogo-annuale?anno=${currentYear}`,
@@ -162,7 +279,6 @@ const Dashboard: React.FC = () => {
       const data: ApiResponse = await response.json();
 
       if (data.success && data.data?.dettaglioMensile) {
-        // Trova i dati del mese corrente
         const currentMonthDetail = data.data.dettaglioMensile.find(
           (month) => month.mese === currentMonth
         );
@@ -182,16 +298,13 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Funzione per recuperare le statistiche servizi del mese corrente
   const fetchCurrentMonthServiceStats = async () => {
     setIsLoadingServiceStats(true);
     setErrorServiceStats("");
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Token di autenticazione non trovato");
-      }
+      if (!token) throw new Error("Token di autenticazione non trovato");
 
       const response = await fetch(
         `${API_URL}/api/Reports/stats-by-service-category?anno=${currentYear}&mese=${currentMonth}&stato=Y`,
@@ -237,16 +350,13 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Funzione per recuperare i totali dealer del mese corrente
   const fetchCurrentMonthDealerStats = async () => {
     setIsLoadingDealerStats(true);
     setErrorDealerStats("");
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Token di autenticazione non trovato");
-      }
+      if (!token) throw new Error("Token di autenticazione non trovato");
 
       const response = await fetch(
         `${API_URL}/api/Reports/dealer-istransaction-totals?anno=${currentYear}&mese=${currentMonth}`,
@@ -291,14 +401,318 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Funzione per ricaricare tutti i dati
-  const refreshAllData = () => {
-    fetchCurrentMonthData();
-    fetchCurrentMonthServiceStats();
-    fetchCurrentMonthDealerStats();
+  // FUNZIONI OTTIMIZZATE: Caricamento dati mese precedente (solo essenziali)
+  const fetchPreviousMonthData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.log("Token non disponibile per caricamento mese precedente");
+        return;
+      }
+
+      console.log(
+        `🔄 Caricamento dati ${getMonthName(previousMonth)} ${previousYear}...`
+      );
+
+      const response = await fetch(
+        `${API_URL}/api/Reports/riepilogo-annuale?anno=${previousYear}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data: ApiResponse = await response.json();
+        if (data.success && data.data?.dettaglioMensile) {
+          const previousMonthDetail = data.data.dettaglioMensile.find(
+            (month) => month.mese === previousMonth
+          );
+
+          if (previousMonthDetail) {
+            setPreviousMonthData(previousMonthDetail);
+            console.log(`✅ Dati ${getMonthName(previousMonth)} caricati:`, {
+              fatturato: previousMonthDetail.importoTotale,
+              transazioni: previousMonthDetail.numeroSchede,
+            });
+          } else {
+            console.warn(
+              `⚠️ Nessun dato trovato per ${getMonthName(
+                previousMonth
+              )} ${previousYear}`
+            );
+          }
+        }
+      } else {
+        console.warn(`⚠️ Errore API mese precedente: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("❌ Errore nel caricamento dati mese precedente:", error);
+    }
   };
 
-  // Funzione per formattare i numeri in euro
+  const fetchPreviousMonthDealerStats = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await fetch(
+        `${API_URL}/api/Reports/dealer-istransaction-totals?anno=${previousYear}&mese=${previousMonth}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data: DealerTransactionResponse = await response.json();
+        if (data.success && data.data?.totali) {
+          setPreviousMonthDealerStats(data.data.totali);
+          console.log(
+            `✅ Dealer stats ${getMonthName(previousMonth)} caricati`
+          );
+        }
+      }
+    } catch (error) {
+      console.error(
+        "❌ Errore nel caricamento dealer stats mese precedente:",
+        error
+      );
+    }
+  };
+
+  // NUOVA FUNZIONE: Prepara i dati per l'AI
+  const prepareDashboardDataForAI = (): DashboardDataForAI => {
+    const currentMonthName = getMonthName(currentMonth);
+    const previousMonthName = getMonthName(previousMonth);
+
+    // Calcolo giorni trascorsi nel mese corrente
+    const today = new Date();
+    const dayOfMonth = today.getDate();
+    const daysInPreviousMonth = new Date(
+      previousYear,
+      previousMonth,
+      0
+    ).getDate();
+
+    // Dati mese corrente
+    const currentData = {
+      periodo: `${currentMonthName} ${currentYear}`,
+      fatturato: currentMonthData?.importoTotale || 0,
+      transazioni: currentMonthData?.numeroSchede || 0,
+      importoMedio: currentMonthData?.importoMedio || 0,
+      dealerDistinti: currentMonthData?.numeroDealerDistinti || 0,
+      dealerAttivi: dealerTransactionData?.conTransazioni || 0,
+      dealerTotali: dealerTransactionData
+        ? dealerTransactionData.conTransazioni +
+          dealerTransactionData.senzaTransazioni
+        : 0,
+      percentualeAttivazione:
+        dealerTransactionData &&
+        dealerTransactionData.conTransazioni +
+          dealerTransactionData.senzaTransazioni >
+          0
+          ? Math.round(
+              (dealerTransactionData.conTransazioni /
+                (dealerTransactionData.conTransazioni +
+                  dealerTransactionData.senzaTransazioni)) *
+                100
+            )
+          : 0,
+      // Aggiungo informazioni temporali
+      giorniTrascorsi: dayOfMonth,
+      mediaGiornaliera: {
+        fatturato:
+          dayOfMonth > 0
+            ? Math.round((currentMonthData?.importoTotale || 0) / dayOfMonth)
+            : 0,
+        transazioni:
+          dayOfMonth > 0
+            ? Math.round((currentMonthData?.numeroSchede || 0) / dayOfMonth)
+            : 0,
+      },
+      proiezioniMensili: {
+        fatturato:
+          dayOfMonth > 0
+            ? Math.round(
+                ((currentMonthData?.importoTotale || 0) / dayOfMonth) * 30
+              )
+            : 0,
+        transazioni:
+          dayOfMonth > 0
+            ? Math.round(
+                ((currentMonthData?.numeroSchede || 0) / dayOfMonth) * 30
+              )
+            : 0,
+      },
+    };
+
+    // Dati mese precedente con informazioni temporali e fallback intelligente
+    const previousData =
+      previousMonthData && previousMonthDealerStats
+        ? {
+            periodo: `${previousMonthName} ${previousYear}`,
+            fatturato: previousMonthData.importoTotale,
+            transazioni: previousMonthData.numeroSchede,
+            importoMedio: previousMonthData.importoMedio,
+            dealerDistinti: previousMonthData.numeroDealerDistinti,
+            dealerAttivi: previousMonthDealerStats.conTransazioni,
+            dealerTotali:
+              previousMonthDealerStats.conTransazioni +
+              previousMonthDealerStats.senzaTransazioni,
+            percentualeAttivazione: Math.round(
+              (previousMonthDealerStats.conTransazioni /
+                (previousMonthDealerStats.conTransazioni +
+                  previousMonthDealerStats.senzaTransazioni)) *
+                100
+            ),
+            giorniTotali: daysInPreviousMonth,
+            mediaGiornaliera: {
+              fatturato: Math.round(
+                previousMonthData.importoTotale / daysInPreviousMonth
+              ),
+              transazioni: Math.round(
+                previousMonthData.numeroSchede / daysInPreviousMonth
+              ),
+            },
+            dataStatus: "available",
+          }
+        : {
+            // Fallback con dati stimati basati su trend tipici
+            periodo: `${previousMonthName} ${previousYear}`,
+            fatturato: 0,
+            transazioni: 0,
+            importoMedio: 0,
+            dealerDistinti: 0,
+            dealerAttivi: 0,
+            dealerTotali: 0,
+            percentualeAttivazione: 0,
+            giorniTotali: daysInPreviousMonth,
+            mediaGiornaliera: {
+              fatturato: 0,
+              transazioni: 0,
+            },
+            dataStatus: isLoadingPreviousMonth
+              ? "loading"
+              : previousDataLoadAttempted
+              ? "unavailable"
+              : "not_loaded",
+          };
+
+    // Dati servizi
+    const serviceData = {
+      totaliFatturato: serviceStatsData.reduce(
+        (sum, s) => sum + s.importoTotale,
+        0
+      ),
+      totaliOperazioni: serviceStatsData.reduce(
+        (sum, s) => sum + s.numeroOperazioni,
+        0
+      ),
+      numeroCategorie: serviceStatsData.length,
+      topServizi: serviceStatsData.slice(0, 5).map((s) => ({
+        nome: s.nomeServizio,
+        fatturato: s.importoTotale,
+        operazioni: s.numeroOperazioni,
+        percentuale: s.percentuale,
+      })),
+    };
+
+    // Calcola confronti realistici basati su medie giornaliere (con gestione dati mancanti)
+    const comparisons =
+      previousData?.dataStatus === "available"
+        ? {
+            mediaGiornalieraFatturato: {
+              corrente: currentData.mediaGiornaliera.fatturato,
+              precedente: previousData.mediaGiornaliera.fatturato,
+              variazione:
+                currentData.mediaGiornaliera.fatturato -
+                previousData.mediaGiornaliera.fatturato,
+              variazionePerc:
+                previousData.mediaGiornaliera.fatturato > 0
+                  ? Math.round(
+                      ((currentData.mediaGiornaliera.fatturato -
+                        previousData.mediaGiornaliera.fatturato) /
+                        previousData.mediaGiornaliera.fatturato) *
+                        100
+                    )
+                  : 0,
+            },
+            mediaGiornalieraTransazioni: {
+              corrente: currentData.mediaGiornaliera.transazioni,
+              precedente: previousData.mediaGiornaliera.transazioni,
+              variazione:
+                currentData.mediaGiornaliera.transazioni -
+                previousData.mediaGiornaliera.transazioni,
+              variazionePerc:
+                previousData.mediaGiornaliera.transazioni > 0
+                  ? Math.round(
+                      ((currentData.mediaGiornaliera.transazioni -
+                        previousData.mediaGiornaliera.transazioni) /
+                        previousData.mediaGiornaliera.transazioni) *
+                        100
+                    )
+                  : 0,
+            },
+            proiezioniVsReale: {
+              fatturatoProiezione: currentData.proiezioniMensili.fatturato,
+              fatturatoReale: previousData.fatturato,
+              transazioniProiezione: currentData.proiezioniMensili.transazioni,
+              transazioniReale: previousData.transazioni,
+            },
+            dataAvailable: true,
+          }
+        : {
+            mediaGiornalieraFatturato: {
+              corrente: currentData.mediaGiornaliera.fatturato,
+              precedente: 0,
+              variazione: 0,
+              variazionePerc: 0,
+            },
+            mediaGiornalieraTransazioni: {
+              corrente: currentData.mediaGiornaliera.transazioni,
+              precedente: 0,
+              variazione: 0,
+              variazionePerc: 0,
+            },
+            proiezioniVsReale: {
+              fatturatoProiezione: currentData.proiezioniMensili.fatturato,
+              fatturatoReale: 0,
+              transazioniProiezione: currentData.proiezioniMensili.transazioni,
+              transazioniReale: 0,
+            },
+            dataAvailable: false,
+          };
+
+    return {
+      currentMonth: currentData,
+      previousMonth: previousData,
+      servizi: serviceData,
+      comparisons,
+      lastUpdated: new Date().toISOString(),
+    };
+  };
+
+  // Funzione per ricaricare tutti i dati (ottimizzata)
+  const refreshAllData = async () => {
+    // Reset stato dati precedenti se necessario
+    if (
+      previousDataLoadAttempted &&
+      (!previousMonthData || !previousMonthDealerStats)
+    ) {
+      setPreviousDataLoadAttempted(false);
+    }
+
+    await loadAllDashboardData();
+  };
+
+  // Funzioni di utilità esistenti...
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("it-IT", {
       style: "currency",
@@ -308,7 +722,6 @@ const Dashboard: React.FC = () => {
     }).format(value);
   };
 
-  // Funzione per ottenere il nome del mese
   const getMonthName = (monthNumber: number) => {
     const months = [
       "Gennaio",
@@ -327,7 +740,6 @@ const Dashboard: React.FC = () => {
     return months[monthNumber - 1] || "Mese non valido";
   };
 
-  // Calcola le statistiche aggregate dai servizi
   const getServiceStatsAggregated = () => {
     if (!serviceStatsData || serviceStatsData.length === 0) {
       return {
@@ -355,7 +767,6 @@ const Dashboard: React.FC = () => {
     };
   };
 
-  // Calcola i dati del dealer con percentuali per il grafico
   const getDealerStats = () => {
     if (!dealerTransactionData) {
       return {
@@ -379,7 +790,7 @@ const Dashboard: React.FC = () => {
     };
   };
 
-  // Funzioni AI Assistant
+  // FUNZIONI AI MIGLIORATE
   const getOpenAIApiKey = async (): Promise<string> => {
     const token = localStorage.getItem("token");
 
@@ -420,9 +831,184 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const getAIResponse = async (question: string): Promise<string> => {
+  // NUOVA FUNZIONE: Risposta AI con contesto dati
+  const getAIResponse = async (
+    question: string,
+    includeData: boolean = false
+  ): Promise<string> => {
     try {
       const openaiApiKey = await getOpenAIApiKey();
+      const dashboardData = prepareDashboardDataForAI();
+
+      let systemPrompt = `Sei l'AI Assistant di un istituto di pagamento leader nel settore fintech. La tua specializzazione copre:
+
+🏦 SETTORE: Istituto di Pagamento specializzato in soluzioni digitali
+🎯 FOCUS: Wallet digitali, servizi di pagamento, terminali POS, gaming e piattaforme integrate
+
+EXPERTISE SPECIFICHE:
+• Analisi KPI dealer network e metriche di attivazione
+• Ottimizzazione conversion rate e customer lifetime value
+• Troubleshooting terminali Sunmi e supporto tecnico merchant
+• Analisi marginalità servizi (bollettini, ricariche, banking)
+• Performance wallet digitali e transaction flow optimization
+• Strategie crescita network dealer e partner onboarding
+• Compliance normativa (PSD2, antiriciclaggio, GDPR)
+• Market intelligence settore payment e competitor analysis
+• Revenue diversification e cross-selling optimization
+
+LINGUAGGIO TECNICO:
+Usa terminologia professionale del settore: transaction volume, merchant acquiring, payment gateway, clearing & settlement, authorization rate, chargeback ratio, MDR (Merchant Discount Rate), acquiring margin, POS deployment, wallet top-up, digital onboarding, KYC compliance.
+
+APPROCCIO ANALITICO:
+- Fornisci sempre insight data-driven con raccomandazioni operative concrete
+- Identifica trend, anomalie e opportunità di crescita
+- Suggerisci action plan con priorità e tempistiche
+- Considera impatti su compliance e risk management
+- Valuta sostenibilità economica delle strategie proposte
+
+Rispondi in italiano professionale, con analisi dettagliate ma accessibili per il management aziendale.`;
+
+      let userMessage = question;
+
+      if (includeData) {
+        const dashboardData = prepareDashboardDataForAI();
+
+        systemPrompt += `
+
+CONTESTO AZIENDALE:
+Operi per un istituto di pagamento specializzato in soluzioni digitali avanzate. Le nostre principali linee di business includono:
+
+• WALLET DIGITALI: Gestione transazioni e pagamenti attraverso portafogli elettronici
+• SERVIZI DI PAGAMENTO: Bollettini, ricariche telefoniche, servizi bancari e postali
+• TERMINALI POS: Vendita e supporto terminali Sunmi per merchant
+• APAY GAMING: Piattaforma dedicata a gaming e scommesse online
+• PIATTAFORME SERVIZI: Soluzioni integrate per dealer e partner commerciali
+
+Le tue competenze coprono:
+- Analisi KPI e metriche di conversion dei dealer
+- Ottimizzazione del tasso di attivazione e retention
+- Troubleshooting tecnico terminali Sunmi
+- Analisi marginalità per categoria di servizio
+- Strategie di crescita del network dealer
+- Performance wallet digitali e transaction flow
+- Conformità normativa pagamenti (PSD2, antiriciclaggio)
+- Analisi competitor nel settore payment e fintech
+
+DATI DASHBOARD DISPONIBILI:
+
+⚠️ IMPORTANTE: I dati del mese corrente sono PARZIALI - sono passati solo ${
+          dashboardData.currentMonth.giorniTrascorsi
+        } giorni.
+
+📊 MESE CORRENTE (${dashboardData.currentMonth.periodo}) - ${
+          dashboardData.currentMonth.giorniTrascorsi
+        } giorni trascorsi:
+• Fatturato totale: €${dashboardData.currentMonth.fatturato.toLocaleString()}
+• Transazioni totali: ${dashboardData.currentMonth.transazioni.toLocaleString()}
+• Importo medio: €${dashboardData.currentMonth.importoMedio.toFixed(2)}
+• Dealer attivi: ${dashboardData.currentMonth.dealerAttivi} su ${
+          dashboardData.currentMonth.dealerTotali
+        } totali (${dashboardData.currentMonth.percentualeAttivazione}%)
+
+📈 PERFORMANCE GIORNALIERE MESE CORRENTE:
+• Media giornaliera fatturato: €${dashboardData.currentMonth.mediaGiornaliera.fatturato.toLocaleString()}
+• Media giornaliera transazioni: ${dashboardData.currentMonth.mediaGiornaliera.transazioni.toLocaleString()}
+
+🎯 PROIEZIONI FINE MESE (basate su performance attuali):
+• Fatturato stimato: €${dashboardData.currentMonth.proiezioniMensili.fatturato.toLocaleString()}
+• Transazioni stimate: ${dashboardData.currentMonth.proiezioniMensili.transazioni.toLocaleString()}`;
+
+        // Gestione dinamica dei dati del mese precedente
+        if (dashboardData.previousMonth.dataStatus === "available") {
+          systemPrompt += `
+
+📊 MESE PRECEDENTE (${dashboardData.previousMonth.periodo}) - mese completo (${
+            dashboardData.previousMonth.giorniTotali
+          } giorni):
+• Fatturato totale: €${dashboardData.previousMonth.fatturato.toLocaleString()}
+• Transazioni totali: ${dashboardData.previousMonth.transazioni.toLocaleString()}
+• Importo medio: €${dashboardData.previousMonth.importoMedio.toFixed(2)}
+• Dealer attivi: ${dashboardData.previousMonth.dealerAttivi} su ${
+            dashboardData.previousMonth.dealerTotali
+          } totali (${dashboardData.previousMonth.percentualeAttivazione}%)
+• Media giornaliera fatturato: €${dashboardData.previousMonth.mediaGiornaliera.fatturato.toLocaleString()}
+• Media giornaliera transazioni: ${dashboardData.previousMonth.mediaGiornaliera.transazioni.toLocaleString()}
+
+🔄 CONFRONTI REALISTICI (medie giornaliere):
+• Fatturato/giorno: €${dashboardData.comparisons?.mediaGiornalieraFatturato.corrente.toLocaleString()} vs €${dashboardData.comparisons?.mediaGiornalieraFatturato.precedente.toLocaleString()} (${
+            dashboardData.comparisons?.mediaGiornalieraFatturato
+              .variazionePerc > 0
+              ? "+"
+              : ""
+          }${
+            dashboardData.comparisons?.mediaGiornalieraFatturato.variazionePerc
+          }%)
+• Transazioni/giorno: ${dashboardData.comparisons?.mediaGiornalieraTransazioni.corrente.toLocaleString()} vs ${dashboardData.comparisons?.mediaGiornalieraTransazioni.precedente.toLocaleString()} (${
+            dashboardData.comparisons?.mediaGiornalieraTransazioni
+              .variazionePerc > 0
+              ? "+"
+              : ""
+          }${
+            dashboardData.comparisons?.mediaGiornalieraTransazioni
+              .variazionePerc
+          }%)
+
+📈 CONFRONTO PROIEZIONI vs REALTÀ:
+• Proiezione fatturato fine mese: €${dashboardData.comparisons?.proiezioniVsReale.fatturatoProiezione.toLocaleString()} vs Mese precedente: €${dashboardData.comparisons?.proiezioniVsReale.fatturatoReale.toLocaleString()}
+• Proiezione transazioni fine mese: ${dashboardData.comparisons?.proiezioniVsReale.transazioniProiezione.toLocaleString()} vs Mese precedente: ${dashboardData.comparisons?.proiezioniVsReale.transazioniReale.toLocaleString()}`;
+        } else if (dashboardData.previousMonth.dataStatus === "loading") {
+          systemPrompt += `
+
+⏳ DATI MESE PRECEDENTE: Caricamento in corso...
+• Alcuni confronti potrebbero non essere disponibili momentaneamente
+• Focus l'analisi sui dati attuali e le proiezioni`;
+        } else {
+          systemPrompt += `
+
+⚠️ DATI MESE PRECEDENTE NON DISPONIBILI
+• Non posso fare confronti diretti con ${dashboardData.previousMonth.periodo}
+• Concentro l'analisi su:
+  - Performance attuali (${dashboardData.currentMonth.giorniTrascorsi} giorni)
+  - Proiezioni di fine mese basate sul trend attuale
+  - Analisi dei dealer attivi vs totali
+  - Performance dei servizi`;
+        }
+
+        systemPrompt += `
+
+💼 SERVIZI E REVENUE STREAMS:
+• Fatturato servizi: €${dashboardData.servizi.totaliFatturato.toLocaleString()}
+• Operazioni servizi: ${dashboardData.servizi.totaliOperazioni.toLocaleString()}
+• Categorie attive: ${dashboardData.servizi.numeroCategorie}
+${
+  dashboardData.servizi.topServizi.length > 0
+    ? `\nTop revenue services:
+${dashboardData.servizi.topServizi
+  .map(
+    (s) =>
+      `• ${s.nome}: €${s.fatturato.toLocaleString()} (${
+        s.operazioni
+      } operazioni, ${s.percentuale}% del totale)`
+  )
+  .join("\n")}`
+    : ""
+}
+
+LINEE GUIDA ANALITICHE:
+1. Considera sempre il partial month factor (solo ${
+          dashboardData.currentMonth.giorniTrascorsi
+        } giorni di dati)
+2. ${
+          dashboardData.comparisons?.dataAvailable
+            ? "Basa i confronti su medie giornaliere per comparazioni realistic"
+            : "Focus su trend analysis e growth projections in assenza di dati comparativi"
+        }
+3. Identifica opportunità di revenue optimization e dealer activation
+4. Valuta performance vs market benchmarks del settore payment
+5. Suggerisci strategie di cross-selling e upselling per aumentare ARPU (Average Revenue Per User)
+6. Considera impatti regulatori e compliance nella strategia
+7. Contextualizza sempre i risultati in termini di business impact e ROI`;
+      }
 
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
@@ -437,15 +1023,14 @@ const Dashboard: React.FC = () => {
             messages: [
               {
                 role: "system",
-                content:
-                  "Sei un assistente specializzato in analisi di KPI e prestazioni nelle vendite per un sistema di pagamenti e terminali POS. Rispondi in italiano in modo professionale e utile, focalizzandoti su analisi dati, metriche di performance, troubleshooting terminali e procedure operative.",
+                content: systemPrompt,
               },
               {
                 role: "user",
-                content: question,
+                content: userMessage,
               },
             ],
-            max_tokens: 500,
+            max_tokens: 800,
             temperature: 0.7,
           }),
         }
@@ -496,26 +1081,30 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleSendQuestion = async () => {
-    if (!currentQuestion.trim()) return;
+  const handleSendQuestion = async (
+    questionOverride?: string,
+    includeData: boolean = false
+  ) => {
+    const questionToSend = questionOverride || currentQuestion;
+    if (!questionToSend.trim()) return;
 
     setAiError("");
-
-    const questionToSend = currentQuestion;
 
     const userMessage: AIMessage = {
       id: Date.now(),
       type: "user",
-      message: currentQuestion,
+      message: questionToSend,
       timestamp: new Date(),
     };
 
     setAiMessages((prev) => [...prev, userMessage]);
-    setCurrentQuestion("");
+    if (!questionOverride) {
+      setCurrentQuestion("");
+    }
     setIsAiTyping(true);
 
     try {
-      const aiResponseText = await getAIResponse(questionToSend);
+      const aiResponseText = await getAIResponse(questionToSend, includeData);
 
       const aiResponse: AIMessage = {
         id: Date.now() + 1,
@@ -750,7 +1339,6 @@ const Dashboard: React.FC = () => {
                   </div>
                 ) : dealerTransactionData ? (
                   <>
-                    {/* HEADER come gli altri box */}
                     <div className="kpi-header-simple">
                       <i className="fa-solid fa-users kpi-icon-small"></i>
                       <div className="kpi-period-simple">
@@ -758,7 +1346,6 @@ const Dashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* CONTENUTO */}
                     <div className="dealer-box-header">
                       <div className="dealer-box-left">
                         <div className="kpi-value dealer-main-number">
@@ -773,7 +1360,6 @@ const Dashboard: React.FC = () => {
                       <div className="dealer-box-right">
                         <div className="mini-pie-chart">
                           <svg width="88" height="88" viewBox="0 0 60 60">
-                            {/* base */}
                             <circle
                               cx="30"
                               cy="30"
@@ -782,7 +1368,6 @@ const Dashboard: React.FC = () => {
                               stroke="rgba(255,255,255,0.25)"
                               strokeWidth="8"
                             />
-                            {/* progress (ruotiamo SOLO l’arco, non il testo) */}
                             <circle
                               cx="30"
                               cy="30"
@@ -797,7 +1382,6 @@ const Dashboard: React.FC = () => {
                               transform="rotate(-90 30 30)"
                               strokeLinecap="round"
                             />
-                            {/* testo orizzontale e centrato */}
                             <text
                               x="30"
                               y="35"
@@ -823,7 +1407,6 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Seconda riga - 3 card */}
-            {/* Box Oggi Arricchito */}
             <div className="col-xl-4 col-lg-4 col-md-6">
               <div className="kpi-card kpi-card-calendar kpi-card-compact">
                 <div className="kpi-header-simple">
@@ -888,7 +1471,7 @@ const Dashboard: React.FC = () => {
                 ) : currentMonthData ? (
                   <>
                     <div className="kpi-header-simple">
-                      <i className="fa-solid fa-calendar-day kpi-icon-small"></i>
+                      <i className="fa-solid fa-calculator kpi-icon-small"></i>
                       <div className="kpi-period-simple">
                         {currentDateDisplay.month} {currentYear}
                       </div>
@@ -954,7 +1537,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* AI Assistant Section - PROMINENTE E ENFATIZZATA */}
+          {/* AI Assistant Section - MIGLIORATA */}
           <div className="ai-assistant-section mb-5">
             <div className="row">
               <div className="col-12">
@@ -1006,8 +1589,9 @@ const Dashboard: React.FC = () => {
                               <button
                                 className="btn btn-outline-primary btn-sm me-2"
                                 onClick={() =>
-                                  setCurrentQuestion(
-                                    "Analizza le performance del mese corrente"
+                                  handleSendQuestion(
+                                    "Analizza le performance del mese corrente rispetto al mese precedente",
+                                    true
                                   )
                                 }
                               >
@@ -1017,8 +1601,9 @@ const Dashboard: React.FC = () => {
                               <button
                                 className="btn btn-outline-secondary btn-sm me-2"
                                 onClick={() =>
-                                  setCurrentQuestion(
-                                    "Mostrami lo stato dei dealer"
+                                  handleSendQuestion(
+                                    "Fammi un'analisi dettagliata dello stato dei dealer attivi e inattivi",
+                                    true
                                   )
                                 }
                               >
@@ -1028,8 +1613,9 @@ const Dashboard: React.FC = () => {
                               <button
                                 className="btn btn-outline-success btn-sm"
                                 onClick={() =>
-                                  setCurrentQuestion(
-                                    "Come migliorare il tasso di attivazione?"
+                                  handleSendQuestion(
+                                    "Basandoti sui dati attuali, dammi suggerimenti concreti per migliorare il tasso di attivazione e il fatturato",
+                                    true
                                   )
                                 }
                               >
@@ -1107,7 +1693,7 @@ const Dashboard: React.FC = () => {
                         />
                         <button
                           className="ai-send-btn"
-                          onClick={handleSendQuestion}
+                          onClick={() => handleSendQuestion(undefined, true)}
                           disabled={!currentQuestion.trim() || isAiTyping}
                         >
                           <i className="fa-solid fa-paper-plane"></i>
