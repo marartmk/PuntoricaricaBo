@@ -78,7 +78,6 @@ interface AIMessage {
   timestamp: Date;
 }
 
-// Nuova interfaccia per i dati aggregati dell'AI
 interface DashboardDataForAI {
   currentMonth: {
     periodo: string;
@@ -127,7 +126,6 @@ interface DashboardDataForAI {
     }>;
   };
   comparisons: {
-    // Confronto realistico basato sulle medie giornaliere
     mediaGiornalieraFatturato: {
       corrente: number;
       precedente: number;
@@ -146,7 +144,8 @@ interface DashboardDataForAI {
       transazioniProiezione: number;
       transazioniReale: number;
     };
-  } | null;
+    dataAvailable: boolean;
+  };
   lastUpdated: string;
 }
 
@@ -554,6 +553,16 @@ const Dashboard: React.FC = () => {
     };
 
     // Dati mese precedente con informazioni temporali e fallback intelligente
+    const fallbackDataStatus:
+      | "loading"
+      | "available"
+      | "unavailable"
+      | "not_loaded" = isLoadingPreviousMonth
+      ? "loading"
+      : previousDataLoadAttempted
+      ? "unavailable"
+      : "not_loaded";
+
     const previousData =
       previousMonthData && previousMonthDealerStats
         ? {
@@ -581,7 +590,7 @@ const Dashboard: React.FC = () => {
                 previousMonthData.numeroSchede / daysInPreviousMonth
               ),
             },
-            dataStatus: "available",
+            dataStatus: "available" as const,
           }
         : {
             // Fallback con dati stimati basati su trend tipici
@@ -598,11 +607,7 @@ const Dashboard: React.FC = () => {
               fatturato: 0,
               transazioni: 0,
             },
-            dataStatus: isLoadingPreviousMonth
-              ? "loading"
-              : previousDataLoadAttempted
-              ? "unavailable"
-              : "not_loaded",
+            dataStatus: fallbackDataStatus,
           };
 
     // Dati servizi
@@ -839,6 +844,7 @@ const Dashboard: React.FC = () => {
     try {
       const openaiApiKey = await getOpenAIApiKey();
       const dashboardData = prepareDashboardDataForAI();
+      console.log("Dati preparati per AI:", dashboardData);
 
       let systemPrompt = `Sei l'AI Assistant di un istituto di pagamento leader nel settore fintech. La tua specializzazione copre:
 
@@ -868,10 +874,16 @@ APPROCCIO ANALITICO:
 
 Rispondi in italiano professionale, con analisi dettagliate ma accessibili per il management aziendale.`;
 
-      let userMessage = question;
+      const userMessage = question;
 
       if (includeData) {
         const dashboardData = prepareDashboardDataForAI();
+
+        // Utilizzo esplicito per evitare warning TypeScript
+        const currentMonth = dashboardData.currentMonth;
+        const previousMonth = dashboardData.previousMonth;
+        const comparisons = dashboardData.comparisons;
+        const servizi = dashboardData.servizi;
 
         systemPrompt += `
 
@@ -897,66 +909,57 @@ Le tue competenze coprono:
 DATI DASHBOARD DISPONIBILI:
 
 ⚠️ IMPORTANTE: I dati del mese corrente sono PARZIALI - sono passati solo ${
-          dashboardData.currentMonth.giorniTrascorsi
+          currentMonth.giorniTrascorsi
         } giorni.
 
-📊 MESE CORRENTE (${dashboardData.currentMonth.periodo}) - ${
-          dashboardData.currentMonth.giorniTrascorsi
+📊 MESE CORRENTE (${currentMonth.periodo}) - ${
+          currentMonth.giorniTrascorsi
         } giorni trascorsi:
-• Fatturato totale: €${dashboardData.currentMonth.fatturato.toLocaleString()}
-• Transazioni totali: ${dashboardData.currentMonth.transazioni.toLocaleString()}
-• Importo medio: €${dashboardData.currentMonth.importoMedio.toFixed(2)}
-• Dealer attivi: ${dashboardData.currentMonth.dealerAttivi} su ${
-          dashboardData.currentMonth.dealerTotali
-        } totali (${dashboardData.currentMonth.percentualeAttivazione}%)
+• Fatturato totale: €${currentMonth.fatturato.toLocaleString()}
+• Transazioni totali: ${currentMonth.transazioni.toLocaleString()}
+• Importo medio: €${currentMonth.importoMedio.toFixed(2)}
+• Dealer attivi: ${currentMonth.dealerAttivi} su ${
+          currentMonth.dealerTotali
+        } totali (${currentMonth.percentualeAttivazione}%)
 
 📈 PERFORMANCE GIORNALIERE MESE CORRENTE:
-• Media giornaliera fatturato: €${dashboardData.currentMonth.mediaGiornaliera.fatturato.toLocaleString()}
-• Media giornaliera transazioni: ${dashboardData.currentMonth.mediaGiornaliera.transazioni.toLocaleString()}
+• Media giornaliera fatturato: €${currentMonth.mediaGiornaliera.fatturato.toLocaleString()}
+• Media giornaliera transazioni: ${currentMonth.mediaGiornaliera.transazioni.toLocaleString()}
 
 🎯 PROIEZIONI FINE MESE (basate su performance attuali):
-• Fatturato stimato: €${dashboardData.currentMonth.proiezioniMensili.fatturato.toLocaleString()}
-• Transazioni stimate: ${dashboardData.currentMonth.proiezioniMensili.transazioni.toLocaleString()}`;
+• Fatturato stimato: €${currentMonth.proiezioniMensili.fatturato.toLocaleString()}
+• Transazioni stimate: ${currentMonth.proiezioniMensili.transazioni.toLocaleString()}`;
 
         // Gestione dinamica dei dati del mese precedente
-        if (dashboardData.previousMonth.dataStatus === "available") {
+        if (previousMonth.dataStatus === "available") {
           systemPrompt += `
 
-📊 MESE PRECEDENTE (${dashboardData.previousMonth.periodo}) - mese completo (${
-            dashboardData.previousMonth.giorniTotali
+📊 MESE PRECEDENTE (${previousMonth.periodo}) - mese completo (${
+            previousMonth.giorniTotali
           } giorni):
-• Fatturato totale: €${dashboardData.previousMonth.fatturato.toLocaleString()}
-• Transazioni totali: ${dashboardData.previousMonth.transazioni.toLocaleString()}
-• Importo medio: €${dashboardData.previousMonth.importoMedio.toFixed(2)}
-• Dealer attivi: ${dashboardData.previousMonth.dealerAttivi} su ${
-            dashboardData.previousMonth.dealerTotali
-          } totali (${dashboardData.previousMonth.percentualeAttivazione}%)
-• Media giornaliera fatturato: €${dashboardData.previousMonth.mediaGiornaliera.fatturato.toLocaleString()}
-• Media giornaliera transazioni: ${dashboardData.previousMonth.mediaGiornaliera.transazioni.toLocaleString()}
+• Fatturato totale: €${previousMonth.fatturato.toLocaleString()}
+• Transazioni totali: ${previousMonth.transazioni.toLocaleString()}
+• Importo medio: €${previousMonth.importoMedio.toFixed(2)}
+• Dealer attivi: ${previousMonth.dealerAttivi} su ${
+            previousMonth.dealerTotali
+          } totali (${previousMonth.percentualeAttivazione}%)
+• Media giornaliera fatturato: €${previousMonth.mediaGiornaliera.fatturato.toLocaleString()}
+• Media giornaliera transazioni: ${previousMonth.mediaGiornaliera.transazioni.toLocaleString()}
 
 🔄 CONFRONTI REALISTICI (medie giornaliere):
-• Fatturato/giorno: €${dashboardData.comparisons?.mediaGiornalieraFatturato.corrente.toLocaleString()} vs €${dashboardData.comparisons?.mediaGiornalieraFatturato.precedente.toLocaleString()} (${
-            dashboardData.comparisons?.mediaGiornalieraFatturato
-              .variazionePerc > 0
+• Fatturato/giorno: €${comparisons?.mediaGiornalieraFatturato.corrente.toLocaleString()} vs €${comparisons?.mediaGiornalieraFatturato.precedente.toLocaleString()} (${
+            comparisons?.mediaGiornalieraFatturato.variazionePerc > 0 ? "+" : ""
+          }${comparisons?.mediaGiornalieraFatturato.variazionePerc}%)
+• Transazioni/giorno: ${comparisons?.mediaGiornalieraTransazioni.corrente.toLocaleString()} vs ${comparisons?.mediaGiornalieraTransazioni.precedente.toLocaleString()} (${
+            comparisons?.mediaGiornalieraTransazioni.variazionePerc > 0
               ? "+"
               : ""
-          }${
-            dashboardData.comparisons?.mediaGiornalieraFatturato.variazionePerc
-          }%)
-• Transazioni/giorno: ${dashboardData.comparisons?.mediaGiornalieraTransazioni.corrente.toLocaleString()} vs ${dashboardData.comparisons?.mediaGiornalieraTransazioni.precedente.toLocaleString()} (${
-            dashboardData.comparisons?.mediaGiornalieraTransazioni
-              .variazionePerc > 0
-              ? "+"
-              : ""
-          }${
-            dashboardData.comparisons?.mediaGiornalieraTransazioni
-              .variazionePerc
-          }%)
+          }${comparisons?.mediaGiornalieraTransazioni.variazionePerc}%)
 
 📈 CONFRONTO PROIEZIONI vs REALTÀ:
-• Proiezione fatturato fine mese: €${dashboardData.comparisons?.proiezioniVsReale.fatturatoProiezione.toLocaleString()} vs Mese precedente: €${dashboardData.comparisons?.proiezioniVsReale.fatturatoReale.toLocaleString()}
-• Proiezione transazioni fine mese: ${dashboardData.comparisons?.proiezioniVsReale.transazioniProiezione.toLocaleString()} vs Mese precedente: ${dashboardData.comparisons?.proiezioniVsReale.transazioniReale.toLocaleString()}`;
-        } else if (dashboardData.previousMonth.dataStatus === "loading") {
+• Proiezione fatturato fine mese: €${comparisons?.proiezioniVsReale.fatturatoProiezione.toLocaleString()} vs Mese precedente: €${comparisons?.proiezioniVsReale.fatturatoReale.toLocaleString()}
+• Proiezione transazioni fine mese: ${comparisons?.proiezioniVsReale.transazioniProiezione.toLocaleString()} vs Mese precedente: ${comparisons?.proiezioniVsReale.transazioniReale.toLocaleString()}`;
+        } else if (previousMonth.dataStatus === "loading") {
           systemPrompt += `
 
 ⏳ DATI MESE PRECEDENTE: Caricamento in corso...
@@ -966,9 +969,9 @@ DATI DASHBOARD DISPONIBILI:
           systemPrompt += `
 
 ⚠️ DATI MESE PRECEDENTE NON DISPONIBILI
-• Non posso fare confronti diretti con ${dashboardData.previousMonth.periodo}
+• Non posso fare confronti diretti con ${previousMonth.periodo}
 • Concentro l'analisi su:
-  - Performance attuali (${dashboardData.currentMonth.giorniTrascorsi} giorni)
+  - Performance attuali (${currentMonth.giorniTrascorsi} giorni)
   - Proiezioni di fine mese basate sul trend attuale
   - Analisi dei dealer attivi vs totali
   - Performance dei servizi`;
@@ -977,13 +980,13 @@ DATI DASHBOARD DISPONIBILI:
         systemPrompt += `
 
 💼 SERVIZI E REVENUE STREAMS:
-• Fatturato servizi: €${dashboardData.servizi.totaliFatturato.toLocaleString()}
-• Operazioni servizi: ${dashboardData.servizi.totaliOperazioni.toLocaleString()}
-• Categorie attive: ${dashboardData.servizi.numeroCategorie}
+• Fatturato servizi: €${servizi.totaliFatturato.toLocaleString()}
+• Operazioni servizi: ${servizi.totaliOperazioni.toLocaleString()}
+• Categorie attive: ${servizi.numeroCategorie}
 ${
-  dashboardData.servizi.topServizi.length > 0
+  servizi.topServizi.length > 0
     ? `\nTop revenue services:
-${dashboardData.servizi.topServizi
+${servizi.topServizi
   .map(
     (s) =>
       `• ${s.nome}: €${s.fatturato.toLocaleString()} (${
@@ -996,10 +999,10 @@ ${dashboardData.servizi.topServizi
 
 LINEE GUIDA ANALITICHE:
 1. Considera sempre il partial month factor (solo ${
-          dashboardData.currentMonth.giorniTrascorsi
+          currentMonth.giorniTrascorsi
         } giorni di dati)
 2. ${
-          dashboardData.comparisons?.dataAvailable
+          comparisons?.dataAvailable
             ? "Basa i confronti su medie giornaliere per comparazioni realistic"
             : "Focus su trend analysis e growth projections in assenza di dati comparativi"
         }
