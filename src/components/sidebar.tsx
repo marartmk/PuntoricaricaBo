@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
-  ArrowLeft, 
-  Calendar, 
+  ArrowLeft,
+  Calendar,
   UserPlus,
   BarChart,
   MonitorSmartphone,
@@ -102,26 +102,33 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
           <LineChart className="icon" />
           <span className="item-text">Dealer Analytics</span>
         </button>
-         <button
+        <button
           className="list-group-item"
           onClick={() => navigate("/services-analytics")}
         >
           <TrendingUp className="icon" />
           <span className="item-text">Services Analytics</span>
         </button>
-         <button
+        <button
           className="list-group-item"
           onClick={() => navigate("/elwallet-analytics")}
         >
           <Activity className="icon" />
           <span className="item-text">e-Wallet Analytics</span>
         </button>
-          <button
+        <button
           className="list-group-item"
           onClick={() => navigate("/elwallet-onboarding")}
         >
           <UserPlus className="icon" />
           <span className="item-text">e-Wallet On Boarding</span>
+        </button>
+        <button
+          className="list-group-item"
+          onClick={() => navigate("/dealer-tracking")}
+        >
+          <UserPlus className="icon" />
+          <span className="item-text">Dealer Tracking</span>
         </button>
       </div>
     </div>

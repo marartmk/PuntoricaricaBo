@@ -14,6 +14,7 @@ import AnagraficaAgenti from "./pages/AnagraficaAgenti";
 import TaskManagement from "./pages/Tasks";
 import Mbo from "./pages/Mbo";
 import KpiAnalysisPage from "./pages/KpyAnalysis";
+import DealerTracking from "./pages/DealerTracking";
 
 
 // Componente per proteggere le route
@@ -145,6 +146,16 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <KpiAnalysisPage />
+          </ProtectedRoute>
+        }
+      />
+
+  {/* Rotte protette */}
+      <Route
+        path="/dealer-tracking"
+        element={
+          <ProtectedRoute>
+            <DealerTracking />
           </ProtectedRoute>
         }
       />

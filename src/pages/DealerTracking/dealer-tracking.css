@@ -1,0 +1,447 @@
+/* dealer-tracking.css - Stili specifici per la pagina DealerTracking */
+
+/* Header title */
+.dealer-tracking-title {
+  color: #000000 !important;
+  font-weight: 600;
+}
+
+/* Breadcrumb personalizzato (eredita da dealer-analytics) */
+.dealer-tracking-page .breadcrumb {
+  background: none;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.dealer-tracking-page .breadcrumb-item + .breadcrumb-item::before {
+  content: "›";
+  color: #002454;
+  font-weight: bold;
+}
+
+.dealer-tracking-page .breadcrumb .btn-link {
+  color: #002454 !important;
+  text-decoration: none !important;
+  font-weight: 500;
+}
+
+.dealer-tracking-page .breadcrumb .btn-link:hover {
+  color: #003875 !important;
+  text-decoration: underline !important;
+}
+
+/* Bottoni con brand color aziendale */
+.dealer-tracking-page .btn-primary-dark {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+  color: white !important;
+  transition: all 0.3s ease;
+}
+
+.dealer-tracking-page .btn-primary-dark:hover {
+  background-color: #003875 !important;
+  border-color: #003875 !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.3);
+}
+
+.dealer-tracking-page .btn-outline-primary-dark {
+  border-color: #002454 !important;
+  color: #002454 !important;
+  background: transparent !important;
+  transition: all 0.3s ease;
+}
+
+.dealer-tracking-page .btn-outline-primary-dark:hover {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.3);
+}
+
+/* Card headers personalizzati */
+.dealer-tracking-page .custom-card-header {
+  background: linear-gradient(135deg, #002454 0%, #003875 100%);
+  border-bottom: 3px solid #3498db;
+  color: white;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+}
+
+/* Menu icons in header */
+.dealer-tracking-page .menu-right {
+  display: flex;
+  gap: 8px;
+}
+
+.dealer-tracking-page .menu-icon {
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.dealer-tracking-page .menu-icon:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* Card hover effects */
+.dealer-tracking-page .card {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+}
+
+.dealer-tracking-page .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 36, 84, 0.15);
+  border-color: #002454;
+}
+
+/* Stili per i placeholder della mappa */
+.map-placeholder {
+  height: 600px;
+  width: 100%;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  margin: 0;
+}
+
+.map-placeholder:hover {
+  border-color: #002454;
+  background: linear-gradient(135deg, #f1f3f4 0%, #e1e5e9 100%);
+}
+
+/* Stili per la mappa Google Maps */
+.dealer-map {
+  width: 100%;
+  height: 600px;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Nav pills personalizzate */
+.dealer-tracking-page .nav-pills .nav-link {
+  color: #002454;
+  border: 1px solid #dee2e6;
+  margin-right: 0.5rem;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.dealer-tracking-page .nav-pills .nav-link:hover {
+  background-color: #f8f9fa;
+  border-color: #002454;
+  transform: translateY(-1px);
+}
+
+.dealer-tracking-page .nav-pills .nav-link.active {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+  color: white !important;
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.3);
+}
+
+/* Cards statistiche rapide */
+.dealer-tracking-page .card.bg-primary {
+  background: linear-gradient(135deg, #002454 0%, #003875 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.dealer-tracking-page .card.bg-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.dealer-tracking-page .card.bg-warning {
+  background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.dealer-tracking-page .card.bg-info {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.dealer-tracking-page .card.bg-primary:hover,
+.dealer-tracking-page .card.bg-success:hover,
+.dealer-tracking-page .card.bg-warning:hover,
+.dealer-tracking-page .card.bg-info:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Progress bar per geocodifica */
+.dealer-tracking-page .progress {
+  background-color: #e9ecef;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  height: 0.5rem;
+}
+
+.dealer-tracking-page .progress-bar {
+  transition: width 0.6s ease;
+  background: linear-gradient(45deg, #002454, #003875);
+}
+
+/* Badge personalizzati */
+.dealer-tracking-page .badge {
+  font-size: 0.75rem;
+  padding: 0.5em 0.75em;
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+
+.dealer-tracking-page .badge.bg-success {
+  background-color: #28a745 !important;
+}
+
+.dealer-tracking-page .badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+/* Form controls personalizzati */
+.dealer-tracking-page .form-control:focus,
+.dealer-tracking-page .form-select:focus {
+  border-color: #002454;
+  box-shadow: 0 0 0 0.2rem rgba(0, 36, 84, 0.25);
+}
+
+/* Dropdown personalizzato */
+.dealer-tracking-page .dropdown-menu {
+  border: 1px solid #002454;
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.15);
+}
+
+.dealer-tracking-page .dropdown-item:hover {
+  background-color: #002454;
+  color: white;
+}
+
+.dealer-tracking-page .dropdown-header {
+  color: #002454;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Stili per Google Maps Info Window */
+.dealer-info-window {
+  max-width: 250px;
+  font-family: inherit;
+}
+
+.dealer-info-window h6 {
+  margin-bottom: 0.5rem;
+  color: #002454;
+  font-size: 1rem;
+}
+
+.dealer-info-window p {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.dealer-info-window .badge {
+  font-size: 0.75rem;
+  padding: 0.25em 0.5em;
+}
+
+.dealer-info-window small {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+/* Animazioni per il caricamento */
+.dealer-tracking-page .fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dealer-tracking-title {
+    font-size: 1.5rem;
+  }
+  
+  .dealer-tracking-page .breadcrumb {
+    font-size: 0.875rem;
+  }
+  
+  .map-placeholder {
+    height: 400px;
+  }
+  
+  .dealer-map {
+    height: 400px;
+  }
+  
+  .dealer-tracking-page .nav-pills .nav-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    margin-right: 0.25rem;
+  }
+
+  /* Stack dei filtri su mobile */
+  .dealer-tracking-page .row.mb-3 .col-md-6 {
+    margin-bottom: 1rem;
+  }
+
+  /* Cards statistiche responsive */
+  .dealer-tracking-page .card.bg-primary,
+  .dealer-tracking-page .card.bg-success,
+  .dealer-tracking-page .card.bg-warning,
+  .dealer-tracking-page .card.bg-info {
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Header responsive */
+  .dealer-tracking-page .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  .dealer-tracking-page .d-flex.gap-2 {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 1rem;
+  }
+
+  /* Nav pills stack su mobile molto piccolo */
+  .dealer-tracking-page .nav-pills {
+    flex-direction: column;
+  }
+
+  .dealer-tracking-page .nav-pills .nav-link {
+    margin-right: 0;
+    margin-bottom: 0.25rem;
+    width: 100%;
+  }
+
+  /* Form controls full-width su mobile */
+  .dealer-tracking-page .form-control,
+  .dealer-tracking-page .form-select {
+    margin-bottom: 0.5rem;
+    width: 100%;
+  }
+
+  /* Nascondi alcuni elementi dell'header su schermi molto piccoli */
+  .dealer-tracking-page .menu-right {
+    display: none;
+  }
+
+  /* Info window più piccola su mobile */
+  .dealer-info-window {
+    max-width: 200px;
+  }
+
+  .dealer-info-window h6 {
+    font-size: 0.9rem;
+  }
+
+  .dealer-info-window p {
+    font-size: 0.8rem;
+  }
+}
+
+/* Dark mode support (opzionale) */
+@media (prefers-color-scheme: dark) {
+  .dealer-tracking-page .map-placeholder {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+
+  .dealer-tracking-page .card {
+    background-color: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+}
+
+/* Print styles */
+@media print {
+  .dealer-tracking-page .btn,
+  .dealer-tracking-page .dropdown,
+  .dealer-tracking-page .nav-pills,
+  .dealer-tracking-page .form-control,
+  .dealer-tracking-page .form-select {
+    display: none !important;
+  }
+
+  .dealer-tracking-page .card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .dealer-map {
+    border: 2px solid #000;
+    border-radius: 4px;
+  }
+
+  .map-placeholder {
+    display: none;
+  }
+}
+
+/* Stili aggiuntivi per migliorare l'esperienza utente */
+.dealer-tracking-page .custom-card-header .fa-map-marker-alt {
+  margin-right: 0.5rem;
+}
+
+.dealer-tracking-page .progress-container {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.dealer-tracking-page .stats-container .card-body {
+  padding: 0.75rem;
+}
+
+/* Hover effects per i marker info */
+.dealer-info-window:hover {
+  background-color: #f8f9fa;
+}
+
+/* Stili per il caricamento geocodifica */
+.dealer-tracking-page .geocoding-progress {
+  background-color: rgba(0, 36, 84, 0.1);
+  border-left: 4px solid #002454;
+}
+
+.dealer-tracking-page .geocoding-progress .fa-map-marker-alt {
+  color: #002454;
+  font-size: 1.2rem;
+}
