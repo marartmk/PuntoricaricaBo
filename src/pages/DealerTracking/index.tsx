@@ -119,6 +119,72 @@ const PROVINCE_NAMES: { [key: string]: string } = {
   VT: "Viterbo",
 };
 
+// --- Regioni canoniche (per la DpList) ---
+const CANONICAL_REGIONS = [
+  "Abruzzo",
+  "Basilicata",
+  "Calabria",
+  "Campania",
+  "Emilia-Romagna",
+  "Friuli Venezia Giulia",
+  "Lazio",
+  "Liguria",
+  "Lombardia",
+  "Marche",
+  "Molise",
+  "Piemonte",
+  "Puglia",
+  "Sardegna",
+  "Sicilia",
+  "Toscana",
+  "Trentino-Alto Adige",
+  "Umbria",
+  "Valle d'Aosta",
+  "Veneto",
+] as const;
+
+// Alias comuni -> forma canonica
+const REGION_ALIASES: Record<string, string> = {
+  "EMILIA ROMAGNA": "Emilia-Romagna",
+  "FRIULI VENEZIA GIULIA": "Friuli Venezia Giulia",
+  "FRIULI VENEZIA-GIULIA": "Friuli Venezia Giulia",
+  "TRENTINO ALTO ADIGE": "Trentino-Alto Adige",
+  "TRENTINO ALTO ADIGE SUDTIROL": "Trentino-Alto Adige",
+  "VALLE D AOSTA": "Valle d'Aosta",
+  "VALLE D OSTA": "Valle d'Aosta",
+  "VALLE DA OSTA": "Valle d'Aosta",
+  "VALLE D  AOSTA": "Valle d'Aosta",
+};
+
+// Normalizza stringhe: toglie accenti/punteggiatura e porta a UPPER
+const normalizeRegionKey = (s: string) =>
+  (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // rimuove diacritici
+    .replace(/[^A-Za-z]+/g, " ") // solo lettere
+    .trim()
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+
+// Converte qualunque input BE in una regione canonica (o null se sconosciuta)
+const toCanonicalRegion = (input?: string | null): string | null => {
+  const key = normalizeRegionKey(input ?? "");
+  if (!key) return null;
+  if (REGION_ALIASES[key]) return REGION_ALIASES[key];
+  const hit = CANONICAL_REGIONS.find((r) => normalizeRegionKey(r) === key);
+  return hit ?? null;
+};
+
+// Aggiorna solo i dealer passati, mantenendo intatto il dataset completo
+const mergeDealerData = (prev: MarkerData[], updates: MarkerData[]) => {
+  const map = new Map(prev.map((d) => [d.userId, d]));
+  for (const u of updates) {
+    const ex = map.get(u.userId) || u;
+    map.set(u.userId, { ...ex, ...u }); // merge per userId
+  }
+  return Array.from(map.values());
+};
+
 // Interfacce per i dati API - AGGIORNATE
 interface DealerDetail {
   accID: number;
@@ -206,12 +272,14 @@ const DealerTracking: React.FC = () => {
   const markersRef = useRef<any[]>([]);
 
   // Modalità test geolocalizzazione
-  const GEO_TEST_MODE = true;
+  const GEO_TEST_MODE = false;
   const GEO_TEST_LIMIT = 300;
 
   // Stato per avviare/fermare manualmente la geocodifica
   const [isCensusRunning, setIsCensusRunning] = useState(false);
   const censusAbortRef = useRef(false);
+  // Filtro regione per il censimento
+  const [selectedRegione, setSelectedRegione] = useState<string>("");
 
   // Parametri URL
   const annoFromUrl = parseInt(
@@ -238,7 +306,6 @@ const DealerTracking: React.FC = () => {
     "all"
   );
   const [selectedProvincia, setSelectedProvincia] = useState<string>("");
-  const [selectedRegione, setSelectedRegione] = useState<string>("");
 
   const API_URL = import.meta.env.VITE_API_URL;
   const GOOGLE_MAPS_API_KEY = "AIzaSyBdIcimFZ-qXj-7YzYX0kbCGGxIpAnOA0I";
@@ -305,11 +372,25 @@ const DealerTracking: React.FC = () => {
   }, [dealerData, activeTab, selectedProvincia, selectedRegione]);
 
   const startCensus = async () => {
-    if (dealerData.length === 0 || isCensusRunning) return;
+    if (isCensusRunning) return;
+
+    // Regione obbligatoria
+    if (!selectedRegione) {
+      // Button sarà disabilitato, ma metto anche una guardia per invocazioni programmatiche
+      window.alert("Seleziona prima una Regione per avviare il censimento.");
+      return;
+    }
+
+    const toCensus = getDealersForCensus();
+    if (toCensus.length === 0) {
+      window.alert("Nessun dealer da censire per la regione selezionata.");
+      return;
+    }
+
     censusAbortRef.current = false;
     setIsCensusRunning(true);
     try {
-      await loadDealersGeolocation(dealerData);
+      await loadDealersGeolocation(toCensus);
     } finally {
       setIsCensusRunning(false);
     }
@@ -527,7 +608,7 @@ const DealerTracking: React.FC = () => {
       }
 
       // Aggiorna lo stato con i dealer dal cache/placeholder
-      setDealerData([...updatedDealers]);
+      setDealerData((prev) => mergeDealerData(prev, updatedDealers));
 
       // ⬅️ Guardia prima della geocodifica dei mancanti
       if (censusAbortRef.current) {
@@ -648,7 +729,7 @@ const DealerTracking: React.FC = () => {
     }
 
     // Aggiorna lo stato finale
-    setDealerData([...dealers]);
+    setDealerData((prev) => mergeDealerData(prev, dealers));
     setGeocodingProgress((prev) => ({ ...prev, isActive: false }));
   };
 
@@ -742,7 +823,7 @@ const DealerTracking: React.FC = () => {
       }
     }
 
-    setDealerData(updatedDealers);
+    setDealerData((prev) => mergeDealerData(prev, updatedDealers));
     setGeocodingProgress((prev) => ({ ...prev, isActive: false }));
   };
 
@@ -766,7 +847,7 @@ const DealerTracking: React.FC = () => {
 
     if (selectedRegione) {
       filteredDealers = filteredDealers.filter(
-        (d) => d.regione === selectedRegione
+        (d) => toCanonicalRegion(d.regione) === selectedRegione
       );
     }
 
@@ -871,8 +952,12 @@ const DealerTracking: React.FC = () => {
   // NUOVE funzioni per gestire regioni e province
   const getUniqueRegions = () => {
     if (!dealerData) return [];
-    const regions = [...new Set(dealerData.map((d) => d.regione))];
-    return regions.sort();
+    const regions = [
+      ...new Set(dealerData.map((d) => (d.regione || "").trim())),
+    ]
+      .filter((r) => r.length > 0)
+      .sort();
+    return regions;
   };
 
   const getUniqueProvinces = () => {
@@ -883,7 +968,7 @@ const DealerTracking: React.FC = () => {
     // Se è selezionata una regione, filtra le province per quella regione
     if (selectedRegione) {
       provinces = dealerData
-        .filter((d) => d.regione === selectedRegione)
+        .filter((d) => toCanonicalRegion(d.regione) === selectedRegione)
         .map((d) => d.provincia);
     }
 
@@ -896,6 +981,18 @@ const DealerTracking: React.FC = () => {
     }));
   };
 
+  // Dealer da processare nel censimento: regione obbligatoria, provincia opzionale
+  const getDealersForCensus = () => {
+    if (!selectedRegione) return [];
+    return dealerData.filter((d) => {
+      const canon = toCanonicalRegion(d.regione);
+      const byRegion = canon === selectedRegione;
+      const byProvince =
+        !selectedProvincia || d.provincia === selectedProvincia;
+      return byRegion && byProvince;
+    });
+  };
+
   const getFilteredCount = (type: "all" | "transanti" | "inattivi") => {
     let filtered = dealerData;
 
@@ -906,7 +1003,9 @@ const DealerTracking: React.FC = () => {
     }
 
     if (selectedRegione) {
-      filtered = filtered.filter((d) => d.regione === selectedRegione);
+      filtered = filtered.filter(
+        (d) => toCanonicalRegion(d.regione) === selectedRegione
+      );
     }
 
     if (selectedProvincia) {
@@ -1216,39 +1315,51 @@ const DealerTracking: React.FC = () => {
                   <span>Mappa Dealer</span>
                   <div className="menu-right">
                     <div className="me-2">
-                      <button
-                        className="btn btn-outline-primary-dark btn-sm"
-                        onClick={startCensus}
-                        disabled={isCensusRunning || dealerData.length === 0}
-                        title="Avvia il censimento geolocalizzazione"
-                      >
-                        <i
-                          className={`fa-solid ${
-                            isCensusRunning
-                              ? "fa-spinner fa-spin"
-                              : "fa-location-crosshairs"
-                          } me-1`}
-                        ></i>
-                        {isCensusRunning ? "Censimento..." : "Avvia censimento"}
-                      </button>
-                    </div>
-                    {isCensusRunning && (
-                      <div className="me-2">
-                        <button
-                          className="btn btn-outline-danger btn-sm"
-                          onClick={cancelCensus}
-                          title="Annulla censimento in corso"
+                      <div className="menu-right">
+                        {/* <button
+                          className="btn btn-primary-dark"
+                          onClick={startCensus}
+                          disabled={
+                            isCensusRunning ||
+                            dealerData.length === 0 ||
+                            !selectedRegione
+                          }
+                          title={
+                            selectedRegione
+                              ? "Avvia il censimento geolocalizzazione"
+                              : "Seleziona una Regione per abilitare il censimento"
+                          }
                         >
-                          <i className="fa-solid fa-ban me-1"></i>
-                          Annulla
+                          <i
+                            className={`fa-solid ${
+                              isCensusRunning
+                                ? "fa-spinner fa-spin"
+                                : "fa-location-crosshairs"
+                            } me-1`}
+                          />
+                          {isCensusRunning
+                            ? "Censimento..."
+                            : "Aggiorna mappa"}
                         </button>
+
+                        {isCensusRunning && (
+                          <button
+                            className="btn btn-outline-primary-dark"
+                            onClick={cancelCensus}
+                            title="Annulla censimento in corso"
+                          >
+                            <i className="fa-solid fa-ban me-1" />
+                            Annulla
+                          </button>
+                        )} */}
+
+                        <div className="menu-icon">
+                          <i className="fa-solid fa-filter" />
+                        </div>
+                        <div className="menu-icon">
+                          <i className="fa-solid fa-expand" />
+                        </div>
                       </div>
-                    )}
-                    <div className="menu-icon">
-                      <i className="fa-solid fa-filter"></i>
-                    </div>
-                    <div className="menu-icon">
-                      <i className="fa-solid fa-expand"></i>
                     </div>
                   </div>
                 </div>
@@ -1295,25 +1406,25 @@ const DealerTracking: React.FC = () => {
                       </div>
                       <div className="col-md-6">
                         <div className="row">
-                          <div className="col-md-6 mb-2">
+                          <div className="col-md-3 mb-2">
                             <select
-                              className="form-select form-select-sm"
+                              className="form-select"
                               value={selectedRegione}
-                              onChange={(e) =>
-                                handleRegionChange(e.target.value)
-                              }
+                              onChange={(
+                                e: React.ChangeEvent<HTMLSelectElement>
+                              ) => setSelectedRegione(e.target.value)}
                             >
-                              <option value="">Tutte le regioni</option>
-                              {getUniqueRegions().map((regione) => (
-                                <option key={regione} value={regione}>
-                                  {regione}
+                              <option value="">Seleziona Regione...</option>
+                              {CANONICAL_REGIONS.map((r) => (
+                                <option key={r} value={r}>
+                                  {r}
                                 </option>
                               ))}
                             </select>
                           </div>
-                          <div className="col-md-6 mb-2">
+                          <div className="col-md-3 mb-2">
                             <select
-                              className="form-select form-select-sm"
+                              className="form-select"
                               value={selectedProvincia}
                               onChange={(e) =>
                                 setSelectedProvincia(e.target.value)
@@ -1329,6 +1440,45 @@ const DealerTracking: React.FC = () => {
                                 </option>
                               ))}
                             </select>
+                          </div>
+                          <div className="col-md-4 mb-2">
+                            <div className="d-flex align-items-center gap-3 flex-nowrap">
+                              <button
+                                className="btn btn-primary-dark px-3"
+                                onClick={startCensus}
+                                disabled={
+                                  isCensusRunning ||
+                                  dealerData.length === 0                              
+                                }
+                                title={
+                                  selectedRegione
+                                    ? "Avvia il censimento geolocalizzazione"
+                                    : "Seleziona una Regione per abilitare il censimento"
+                                }
+                              >
+                                <i
+                                  className={`fa-solid ${
+                                    isCensusRunning
+                                      ? "fa-spinner fa-spin"
+                                      : "fa-location-crosshairs"
+                                  } me-2`}
+                                />
+                                {isCensusRunning
+                                  ? "Censimento..."
+                                  : "Aggiorna mappa"}
+                              </button>
+
+                              {isCensusRunning && (
+                                <button
+                                  className="btn btn-outline-primary-dark px-3"
+                                  onClick={cancelCensus}
+                                  title="Annulla censimento in corso"
+                                >
+                                  <i className="fa-solid fa-ban me-2" />
+                                  Annulla
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -445,3 +445,133 @@
   color: #002454;
   font-size: 1.2rem;
 }
+
+/* CTA bianche sulla barra blu */
+.dealer-tracking-page .header-cta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dealer-tracking-page .btn-header-white {
+  background: #ffffff !important;
+  color: #002454 !important;
+  border: 1px solid #ffffff !important;
+  font-weight: 700;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  box-shadow: 0 3px 10px rgba(255,255,255,0.25), 0 2px 6px rgba(0,36,84,0.2);
+  transition: all .2s ease;
+}
+.dealer-tracking-page .btn-header-white:hover:not(:disabled) {
+  background: #f3f6ff !important;
+  transform: translateY(-1px);
+}
+
+.dealer-tracking-page .btn-header-danger {
+  background: #ffffff !important;
+  color: #c82333 !important;             /* rosso bootstrap-ish */
+  border: 1px solid #c82333 !important;
+  font-weight: 700;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  box-shadow: 0 3px 10px rgba(255,255,255,0.25), 0 2px 6px rgba(200,35,51,0.15);
+  transition: all .2s ease;
+}
+.dealer-tracking-page .btn-header-danger:hover:not(:disabled) {
+  background: #fff5f6 !important;
+  transform: translateY(-1px);
+}
+
+.dealer-tracking-page .btn-header-white:disabled,
+.dealer-tracking-page .btn-header-danger:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Bottoni header compatti: stessa altezza delle icone (30px) */
+.dealer-tracking-page .btn-header-compact {
+  height: 30px;
+  padding: 0 12px;            /* niente padding verticale */
+  display: inline-flex;       /* centra icona+testo verticalmente */
+  align-items: center;
+  gap: .4rem;
+  font-size: .9rem;           /* leggermente più piccolo */
+  line-height: 1;             /* evita extra-altezza */
+}
+
+.dealer-tracking-page .btn-header-compact .fa-solid {
+  font-size: .95rem;          /* icona proporzionata */
+}
+
+/* Base per i bottoni dell'header (stessa altezza dei controlli sopra) */
+.dealer-tracking-page .btn-header{
+  height:36px;
+  padding:0 12px;
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+  line-height:1;
+  font-weight:600;
+  border-radius:.75rem;
+  border-width:1px;
+  transition:all .15s ease;
+}
+
+/* Variante primary (filled) tipo "Aggiorna" */
+.dealer-tracking-page .btn-header-primary{
+  background:#0f3d7a;         /* blu pieno coerente coi controlli sopra */
+  color:#fff;
+  border-color:#0f3d7a;
+}
+.dealer-tracking-page .btn-header-primary:hover:not(:disabled){
+  filter:brightness(1.05);
+  transform:translateY(-1px);
+}
+
+/* Variante outline (bianca con bordo blu) tipo "Anno" */
+.dealer-tracking-page .btn-header-outline{
+  background:#fff;
+  color:#0f3d7a;
+  border-color:#0f3d7a;
+}
+.dealer-tracking-page .btn-header-outline:hover:not(:disabled){
+  background:#f6f9ff;
+  transform:translateY(-1px);
+}
+
+/* Variante outline-danger per Annulla (bordo rosso) */
+.dealer-tracking-page .btn-header-outline-danger{
+  background:#fff;
+  color:#c82333;
+  border-color:#c82333;
+}
+.dealer-tracking-page .btn-header-outline-danger:hover:not(:disabled){
+  background:#fff5f6;
+  transform:translateY(-1px);
+}
+
+/* Stato disabled */
+.dealer-tracking-page .btn-header:disabled{
+  opacity:.6;
+  transform:none;
+}
+
+/* Bottoni della toolbar filtri: stessa altezza dei select */
+.dealer-tracking-page .card .p-3 .btn {
+  height: 38px;             /* come .form-select di Bootstrap */
+  padding-top: 0;
+  padding-bottom: 0;
+  display: inline-flex;     /* centra icona + testo verticalmente */
+  align-items: center;
+  line-height: 1;           /* evita extra-altezza in stato attivo/disabled */
+}
+
+.dealer-tracking-page .card .p-3 .btn i {
+  line-height: 1;           /* icone allineate */
+  font-size: 0.95rem;       /* proporzionate ai select */
+}
+
+
