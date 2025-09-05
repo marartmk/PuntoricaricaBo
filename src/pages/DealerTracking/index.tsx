@@ -949,17 +949,6 @@ const DealerTracking: React.FC = () => {
     localStorage.setItem("menuState", newState);
   };
 
-  // NUOVE funzioni per gestire regioni e province
-  const getUniqueRegions = () => {
-    if (!dealerData) return [];
-    const regions = [
-      ...new Set(dealerData.map((d) => (d.regione || "").trim())),
-    ]
-      .filter((r) => r.length > 0)
-      .sort();
-    return regions;
-  };
-
   const getUniqueProvinces = () => {
     if (!dealerData) return [];
 
@@ -1013,12 +1002,6 @@ const DealerTracking: React.FC = () => {
     }
 
     return filtered.length;
-  };
-
-  // Reset provincia quando cambia regione
-  const handleRegionChange = (regione: string) => {
-    setSelectedRegione(regione);
-    setSelectedProvincia(""); // Reset provincia quando cambia regione
   };
 
   const getTotals = () => {
