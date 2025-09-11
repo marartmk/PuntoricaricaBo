@@ -1,0 +1,690 @@
+/* =============================================
+   PROSPECT MANAGEMENT - CSS CORRETTO E ORGANIZZATO
+   ============================================= */
+
+/* === VARIABILI CSS === */
+:root {
+  --primary-color: #002454;
+  --primary-hover: #003875;
+  --prospect-accent: #28a745;
+  --prospect-warning: #ffc107;
+  --border-radius: 8px;
+  --box-shadow: 0 4px 8px rgba(0, 36, 84, 0.15);
+  --transition: all 0.3s ease;
+}
+
+/* === LAYOUT PRINCIPALE === */
+.prospect-management-page {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.prospect-management-page .page-title {
+  color: #000000;
+  font-weight: 600;
+}
+
+/* === BREADCRUMB === */
+.prospect-management-page .breadcrumb {
+  background: none;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.prospect-management-page .breadcrumb-item + .breadcrumb-item::before {
+  content: "›";
+  color: var(--primary-color);
+  font-weight: bold;
+}
+
+.prospect-management-page .breadcrumb .btn-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.prospect-management-page .breadcrumb .btn-link:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* === BOTTONI === */
+.prospect-management-page .btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+  transition: var(--transition);
+}
+
+.prospect-management-page .btn-primary:hover {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: var(--box-shadow);
+}
+
+.prospect-management-page .btn-outline-primary {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: transparent;
+  transition: var(--transition);
+}
+
+.prospect-management-page .btn-outline-primary:hover {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: var(--box-shadow);
+}
+
+.prospect-management-page .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+/* === CARDS STATISTICHE === */
+.prospect-management-page .stats-card {
+  transition: var(--transition);
+  border: 1px solid #e9ecef;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.prospect-management-page .stats-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.prospect-management-page .stats-card .card-body {
+  padding: 1.5rem;
+}
+
+.prospect-management-page .stats-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem auto;
+}
+
+.prospect-management-page .stats-icon.bg-primary {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+}
+
+.prospect-management-page .stats-icon.bg-secondary {
+  background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+}
+
+.prospect-management-page .stats-icon.bg-warning {
+  background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+}
+
+.prospect-management-page .stats-icon.bg-info {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+.prospect-management-page .stats-icon.bg-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.prospect-management-page .stats-icon.bg-danger {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+}
+
+.prospect-management-page .stats-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.prospect-management-page .stats-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+}
+
+/* === CARDS GENERICHE === */
+.prospect-management-page .card {
+  transition: var(--transition);
+  border: 1px solid #e9ecef;
+  border-radius: var(--border-radius);
+}
+
+.prospect-management-page .card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--box-shadow);
+  border-color: var(--primary-color);
+}
+
+.prospect-management-page .card-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid #dee2e6;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.prospect-management-page .card-header.bg-white {
+  background: white;
+  border-bottom: 2px solid var(--prospect-accent);
+}
+
+/* === SEZIONI FORM === */
+.prospect-management-page .section-title {
+  color: var(--primary-color);
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--prospect-accent);
+  display: flex;
+  align-items: center;
+}
+
+.prospect-management-page .section-title i {
+  color: var(--prospect-accent);
+  margin-right: 0.5rem;
+}
+
+/* === NAV PILLS === */
+.prospect-management-page .nav-pills .nav-link {
+  color: var(--primary-color);
+  border: 1px solid #dee2e6;
+  margin-right: 0.5rem;
+  transition: var(--transition);
+  font-weight: 500;
+  border-radius: 20px;
+  background-color: white;
+}
+
+.prospect-management-page .nav-pills .nav-link:hover {
+  background-color: #f8f9fa;
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  color: var(--primary-color);
+}
+
+.prospect-management-page .nav-pills .nav-link.active {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+  box-shadow: var(--box-shadow);
+}
+
+/* === TABELLA === */
+.prospect-management-page .table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.prospect-management-page .table thead th {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+  color: white;
+  border: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 1rem 0.75rem;
+}
+
+.prospect-management-page .table tbody td {
+  vertical-align: middle;
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color 0.2s ease;
+  padding: 0.875rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.prospect-management-page .table tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: scale(1.002);
+  transition: all 0.2s ease;
+}
+
+.prospect-management-page .table tbody tr:nth-child(even) {
+  background-color: #fafbfc;
+}
+
+.prospect-management-page .table tbody tr:nth-child(even):hover {
+  background-color: #f1f3f4;
+}
+
+.prospect-management-page .table-responsive {
+  overflow-x: auto;
+  border-radius: var(--border-radius);
+}
+
+/* === ELEMENTI CLICKABILI === */
+.prospect-management-page .prospect-name {
+  color: var(--primary-color);
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.prospect-management-page .prospect-name:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* === BADGES === */
+.prospect-management-page .badge {
+  font-size: 0.65rem;
+  padding: 0.5em 0.75em;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.prospect-management-page .badge:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+  cursor: default;
+}
+
+.prospect-management-page .badge.bg-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.prospect-management-page .badge.bg-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.prospect-management-page .badge.bg-info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.prospect-management-page .badge.bg-warning {
+  background-color: #ffc107;
+  color: #000;
+}
+
+.prospect-management-page .badge.bg-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.prospect-management-page .badge.bg-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.prospect-management-page .badge.bg-light {
+  background-color: #f8f9fa;
+  color: #495057;
+  border: 1px solid #dee2e6;
+}
+
+/* === FORM CONTROLS === */
+.prospect-management-page .form-control,
+.prospect-management-page .form-select {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  transition: var(--transition);
+  font-size: 0.9rem;
+}
+
+.prospect-management-page .form-control:focus,
+.prospect-management-page .form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(0, 36, 84, 0.25);
+  outline: none;
+}
+
+.prospect-management-page .form-control:hover,
+.prospect-management-page .form-select:hover {
+  border-color: var(--primary-hover);
+}
+
+.prospect-management-page .form-label {
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.prospect-management-page .form-label.required::after {
+  content: " *";
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.prospect-management-page .input-group-text {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+  color: var(--primary-color);
+}
+
+/* === MODALS === */
+.prospect-management-page .modal-xl {
+  max-width: 1200px;
+}
+
+.prospect-management-page .modal-content {
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: none;
+}
+
+.prospect-management-page .modal-header {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+  color: white;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  padding: 1.5rem;
+}
+
+.prospect-management-page .modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+  opacity: 0.8;
+}
+
+.prospect-management-page .modal-header .btn-close:hover {
+  opacity: 1;
+}
+
+.prospect-management-page .modal-body {
+  padding: 2rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) #f8f9fa;
+}
+
+.prospect-management-page .modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.prospect-management-page .modal-body::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.prospect-management-page .modal-body::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 4px;
+}
+
+.prospect-management-page .modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-hover);
+}
+
+.prospect-management-page .modal-footer {
+  border-top: 1px solid #dee2e6;
+  padding: 1.5rem;
+}
+
+/* === RAPPRESENTANTI LEGALI === */
+.prospect-management-page .rappresentante-card {
+  border: 2px solid #e9ecef;
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+  background: #fafbfc;
+  margin-bottom: 1rem;
+}
+
+.prospect-management-page .rappresentante-card:hover {
+  border-color: var(--prospect-accent);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15);
+}
+
+.prospect-management-page .rappresentante-card .card-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid #dee2e6;
+  font-weight: 600;
+  color: var(--primary-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* === DOCUMENTI CHECKLIST === */
+.prospect-management-page .form-check {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+  border: 1px solid #e9ecef;
+}
+
+.prospect-management-page .form-check:hover {
+  background-color: rgba(40, 167, 69, 0.05);
+  border-color: var(--prospect-accent);
+}
+
+.prospect-management-page .form-check-input {
+  margin-top: 0.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.prospect-management-page .form-check-input:checked {
+  background-color: var(--prospect-accent);
+  border-color: var(--prospect-accent);
+}
+
+.prospect-management-page .form-check-input:focus {
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+.prospect-management-page .form-check-label {
+  margin-left: 0.5rem;
+  font-weight: 500;
+  color: #495057;
+  cursor: pointer;
+}
+
+/* === PAGINAZIONE === */
+.prospect-management-page .pagination .page-link {
+  color: var(--primary-color);
+  border-color: #dee2e6;
+  transition: var(--transition);
+  padding: 0.5rem 0.75rem;
+}
+
+.prospect-management-page .pagination .page-link:hover {
+  color: white;
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.prospect-management-page .pagination .page-link:focus {
+  box-shadow: 0 0 0 0.2rem rgba(0, 36, 84, 0.25);
+}
+
+.prospect-management-page .pagination .page-item.active .page-link {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.prospect-management-page .pagination .page-item.disabled .page-link {
+  color: #6c757d;
+  background-color: #fff;
+  border-color: #dee2e6;
+}
+
+/* === PLACEHOLDER MESSAGGI === */
+.prospect-management-page .text-center.p-4 {
+  padding: 3rem 1rem !important;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: var(--border-radius);
+  border: 2px dashed #dee2e6;
+  margin: 2rem 0;
+}
+
+.prospect-management-page .text-center.p-4 i {
+  color: #6c757d;
+  opacity: 0.7;
+}
+
+.prospect-management-page .text-center.p-4 h5 {
+  color: #495057;
+  margin-top: 1rem;
+}
+
+.prospect-management-page .text-center.p-4 p {
+  color: #6c757d;
+  margin-bottom: 0;
+}
+
+/* === LOADING STATES === */
+.prospect-management-page .spinner-border {
+  width: 2rem;
+  height: 2rem;
+  border-width: 0.25em;
+}
+
+.prospect-management-page .spinner-border.text-primary {
+  color: var(--primary-color) !important;
+}
+
+/* === STATUS SPECIFICI === */
+.prospect-management-page .prospect-bozza {
+  border-left: 4px solid #6c757d;
+}
+
+.prospect-management-page .prospect-inviato {
+  border-left: 4px solid #ffc107;
+}
+
+.prospect-management-page .prospect-lavorazione {
+  border-left: 4px solid #17a2b8;
+}
+
+.prospect-management-page .prospect-approvato {
+  border-left: 4px solid #28a745;
+}
+
+.prospect-management-page .prospect-rifiutato {
+  border-left: 4px solid #dc3545;
+}
+
+/* === ANIMAZIONI === */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.prospect-management-page .card {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* === ACCESSIBILITY === */
+.prospect-management-page .btn:focus,
+.prospect-management-page .form-control:focus,
+.prospect-management-page .form-select:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 768px) {
+  .prospect-management-page .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .prospect-management-page .table {
+    font-size: 0.75rem;
+  }
+  
+  .prospect-management-page .nav-pills {
+    flex-direction: column;
+  }
+
+  .prospect-management-page .nav-pills .nav-link {
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
+
+  .prospect-management-page .stats-number {
+    font-size: 2rem;
+  }
+
+  .prospect-management-page .modal-xl {
+    max-width: 95%;
+    margin: 10px auto;
+  }
+
+  .prospect-management-page .modal-body {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .prospect-management-page .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .prospect-management-page .btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+
+  .prospect-management-page .table thead th,
+  .prospect-management-page .table tbody td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.7rem;
+  }
+
+  .prospect-management-page .stats-number {
+    font-size: 1.8rem;
+  }
+
+  .prospect-management-page .form-control,
+  .prospect-management-page .form-select {
+    font-size: 0.85rem;
+    padding: 0.6rem 0.8rem;
+  }
+}
+
+/* === PRINT STYLES === */
+@media print {
+  .prospect-management-page .btn,
+  .prospect-management-page .form-control,
+  .prospect-management-page .form-select,
+  .prospect-management-page .nav-pills,
+  .prospect-management-page .pagination {
+    display: none;
+  }
+
+  .prospect-management-page .card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .prospect-management-page .table {
+    font-size: 0.8rem;
+  }
+
+  .prospect-management-page .badge {
+    border: 1px solid #000;
+    color: #000;
+    background: transparent;
+  }
+}
+/* ===

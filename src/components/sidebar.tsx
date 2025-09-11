@@ -91,6 +91,13 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
           <Store className="icon" />
           <span className="item-text">Vendite</span>
         </button> */}
+        <button
+          className="list-group-item"
+          onClick={() => navigate("/prospect-management")}
+        >
+          <Calendar className="icon" />
+          <span className="item-text">Prospect Management</span>
+        </button>
         <button className="list-group-item" onClick={() => navigate("/report")}>
           <BarChart className="icon" />
           <span className="item-text">Report</span>
@@ -130,7 +137,7 @@ const Sidebar: React.FC<SidebarProps> = ({ menuState, toggleMenu }) => {
           <UserPlus className="icon" />
           <span className="item-text">Dealer Tracking</span>
         </button>
-         <button
+        <button
           className="list-group-item"
           onClick={() => navigate("/agn-tracking")}
         >

@@ -16,7 +16,7 @@ import Mbo from "./pages/Mbo";
 import KpiAnalysisPage from "./pages/KpyAnalysis";
 import DealerTracking from "./pages/DealerTracking";
 import AgnTracking from "./pages/AgnTracking";
-
+import ProspectManagement from "./pages/Prospect";
 
 // Componente per proteggere le route
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -101,7 +101,7 @@ const AppRoutes = () => {
         }
       />
 
-       {/* Rotte protette */}
+      {/* Rotte protette */}
       <Route
         path="/elwallet-onboarding"
         element={
@@ -111,7 +111,7 @@ const AppRoutes = () => {
         }
       />
 
-    {/* Rotte protette */}
+      {/* Rotte protette */}
       <Route
         path="/anagrafica-agenti"
         element={
@@ -121,7 +121,7 @@ const AppRoutes = () => {
         }
       />
 
-       {/* Rotte protette */}
+      {/* Rotte protette */}
       <Route
         path="/task-management"
         element={
@@ -141,7 +141,7 @@ const AppRoutes = () => {
         }
       />
 
-       {/* Rotte protette */}
+      {/* Rotte protette */}
       <Route
         path="/kpi-analysis"
         element={
@@ -151,7 +151,7 @@ const AppRoutes = () => {
         }
       />
 
-       {/* Rotte protette */}
+      {/* Rotte protette */}
       <Route
         path="/dealer-tracking"
         element={
@@ -161,12 +161,22 @@ const AppRoutes = () => {
         }
       />
 
-        {/* Rotte protette */}
+      {/* Rotte protette */}
       <Route
         path="/agn-tracking"
         element={
           <ProtectedRoute>
             <AgnTracking />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Rotte protette */}
+      <Route
+        path="/prospect-management"
+        element={
+          <ProtectedRoute>
+            <ProspectManagement />
           </ProtectedRoute>
         }
       />
