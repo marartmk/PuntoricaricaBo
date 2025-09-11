@@ -5,6 +5,16 @@ import "./dealer-analytics.css";
 import Sidebar from "../../components/sidebar";
 import Topbar from "../../components/topbar";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+
+// Interfaccia per jsPDF con autoTable
+declare module "jspdf" {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 // Interfacce per i dati API - AGGIORNATE
 interface DealerTransactionTotals {
@@ -72,6 +82,9 @@ const DealerAnalytics: React.FC = () => {
   // Paginazione
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(20);
+
+  // Modal di esportazione
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -173,7 +186,6 @@ const DealerAnalytics: React.FC = () => {
     ];
   };
 
-  // Filtri per la lista
   // Filtri per la lista - AGGIORNATA CON ORDINAMENTO
   const getFilteredList = () => {
     if (!dealerData?.dealers) return [];
@@ -202,9 +214,8 @@ const DealerAnalytics: React.FC = () => {
       );
     }
 
-    // Applica ordinamento - NUOVO
+    // Applica ordinamento
     return getSortedList(filtered);
-    //return filtered;
   };
 
   // Paginazione
@@ -223,7 +234,7 @@ const DealerAnalytics: React.FC = () => {
     return provinces.sort();
   };
 
-  // Gestione ordinamento - NUOVO
+  // Gestione ordinamento
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       // Se è la stessa colonna, cambia direzione
@@ -286,6 +297,7 @@ const DealerAnalytics: React.FC = () => {
       return 0;
     });
   }
+
   // Helper per formattare i giorni dall'ultima transazione
   function formatGiorniUltimaTransazione(giorni?: number): {
     text: string;
@@ -349,6 +361,372 @@ const DealerAnalytics: React.FC = () => {
       badgeClass: "bg-danger",
     };
   }
+
+  // Funzione per esportare in Excel
+  const exportToExcel = () => {
+    const filteredData = getFilteredList();
+
+    if (filteredData.length === 0) {
+      alert("Nessun dato da esportare con i filtri attuali");
+      return;
+    }
+
+    // Prepara i dati per l'esportazione
+    const exportData = filteredData.map((dealer, index) => {
+      const giornoInfo = formatGiorniUltimaTransazione(
+        dealer.giorniDallUltimaTransazione
+      );
+
+      return {
+        "#": index + 1,
+        "Codice Dealer": dealer.userId,
+        "Ragione Sociale": dealer.nome,
+        Email: dealer.email,
+        Telefono: dealer.telefonoFisso || "N/A",
+        Indirizzo: dealer.indirizzo,
+        CAP: dealer.cap,
+        Città: dealer.citta,
+        Provincia: dealer.provincia,
+        Regione: dealer.regione,
+        Status: dealer.isTransaction ? "Transante" : "Non Transante",
+        "Ultima Transazione": dealer.ultimaTransazione
+          ? new Date(dealer.ultimaTransazione).toLocaleDateString("it-IT")
+          : "Mai",
+        "Giorni dall'Ultima Transazione": giornoInfo.text,
+        "Account ID": dealer.accID,
+      };
+    });
+
+    // Crea il foglio di lavoro
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    // Crea la cartella di lavoro
+    const workbook = XLSX.utils.book_new();
+
+    // Aggiungi il foglio principale
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Dealer Analytics");
+
+    // Crea un foglio di riepilogo
+    const summaryData = [
+      ["Riepilogo Dealer Analytics", ""],
+      [
+        "Periodo",
+        selectedMonth
+          ? `${getMonthName(selectedMonth)} ${selectedYear}`
+          : `Anno ${selectedYear}`,
+      ],
+      ["Data Esportazione", new Date().toLocaleDateString("it-IT")],
+      [
+        "Filtro Attivo",
+        activeTab === "all"
+          ? "Tutti"
+          : activeTab === "transanti"
+          ? "Transanti"
+          : "Non Transanti",
+      ],
+      ["Provincia Selezionata", selectedProvincia || "Tutte"],
+      ["Termine di Ricerca", searchTerm || "Nessuno"],
+      ["", ""],
+      ["Totale Dealer Esportati", filteredData.length.toString()],
+      [
+        "Dealer Transanti",
+        filteredData.filter((d) => d.isTransaction).length.toString(),
+      ],
+      [
+        "Dealer Non Transanti",
+        filteredData.filter((d) => !d.isTransaction).length.toString(),
+      ],
+      ["", ""],
+      ["Statistiche Generali", ""],
+      [
+        "Totale Dealer (tutti)",
+        dealerData?.totali
+          ? (
+              dealerData.totali.conTransazioni +
+              dealerData.totali.senzaTransazioni
+            ).toString()
+          : "0",
+      ],
+      [
+        "Dealer con Transazioni",
+        dealerData?.totali?.conTransazioni?.toString() || "0",
+      ],
+      [
+        "Dealer senza Transazioni",
+        dealerData?.totali?.senzaTransazioni?.toString() || "0",
+      ],
+      [
+        "Tasso di Attivazione",
+        dealerData?.totali
+          ? `${Math.round(
+              (dealerData.totali.conTransazioni /
+                (dealerData.totali.conTransazioni +
+                  dealerData.totali.senzaTransazioni)) *
+                100
+            )}%`
+          : "0%",
+      ],
+    ];
+
+    const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(workbook, summaryWorksheet, "Riepilogo");
+
+    // Genera il nome del file
+    const fileName = `dealer-analytics-${selectedYear}${
+      selectedMonth ? `-${selectedMonth.toString().padStart(2, "0")}` : ""
+    }-${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    // Scarica il file
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  // Funzione per esportare in PDF
+  const exportToPDF = () => {
+    const filteredData = getFilteredList();
+
+    if (filteredData.length === 0) {
+      alert("Nessun dato da esportare con i filtri attuali");
+      return;
+    }
+
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+    });
+
+    // Header del documento
+    doc.setFontSize(20);
+    doc.setTextColor(0, 36, 84);
+    doc.text("Dealer Analytics Report", 14, 20);
+
+    // Informazioni sul report
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    const periodo = selectedMonth
+      ? `${getMonthName(selectedMonth)} ${selectedYear}`
+      : `Anno ${selectedYear}`;
+    doc.text(`Periodo: ${periodo}`, 14, 30);
+    doc.text(`Data: ${new Date().toLocaleDateString("it-IT")}`, 14, 37);
+    doc.text(
+      `Filtri: ${
+        activeTab === "all"
+          ? "Tutti"
+          : activeTab === "transanti"
+          ? "Transanti"
+          : "Non Transanti"
+      }`,
+      14,
+      44
+    );
+
+    let currentY = 44;
+    if (selectedProvincia) {
+      currentY += 7;
+      doc.text(`Provincia: ${selectedProvincia}`, 14, currentY);
+    }
+    if (searchTerm) {
+      currentY += 7;
+      doc.text(`Ricerca: ${searchTerm}`, 14, currentY);
+    }
+
+    // Statistiche di riepilogo
+    currentY += 14;
+    doc.setFontSize(14);
+    doc.setTextColor(0, 36, 84);
+    doc.text("Riepilogo", 14, currentY);
+
+    currentY += 10;
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Totale Dealer: ${filteredData.length}`, 14, currentY);
+    doc.text(
+      `Transanti: ${filteredData.filter((d) => d.isTransaction).length}`,
+      80,
+      currentY
+    );
+    doc.text(
+      `Non Transanti: ${filteredData.filter((d) => !d.isTransaction).length}`,
+      140,
+      currentY
+    );
+
+    if (dealerData?.totali) {
+      const tassoAttivazione = Math.round(
+        (dealerData.totali.conTransazioni /
+          (dealerData.totali.conTransazioni +
+            dealerData.totali.senzaTransazioni)) *
+          100
+      );
+      doc.text(
+        `Tasso Attivazione Generale: ${tassoAttivazione}%`,
+        200,
+        currentY
+      );
+    }
+
+    // Prepara i dati per la tabella
+    const tableData = filteredData.map((dealer, index) => {
+      const giornoInfo = formatGiorniUltimaTransazione(
+        dealer.giorniDallUltimaTransazione
+      );
+
+      return [
+        (index + 1).toString(),
+        dealer.userId,
+        dealer.nome.length > 25
+          ? dealer.nome.substring(0, 25) + "..."
+          : dealer.nome,
+        dealer.citta,
+        dealer.provincia,
+        dealer.isTransaction ? "Sì" : "No",
+        giornoInfo.text,
+        dealer.email.length > 25
+          ? dealer.email.substring(0, 25) + "..."
+          : dealer.email,
+      ];
+    });
+
+    // Usa autoTable con la sintassi corretta
+    autoTable(doc, {
+      head: [
+        [
+          "#",
+          "Codice",
+          "Ragione Sociale",
+          "Città",
+          "Prov.",
+          "Transante",
+          "Ultima Trans.",
+          "Email",
+        ],
+      ],
+      body: tableData,
+      startY: currentY + 10,
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+      },
+      headStyles: {
+        fillColor: [0, 36, 84],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+      },
+      alternateRowStyles: {
+        fillColor: [248, 249, 250],
+      },
+      margin: { left: 14, right: 14 },
+      columnStyles: {
+        0: { halign: "center", cellWidth: 15 },
+        1: { halign: "center", cellWidth: 25 },
+        2: { cellWidth: 60 },
+        3: { cellWidth: 35 },
+        4: { halign: "center", cellWidth: 20 },
+        5: { halign: "center", cellWidth: 25 },
+        6: { halign: "center", cellWidth: 30 },
+        7: { cellWidth: 65 },
+      },
+    });
+
+    // Footer con numero di pagina
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.text(
+        `Pagina ${i} di ${pageCount}`,
+        doc.internal.pageSize.width - 30,
+        doc.internal.pageSize.height - 10
+      );
+      doc.text(
+        "Generato da PuntoRicarica BO",
+        14,
+        doc.internal.pageSize.height - 10
+      );
+    }
+
+    // Genera il nome del file e scarica
+    const fileName = `dealer-analytics-${selectedYear}${
+      selectedMonth ? `-${selectedMonth.toString().padStart(2, "0")}` : ""
+    }-${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(fileName);
+  };
+
+  // Funzione per gestire il click del bottone Esporta
+  const handleExport = () => {
+    setShowExportModal(true);
+  };
+
+  // Modal di esportazione
+  const exportModal = (
+    <div
+      className={`modal fade ${showExportModal ? "show d-block" : ""}`}
+      tabIndex={-1}
+      style={{
+        backgroundColor: showExportModal ? "rgba(0,0,0,0.5)" : "transparent",
+      }}
+    >
+      <div className="modal-dialog modal-dialog-centered">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h5 className="modal-title">
+              <i className="fa-solid fa-download me-2"></i>
+              Esporta Dati Dealer
+            </h5>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={() => setShowExportModal(false)}
+            ></button>
+          </div>
+          <div className="modal-body">
+            <p className="mb-3">
+              Scegli il formato per esportare{" "}
+              <strong>{getFilteredList().length}</strong> dealer filtrati:
+            </p>
+            <div className="d-grid gap-2">
+              <button
+                className="btn btn-outline-success btn-lg"
+                onClick={() => {
+                  exportToExcel();
+                  setShowExportModal(false);
+                }}
+              >
+                <i className="fa-solid fa-file-excel me-2"></i>
+                Esporta in Excel (.xlsx)
+                <small className="d-block text-muted">
+                  Include foglio di riepilogo con statistiche
+                </small>
+              </button>
+              <button
+                className="btn btn-outline-danger btn-lg"
+                onClick={() => {
+                  exportToPDF();
+                  setShowExportModal(false);
+                }}
+              >
+                <i className="fa-solid fa-file-pdf me-2"></i>
+                Esporta in PDF
+                <small className="d-block text-muted">
+                  Formato stampabile con layout ottimizzato
+                </small>
+              </button>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setShowExportModal(false)}
+            >
+              Annulla
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div
@@ -460,7 +838,11 @@ const DealerAnalytics: React.FC = () => {
                   ))}
                 </ul>
               </div>
-              <button className="btn btn-outline-primary-dark">
+              <button
+                className="btn btn-outline-primary-dark"
+                onClick={handleExport}
+                disabled={isLoadingDealer || !dealerData?.dealers?.length}
+              >
                 <i className="fa-solid fa-download me-1"></i>
                 Esporta
               </button>
@@ -1200,6 +1582,9 @@ const DealerAnalytics: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal di esportazione */}
+      {exportModal}
     </div>
   );
 };

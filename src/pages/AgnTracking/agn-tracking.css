@@ -1,0 +1,575 @@
+/* agn-tracking.css - Stili specifici per la pagina AgnTracking */
+
+/* Header title */
+.agn-tracking-title {
+  color: #000000 !important;
+  font-weight: 600;
+}
+
+/* Breadcrumb personalizzato (eredita da agn-analytics) */
+.agn-tracking-page .breadcrumb {
+  background: none;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.agn-tracking-page .breadcrumb-item + .breadcrumb-item::before {
+  content: "›";
+  color: #002454;
+  font-weight: bold;
+}
+
+.agn-tracking-page .breadcrumb .btn-link {
+  color: #002454 !important;
+  text-decoration: none !important;
+  font-weight: 500;
+}
+
+.agn-tracking-page .breadcrumb .btn-link:hover {
+  color: #003875 !important;
+  text-decoration: underline !important;
+}
+
+/* Bottoni con brand color aziendale */
+.agn-tracking-page .btn-primary-dark {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+  color: white !important;
+  transition: all 0.3s ease;
+}
+
+.agn-tracking-page .btn-primary-dark:hover {
+  background-color: #003875 !important;
+  border-color: #003875 !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.3);
+}
+
+.agn-tracking-page .btn-outline-primary-dark {
+  border-color: #002454 !important;
+  color: #002454 !important;
+  background: transparent !important;
+  transition: all 0.3s ease;
+}
+
+.agn-tracking-page .btn-outline-primary-dark:hover {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.3);
+}
+
+/* Card headers personalizzati */
+.agn-tracking-page .custom-card-header {
+  background: linear-gradient(135deg, #002454 0%, #003875 100%);
+  border-bottom: 3px solid #3498db;
+  color: white;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+}
+
+/* Menu icons in header */
+.agn-tracking-page .menu-right {
+  display: flex;
+  gap: 8px;
+}
+
+.agn-tracking-page .menu-icon {
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.agn-tracking-page .menu-icon:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* Card hover effects */
+.agn-tracking-page .card {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+}
+
+.agn-tracking-page .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 36, 84, 0.15);
+  border-color: #002454;
+}
+
+/* Stili per i placeholder della mappa */
+.map-placeholder {
+  height: 600px;
+  width: 100%;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  margin: 0;
+}
+
+.map-placeholder:hover {
+  border-color: #002454;
+  background: linear-gradient(135deg, #f1f3f4 0%, #e1e5e9 100%);
+}
+
+/* Stili per la mappa Google Maps */
+.agn-map {
+  width: 100%;
+  height: 600px;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Nav pills personalizzate */
+.agn-tracking-page .nav-pills .nav-link {
+  color: #002454;
+  border: 1px solid #dee2e6;
+  margin-right: 0.5rem;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.agn-tracking-page .nav-pills .nav-link:hover {
+  background-color: #f8f9fa;
+  border-color: #002454;
+  transform: translateY(-1px);
+}
+
+.agn-tracking-page .nav-pills .nav-link.active {
+  background-color: #002454 !important;
+  border-color: #002454 !important;
+  color: white !important;
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.3);
+}
+
+/* Cards statistiche rapide */
+.agn-tracking-page .card.bg-primary {
+  background: linear-gradient(135deg, #002454 0%, #003875 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.agn-tracking-page .card.bg-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.agn-tracking-page .card.bg-warning {
+  background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.agn-tracking-page .card.bg-info {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.agn-tracking-page .card.bg-primary:hover,
+.agn-tracking-page .card.bg-success:hover,
+.agn-tracking-page .card.bg-warning:hover,
+.agn-tracking-page .card.bg-info:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Progress bar per geocodifica */
+.agn-tracking-page .progress {
+  background-color: #e9ecef;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  height: 0.5rem;
+}
+
+.agn-tracking-page .progress-bar {
+  transition: width 0.6s ease;
+  background: linear-gradient(45deg, #002454, #003875);
+}
+
+/* Badge personalizzati */
+.agn-tracking-page .badge {
+  font-size: 0.75rem;
+  padding: 0.5em 0.75em;
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+
+.agn-tracking-page .badge.bg-success {
+  background-color: #28a745 !important;
+}
+
+.agn-tracking-page .badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+/* Form controls personalizzati */
+.agn-tracking-page .form-control:focus,
+.agn-tracking-page .form-select:focus {
+  border-color: #002454;
+  box-shadow: 0 0 0 0.2rem rgba(0, 36, 84, 0.25);
+}
+
+/* Dropdown personalizzato */
+.agn-tracking-page .dropdown-menu {
+  border: 1px solid #002454;
+  box-shadow: 0 4px 8px rgba(0, 36, 84, 0.15);
+}
+
+.agn-tracking-page .dropdown-item:hover {
+  background-color: #002454;
+  color: white;
+}
+
+.agn-tracking-page .dropdown-header {
+  color: #002454;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Stili per Google Maps Info Window */
+.agn-info-window {
+  max-width: 250px;
+  font-family: inherit;
+}
+
+.agn-info-window h6 {
+  margin-bottom: 0.5rem;
+  color: #002454;
+  font-size: 1rem;
+}
+
+.agn-info-window p {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.agn-info-window .badge {
+  font-size: 0.75rem;
+  padding: 0.25em 0.5em;
+}
+
+.agn-info-window small {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+/* Animazioni per il caricamento */
+.agn-tracking-page .fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .agn-tracking-title {
+    font-size: 1.5rem;
+  }
+  
+  .agn-tracking-page .breadcrumb {
+    font-size: 0.875rem;
+  }
+  
+  .map-placeholder {
+    height: 400px;
+  }
+  
+  .agn-map {
+    height: 400px;
+  }
+  
+  .agn-tracking-page .nav-pills .nav-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    margin-right: 0.25rem;
+  }
+
+  /* Stack dei filtri su mobile */
+  .agn-tracking-page .row.mb-3 .col-md-6 {
+    margin-bottom: 1rem;
+  }
+
+  /* Cards statistiche responsive */
+  .agn-tracking-page .card.bg-primary,
+  .agn-tracking-page .card.bg-success,
+  .agn-tracking-page .card.bg-warning,
+  .agn-tracking-page .card.bg-info {
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Header responsive */
+  .agn-tracking-page .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  .agn-tracking-page .d-flex.gap-2 {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 1rem;
+  }
+
+  /* Nav pills stack su mobile molto piccolo */
+  .agn-tracking-page .nav-pills {
+    flex-direction: column;
+  }
+
+  .agn-tracking-page .nav-pills .nav-link {
+    margin-right: 0;
+    margin-bottom: 0.25rem;
+    width: 100%;
+  }
+
+  /* Form controls full-width su mobile */
+  .agn-tracking-page .form-control,
+  .agn-tracking-page .form-select {
+    margin-bottom: 0.5rem;
+    width: 100%;
+  }
+
+  /* Nascondi alcuni elementi dell'header su schermi molto piccoli */
+  .agn-tracking-page .menu-right {
+    display: none;
+  }
+
+  /* Info window più piccola su mobile */
+  .agn-info-window {
+    max-width: 200px;
+  }
+
+  .agn-info-window h6 {
+    font-size: 0.9rem;
+  }
+
+  .agn-info-window p {
+    font-size: 0.8rem;
+  }
+}
+
+/* Dark mode support (opzionale) */
+@media (prefers-color-scheme: dark) {
+  .agn-tracking-page .map-placeholder {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+
+  .agn-tracking-page .card {
+    background-color: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+}
+
+/* Print styles */
+@media print {
+  .agn-tracking-page .btn,
+  .agn-tracking-page .dropdown,
+  .agn-tracking-page .nav-pills,
+  .agn-tracking-page .form-control,
+  .agn-tracking-page .form-select {
+    display: none !important;
+  }
+
+  .agn-tracking-page .card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .agn-map {
+    border: 2px solid #000;
+    border-radius: 4px;
+  }
+
+  .map-placeholder {
+    display: none;
+  }
+}
+
+/* Stili aggiuntivi per migliorare l'esperienza utente */
+.agn-tracking-page .custom-card-header .fa-map-marker-alt {
+  margin-right: 0.5rem;
+}
+
+.agn-tracking-page .progress-container {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.agn-tracking-page .stats-container .card-body {
+  padding: 0.75rem;
+}
+
+/* Hover effects per i marker info */
+.agn-info-window:hover {
+  background-color: #f8f9fa;
+}
+
+/* Stili per il caricamento geocodifica */
+.agn-tracking-page .geocoding-progress {
+  background-color: rgba(0, 36, 84, 0.1);
+  border-left: 4px solid #002454;
+}
+
+.agn-tracking-page .geocoding-progress .fa-map-marker-alt {
+  color: #002454;
+  font-size: 1.2rem;
+}
+
+/* CTA bianche sulla barra blu */
+.agn-tracking-page .header-cta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.agn-tracking-page .btn-header-white {
+  background: #ffffff !important;
+  color: #002454 !important;
+  border: 1px solid #ffffff !important;
+  font-weight: 700;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  box-shadow: 0 3px 10px rgba(255,255,255,0.25), 0 2px 6px rgba(0,36,84,0.2);
+  transition: all .2s ease;
+}
+.agn-tracking-page .btn-header-white:hover:not(:disabled) {
+  background: #f3f6ff !important;
+  transform: translateY(-1px);
+}
+
+.agn-tracking-page .btn-header-danger {
+  background: #ffffff !important;
+  color: #c82333 !important;             /* rosso bootstrap-ish */
+  border: 1px solid #c82333 !important;
+  font-weight: 700;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  box-shadow: 0 3px 10px rgba(255,255,255,0.25), 0 2px 6px rgba(200,35,51,0.15);
+  transition: all .2s ease;
+}
+.agn-tracking-page .btn-header-danger:hover:not(:disabled) {
+  background: #fff5f6 !important;
+  transform: translateY(-1px);
+}
+
+.agn-tracking-page .btn-header-white:disabled,
+.agn-tracking-page .btn-header-danger:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Bottoni header compatti: stessa altezza delle icone (30px) */
+.agn-tracking-page .btn-header-compact {
+  height: 30px;
+  padding: 0 12px;            /* niente padding verticale */
+  display: inline-flex;       /* centra icona+testo verticalmente */
+  align-items: center;
+  gap: .4rem;
+  font-size: .9rem;           /* leggermente più piccolo */
+  line-height: 1;             /* evita extra-altezza */
+}
+
+.agn-tracking-page .btn-header-compact .fa-solid {
+  font-size: .95rem;          /* icona proporzionata */
+}
+
+/* Base per i bottoni dell'header (stessa altezza dei controlli sopra) */
+.agn-tracking-page .btn-header{
+  height:36px;
+  padding:0 12px;
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+  line-height:1;
+  font-weight:600;
+  border-radius:.75rem;
+  border-width:1px;
+  transition:all .15s ease;
+}
+
+/* Variante primary (filled) tipo "Aggiorna" */
+.agn-tracking-page .btn-header-primary{
+  background:#0f3d7a;         /* blu pieno coerente coi controlli sopra */
+  color:#fff;
+  border-color:#0f3d7a;
+}
+.agn-tracking-page .btn-header-primary:hover:not(:disabled){
+  filter:brightness(1.05);
+  transform:translateY(-1px);
+}
+
+/* Variante outline (bianca con bordo blu) tipo "Anno" */
+.agn-tracking-page .btn-header-outline{
+  background:#fff;
+  color:#0f3d7a;
+  border-color:#0f3d7a;
+}
+.agn-tracking-page .btn-header-outline:hover:not(:disabled){
+  background:#f6f9ff;
+  transform:translateY(-1px);
+}
+
+/* Variante outline-danger per Annulla (bordo rosso) */
+.agn-tracking-page .btn-header-outline-danger{
+  background:#fff;
+  color:#c82333;
+  border-color:#c82333;
+}
+.agn-tracking-page .btn-header-outline-danger:hover:not(:disabled){
+  background:#fff5f6;
+  transform:translateY(-1px);
+}
+
+/* Stato disabled */
+.agn-tracking-page .btn-header:disabled{
+  opacity:.6;
+  transform:none;
+}
+
+/* Bottoni della toolbar filtri: stessa altezza dei select */
+.agn-tracking-page .card .p-3 .btn {
+  height: 38px;             /* come .form-select di Bootstrap */
+  padding-top: 0;
+  padding-bottom: 0;
+  display: inline-flex;     /* centra icona + testo verticalmente */
+  align-items: center;
+  line-height: 1;           /* evita extra-altezza in stato attivo/disabled */
+}
+
+.agn-tracking-page .card .p-3 .btn i {
+  line-height: 1;           /* icone allineate */
+  font-size: 0.95rem;       /* proporzionate ai select */
+}

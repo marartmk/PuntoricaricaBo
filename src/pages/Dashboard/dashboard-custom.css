@@ -1379,3 +1379,79 @@
   padding-left: 0px;
 }
 
+/* === AGGIUNGERE AL FILE dashboard-custom.css === */
+
+/* AI Status Offline */
+.dashboard-page .ai-status-indicator.offline {
+  background: #dc3545; /* Rosso per offline */
+  box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+}
+
+/* AI Assistant Disabilitato - Stato Input */
+.dashboard-page .ai-input:disabled {
+  background-color: #f8f9fa !important;
+  color: #6c757d !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.dashboard-page .ai-input:disabled::placeholder {
+  color: #adb5bd !important;
+  opacity: 0.8;
+}
+
+/* Pulsante Send disabilitato permanentemente quando AI è offline */
+.dashboard-page .ai-send-btn:disabled {
+  background: #6c757d !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+  opacity: 0.6;
+}
+
+/* Pulsanti Quick Actions disabilitati */
+.dashboard-page .quick-actions .btn:disabled {
+  background-color: #e9ecef !important;
+  border-color: #dee2e6 !important;
+  color: #6c757d !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Container AI disabilitato - effetto visivo */
+.dashboard-page .ai-assistant-container.disabled {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Messaggio di stato disabilitato */
+.dashboard-page .ai-assistant-body .alert-info {
+  background-color: #d1ecf1;
+  border-color: #bee5eb;
+  color: #0c5460;
+  border-radius: 8px;
+  border-left: 4px solid #17a2b8;
+}
+
+/* Override per evitare interazioni quando disabilitato */
+.dashboard-page .ai-assistant-container.disabled .ai-input-container,
+.dashboard-page .ai-assistant-container.disabled .quick-actions {
+  pointer-events: none;
+}
+
+.dashboard-page .ai-assistant-container.disabled .ai-input-wrapper {
+  filter: grayscale(20%);
+}
+
+/* Stile per l'indicatore offline con animazione */
+@keyframes offline-pulse {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.4; }
+}
+
+.dashboard-page .ai-status-indicator.offline {
+  animation: offline-pulse 3s infinite;
+}
+

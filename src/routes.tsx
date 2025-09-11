@@ -15,6 +15,7 @@ import TaskManagement from "./pages/Tasks";
 import Mbo from "./pages/Mbo";
 import KpiAnalysisPage from "./pages/KpyAnalysis";
 import DealerTracking from "./pages/DealerTracking";
+import AgnTracking from "./pages/AgnTracking";
 
 
 // Componente per proteggere le route
@@ -150,12 +151,22 @@ const AppRoutes = () => {
         }
       />
 
-  {/* Rotte protette */}
+       {/* Rotte protette */}
       <Route
         path="/dealer-tracking"
         element={
           <ProtectedRoute>
             <DealerTracking />
+          </ProtectedRoute>
+        }
+      />
+
+        {/* Rotte protette */}
+      <Route
+        path="/agn-tracking"
+        element={
+          <ProtectedRoute>
+            <AgnTracking />
           </ProtectedRoute>
         }
       />

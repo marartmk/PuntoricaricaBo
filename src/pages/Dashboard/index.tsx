@@ -149,6 +149,8 @@ interface DashboardDataForAI {
   lastUpdated: string;
 }
 
+const AI_ASSISTANT_ENABLED = false; // 👈 Flag per attivare/disattivare l'AI Assistant
+
 const Dashboard: React.FC = () => {
   const [menuState, setMenuState] = useState<"open" | "closed">("open");
 
@@ -1540,7 +1542,7 @@ LINEE GUIDA ANALITICHE:
             </div>
           </div>
 
-          {/* AI Assistant Section - MIGLIORATA */}
+          {/* AI Assistant Section - CON CONTROLLO TOGGLE */}
           <div className="ai-assistant-section mb-5">
             <div className="row">
               <div className="col-12">
@@ -1554,20 +1556,34 @@ LINEE GUIDA ANALITICHE:
                         <div className="ai-header-text">
                           <h3>AI Assistant</h3>
                           <p>
-                            Il tuo assistente intelligente per analisi KPI,
-                            troubleshooting e procedure operative
+                            {AI_ASSISTANT_ENABLED
+                              ? "Il tuo assistente intelligente per analisi KPI, troubleshooting e procedure operative"
+                              : "Assistente AI temporaneamente non disponibile"}
                           </p>
                         </div>
                       </div>
                       <div className="ai-status">
-                        <div className="ai-status-indicator online"></div>
-                        <span>Online</span>
+                        <div
+                          className={`ai-status-indicator ${
+                            AI_ASSISTANT_ENABLED ? "online" : "offline"
+                          }`}
+                        ></div>
+                        <span>
+                          {AI_ASSISTANT_ENABLED ? "Online" : "Offline"}
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   <div className="ai-assistant-body">
-                    {aiError && (
+                    {!AI_ASSISTANT_ENABLED && (
+                      <div className="alert alert-info mb-3" role="alert">
+                        <i className="fa-solid fa-info-circle"></i>
+                         L'assistente AI è attualmente disattivato.
+                      </div>
+                    )}
+
+                    {aiError && AI_ASSISTANT_ENABLED && (
                       <div className="alert alert-warning mb-3" role="alert">
                         <i className="fa-solid fa-exclamation-triangle"></i>{" "}
                         {aiError}
@@ -1581,51 +1597,56 @@ LINEE GUIDA ANALITICHE:
                             <div className="welcome-icon">
                               <i className="fa-solid fa-comments"></i>
                             </div>
-                            <h4>Benvenuto nell'AI Assistant!</h4>
+                            <h4>
+                              {AI_ASSISTANT_ENABLED
+                                ? "Benvenuto nell'AI Assistant!"
+                                : "AI Assistant Non Disponibile"}
+                            </h4>
                             <p className="text-muted">
-                              Sono qui per aiutarti con analisi di KPI,
-                              informazioni su transazioni, terminali di
-                              pagamento e procedure operative. Cosa vorresti
-                              sapere?
+                              {AI_ASSISTANT_ENABLED
+                                ? "Sono qui per aiutarti con analisi di KPI, informazioni su transazioni, terminali di pagamento e procedure operative. Cosa vorresti sapere?"
+                                : "L'assistente AI è temporaneamente disattivato. Tutte le funzionalità di analisi e supporto sono momentaneamente non disponibili."}
                             </p>
-                            <div className="quick-actions">
-                              <button
-                                className="btn btn-outline-primary btn-sm me-2"
-                                onClick={() =>
-                                  handleSendQuestion(
-                                    "Analizza le performance del mese corrente rispetto al mese precedente",
-                                    true
-                                  )
-                                }
-                              >
-                                <i className="fa-solid fa-chart-line me-1"></i>
-                                Analisi Performance
-                              </button>
-                              <button
-                                className="btn btn-outline-secondary btn-sm me-2"
-                                onClick={() =>
-                                  handleSendQuestion(
-                                    "Fammi un'analisi dettagliata dello stato dei dealer attivi e inattivi",
-                                    true
-                                  )
-                                }
-                              >
-                                <i className="fa-solid fa-users me-1"></i>
-                                Stato Dealer
-                              </button>
-                              <button
-                                className="btn btn-outline-success btn-sm"
-                                onClick={() =>
-                                  handleSendQuestion(
-                                    "Basandoti sui dati attuali, dammi suggerimenti concreti per migliorare il tasso di attivazione e il fatturato",
-                                    true
-                                  )
-                                }
-                              >
-                                <i className="fa-solid fa-lightbulb me-1"></i>
-                                Suggerimenti
-                              </button>
-                            </div>
+                            {AI_ASSISTANT_ENABLED && (
+                              <div className="quick-actions">
+                                <button
+                                  className="btn btn-outline-primary btn-sm me-2"
+                                  onClick={() =>
+                                    handleSendQuestion(
+                                      "Analizza le performance del mese corrente rispetto al mese precedente",
+                                      true
+                                    )
+                                  }
+                                >
+                                  <i className="fa-solid fa-chart-line me-1"></i>
+                                  Analisi Performance
+                                </button>
+                                <button
+                                  className="btn btn-outline-secondary btn-sm me-2"
+                                  onClick={() =>
+                                    handleSendQuestion(
+                                      "Fammi un'analisi dettagliata dello stato dei dealer attivi e inattivi",
+                                      true
+                                    )
+                                  }
+                                >
+                                  <i className="fa-solid fa-users me-1"></i>
+                                  Stato Dealer
+                                </button>
+                                <button
+                                  className="btn btn-outline-success btn-sm"
+                                  onClick={() =>
+                                    handleSendQuestion(
+                                      "Basandoti sui dati attuali, dammi suggerimenti concreti per migliorare il tasso di attivazione e il fatturato",
+                                      true
+                                    )
+                                  }
+                                >
+                                  <i className="fa-solid fa-lightbulb me-1"></i>
+                                  Suggerimenti
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -1662,7 +1683,7 @@ LINEE GUIDA ANALITICHE:
                               </div>
                             </div>
                           ))}
-                          {isAiTyping && (
+                          {isAiTyping && AI_ASSISTANT_ENABLED && (
                             <div className="ai-message ai">
                               <div className="message-content">
                                 <div className="message-header">
@@ -1690,14 +1711,22 @@ LINEE GUIDA ANALITICHE:
                           value={currentQuestion}
                           onChange={(e) => setCurrentQuestion(e.target.value)}
                           onKeyPress={handleKeyPress}
-                          placeholder="Scrivi la tua domanda qui... (es. Analizza le performance del mese, Problemi con i terminali, Suggerimenti per migliorare i KPI)"
+                          placeholder={
+                            AI_ASSISTANT_ENABLED
+                              ? "Scrivi la tua domanda qui... (es. Analizza le performance del mese, Problemi con i terminali, Suggerimenti per migliorare i KPI)"
+                              : "AI Assistant non disponibile"
+                          }
                           rows={2}
-                          disabled={isAiTyping}
+                          disabled={!AI_ASSISTANT_ENABLED || isAiTyping}
                         />
                         <button
                           className="ai-send-btn"
                           onClick={() => handleSendQuestion(undefined, true)}
-                          disabled={!currentQuestion.trim() || isAiTyping}
+                          disabled={
+                            !AI_ASSISTANT_ENABLED ||
+                            !currentQuestion.trim() ||
+                            isAiTyping
+                          }
                         >
                           <i className="fa-solid fa-paper-plane"></i>
                         </button>
