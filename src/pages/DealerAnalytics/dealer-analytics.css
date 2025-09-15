@@ -521,3 +521,199 @@
     display: none;
   }
 }
+
+/* ✅ STILI AGGIUNTIVI PER IL NUOVO LAYOUT FILTRI */
+
+/* Miglioramenti per la sezione filtri */
+.dealer-analytics-page .filters-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e9ecef;
+}
+
+/* Stili per i form controls nei filtri */
+.dealer-analytics-page .form-select-sm,
+.dealer-analytics-page .form-control-sm {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dealer-analytics-page .form-select-sm:hover,
+.dealer-analytics-page .form-control-sm:hover {
+  border-color: #002454;
+  box-shadow: 0 2px 6px rgba(0, 36, 84, 0.15);
+}
+
+.dealer-analytics-page .form-select-sm:focus,
+.dealer-analytics-page .form-control-sm:focus {
+  border-color: #002454;
+  box-shadow: 0 0 0 0.2rem rgba(0, 36, 84, 0.25);
+  outline: none;
+}
+
+/* Stile per il bottone reset quando attivo */
+.dealer-analytics-page .btn-reset-filters {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dealer-analytics-page .btn-reset-filters:hover {
+  background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Stili per gli optgroup */
+.dealer-analytics-page .form-select optgroup {
+  font-weight: 600;
+  color: #002454;
+  background-color: #f8f9fa;
+  font-style: normal;
+}
+
+.dealer-analytics-page .form-select option {
+  padding: 0.5rem;
+  color: #495057;
+}
+
+/* Badges nei nav pills con filtri attivi */
+.dealer-analytics-page .nav-pills .nav-link .filter-badge {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 0.7rem;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  margin-left: 0.5rem;
+}
+
+/* Indicatori filtri attivi */
+.dealer-analytics-page .filter-indicator {
+  position: relative;
+}
+
+.dealer-analytics-page .filter-indicator.active::after {
+  content: "•";
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  color: #28a745;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+/* Responsive migliorato per i filtri */
+@media (max-width: 768px) {
+  .dealer-analytics-page .filters-section {
+    padding: 0.75rem;
+  }
+  
+  /* Su tablet, stack i filtri in due righe */
+  .dealer-analytics-page .filters-section .row.g-2 .col-md-3 {
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Prima riga: Distributore + Ricerca */
+  .dealer-analytics-page .filters-section .row.g-2 .col-md-3:nth-child(1),
+  .dealer-analytics-page .filters-section .row.g-2 .col-md-3:nth-child(2) {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+  
+  /* Seconda riga: Provincia + Reset */
+  .dealer-analytics-page .filters-section .row.g-2 .col-md-3:nth-child(3),
+  .dealer-analytics-page .filters-section .row.g-2 .col-md-3:nth-child(4) {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Su mobile, tutti i filtri in colonna singola */
+  .dealer-analytics-page .filters-section .row.g-2 .col-md-3 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Bottone reset full-width su mobile */
+  .dealer-analytics-page .btn-reset-filters {
+    width: 100% !important;
+  }
+  
+  /* Nav pills responsive */
+  .dealer-analytics-page .nav-pills {
+    flex-direction: column;
+  }
+  
+  .dealer-analytics-page .nav-pills .nav-link {
+    margin-right: 0;
+    margin-bottom: 0.25rem;
+    text-align: center;
+  }
+  
+  /* Nascondi i dettagli sui nav pills su mobile molto piccolo */
+  .dealer-analytics-page .nav-pills .nav-link small {
+    display: none;
+  }
+}
+
+/* Stili per migliorare l'accessibilità */
+.dealer-analytics-page .form-select-sm:focus,
+.dealer-analytics-page .form-control-sm:focus {
+  outline: 2px solid #002454;
+  outline-offset: 2px;
+}
+
+/* Animazioni smooth per i cambi di stato */
+.dealer-analytics-page .form-select-sm,
+.dealer-analytics-page .form-control-sm,
+.dealer-analytics-page .btn-reset-filters {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Placeholder migliorato */
+.dealer-analytics-page .form-control-sm::placeholder {
+  color: #6c757d;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+/* Stili per il conteggio risultati nei filtri */
+.dealer-analytics-page .results-counter {
+  background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #495057;
+  font-weight: 500;
+}
+
+/* Bordi standard grigi per tutti i form controls */
+.dealer-analytics-page .form-select-sm,
+.dealer-analytics-page .form-control-sm {
+  border: 1px solid #dee2e6 !important; /* Bordo grigio standard */
+  background-color: white !important; /* Background sempre bianco */
+}
+
+/* Hover: grigio leggermente più scuro */
+.dealer-analytics-page .form-select-sm:hover,
+.dealer-analytics-page .form-control-sm:hover {
+  border-color: #ced4da !important;
+}
+
+/* Focus: standard Bootstrap (blu chiaro) */
+.dealer-analytics-page .form-select-sm:focus,
+.dealer-analytics-page .form-control-sm:focus {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+}

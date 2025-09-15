@@ -24,8 +24,8 @@ interface DealerTransactionTotals {
 
 interface DealerDetail {
   accID: number;
-  userId: string; // Codice dealer
-  nome: string; // Ragione sociale
+  userId: string;
+  nome: string;
   isTransaction: boolean;
   email: string;
   indirizzo: string;
@@ -34,8 +34,14 @@ interface DealerDetail {
   provincia: string;
   regione: string;
   telefonoFisso: string;
-  ultimaTransazione?: string; // Data ultima transazione
-  giorniDallUltimaTransazione?: number; // Giorni dall'ultima transazione
+  ultimaTransazione?: string;
+  giorniDallUltimaTransazione?: number;
+  // ✅ AGGIUNTI CAMPI DISTRIBUTORE
+  codiceDistributore?: string;
+  distributoreRagSoc?: string;
+  distributoreEmail?: string;
+  distributoreCitta?: string;
+  distributoreProvincia?: string;
 }
 
 interface DealerDetailResponse {
@@ -86,6 +92,9 @@ const DealerAnalytics: React.FC = () => {
   // Modal di esportazione
   const [showExportModal, setShowExportModal] = useState(false);
 
+  // Stati per filtri avanzati (distributore) - AGGIUNTATI
+  const [selectedDistributore, setSelectedDistributore] = useState<string>("");
+
   const API_URL = import.meta.env.VITE_API_URL;
 
   // Carica lo stato del menu dal localStorage
@@ -100,6 +109,28 @@ const DealerAnalytics: React.FC = () => {
   useEffect(() => {
     fetchDealerData(selectedYear, selectedMonth);
   }, [selectedYear, selectedMonth]);
+
+  // 3. FUNZIONE PER OTTENERE DISTRIBUTORI UNICI
+  const getUniqueDistributors = () => {
+    if (!dealerData?.dealers) return [];
+
+    const distributors = dealerData.dealers
+      .filter((d) => d.codiceDistributore && d.distributoreRagSoc) // Solo dealer con distributore
+      .map((d) => ({
+        codice: d.codiceDistributore!,
+        ragioneSociale: d.distributoreRagSoc!,
+        citta: d.distributoreCitta,
+        provincia: d.distributoreProvincia,
+      }))
+      .filter(
+        (dist, index, self) =>
+          // Rimuovi duplicati basandosi sul codice
+          index === self.findIndex((d) => d.codice === dist.codice)
+      )
+      .sort((a, b) => a.ragioneSociale.localeCompare(b.ragioneSociale));
+
+    return distributors;
+  };
 
   // Funzione unificata per recuperare tutti i dati dealer
   const fetchDealerData = async (anno: number, mese?: number | null) => {
@@ -199,6 +230,21 @@ const DealerAnalytics: React.FC = () => {
       filtered = filtered.filter((d) => d.isTransaction === false);
     }
 
+    // ✅ NUOVO FILTRO PER DISTRIBUTORE
+    if (selectedDistributore) {
+      if (selectedDistributore === "NESSUNO") {
+        // Mostra solo dealer senza distributore
+        filtered = filtered.filter(
+          (d) => !d.codiceDistributore || d.codiceDistributore === ""
+        );
+      } else {
+        // Mostra solo dealer del distributore selezionato
+        filtered = filtered.filter(
+          (d) => d.codiceDistributore === selectedDistributore
+        );
+      }
+    }
+
     // Filtro per provincia
     if (selectedProvincia) {
       filtered = filtered.filter((d) => d.provincia === selectedProvincia);
@@ -210,11 +256,11 @@ const DealerAnalytics: React.FC = () => {
         (d) =>
           d.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
           d.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          d.email.toLowerCase().includes(searchTerm.toLowerCase())
+          d.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          d.distributoreRagSoc?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Applica ordinamento
     return getSortedList(filtered);
   };
 
@@ -1081,8 +1127,9 @@ const DealerAnalytics: React.FC = () => {
                 </div>
                 <div className="card-body">
                   {/* Filtri e Tab */}
+                  {/* Filtri e Tab - LAYOUT AGGIORNATO */}
                   <div className="row mb-3">
-                    <div className="col-md-6">
+                    <div className="col-md-4">
                       <ul className="nav nav-pills">
                         <li className="nav-item">
                           <button
@@ -1094,7 +1141,12 @@ const DealerAnalytics: React.FC = () => {
                               setCurrentPage(1);
                             }}
                           >
-                            Tutti ({getFilteredList().length})
+                            Tutti ({getFilteredList().length})                            
+                            {selectedDistributore === "NESSUNO" && (
+                              <small className="d-block text-muted">
+                                Indipendenti
+                              </small>
+                            )}
                           </button>
                         </li>
                         <li className="nav-item">
@@ -1133,9 +1185,41 @@ const DealerAnalytics: React.FC = () => {
                         </li>
                       </ul>
                     </div>
-                    <div className="col-md-6">
-                      <div className="row">
-                        <div className="col-md-6">
+
+                    {/* ✅ NUOVO LAYOUT FILTRI */}
+                    <div className="col-md-8">
+                      <div className="row g-2">
+                        {/* FILTRO DISTRIBUTORE - Prima posizione */}
+                        <div className="col-md-3">
+                          <select
+                            className="form-select form-select-sm"
+                            value={selectedDistributore}
+                            onChange={(e) => {
+                              setSelectedDistributore(e.target.value);
+                              setCurrentPage(1);
+                            }}
+                          >
+                            <option value="">Tutti i distributori</option>
+                            <option value="NESSUNO">
+                              🏢 Dealer Indipendenti
+                            </option>
+                            <optgroup label="Distributori">
+                              {getUniqueDistributors().map((distributore) => (
+                                <option
+                                  key={distributore.codice}
+                                  value={distributore.codice}
+                                >
+                                  {distributore.ragioneSociale}
+                                  {distributore.citta &&
+                                    ` (${distributore.citta})`}
+                                </option>
+                              ))}
+                            </optgroup>
+                          </select>
+                        </div>
+
+                        {/* CAMPO RICERCA - Seconda posizione, ridotto */}
+                        <div className="col-md-3">
                           <input
                             type="text"
                             className="form-control form-control-sm"
@@ -1147,7 +1231,9 @@ const DealerAnalytics: React.FC = () => {
                             }}
                           />
                         </div>
-                        <div className="col-md-6">
+
+                        {/* FILTRO PROVINCE - Terza posizione */}
+                        <div className="col-md-3">
                           <select
                             className="form-select form-select-sm"
                             value={selectedProvincia}
@@ -1163,6 +1249,27 @@ const DealerAnalytics: React.FC = () => {
                               </option>
                             ))}
                           </select>
+                        </div>
+
+                        {/* BOTTONE RESET - Quarta posizione */}
+                        <div className="col-md-3">
+                          {(selectedDistributore ||
+                            selectedProvincia ||
+                            searchTerm) && (
+                            <button
+                              className="btn btn-outline-secondary btn-sm w-100"
+                              onClick={() => {
+                                setSelectedDistributore("");
+                                setSelectedProvincia("");
+                                setSearchTerm("");
+                                setCurrentPage(1);
+                              }}
+                              title="Pulisci tutti i filtri"
+                            >
+                              <i className="fa-solid fa-times me-1"></i>
+                              Reset Filtri
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
